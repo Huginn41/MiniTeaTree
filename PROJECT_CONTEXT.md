@@ -19,96 +19,88 @@ Telegram Mini App магазин чая «Чайное Дерево».
 обсуждается менеджером отдельно (он присылает ссылку на оплату доставки).
 Поэтому в заказе два независимых статуса: оплаты и доставки.
 
-**Подробный план:** см. раздел «План реализации по этапам» ниже.
-
 ---
 
 ## Принятые архитектурные решения
 
 1. **Движок БД ленивый.** `app.db` не создаёт async-engine на верхнем уровне
-   импорта — иначе синхронный alembic падает с `MissingGreenlet`. Используем
-   `configure_engine()` в `lifespan` и в тестах. Геттеры: `get_engine()`,
-   `get_session_factory()`.
-2. **Тесты на in-memory SQLite** (`aiosqlite`). Модели пишем совместимые с
-   Postgres и SQLite. Интеграционные тесты на реальном Postgres — позже.
+   импорта — иначе синхронный alembic падает. Используем `configure_engine()`
+   в `lifespan` и в тестах. Геттеры: `get_engine()`, `get_session_factory()`.
+2. **Тесты на in-memory SQLite** (`aiosqlite`). Модели совместимы с обеими СУБД.
+   SQLite: FK enforcement включён через event listener, PKType использует
+   `BigInteger().with_variant(Integer, "sqlite")` для autoincrement.
 3. **В `APP_ENV=test` Settings не читает `.env`** (`env_file=None`), чтобы
    реальный `.env` не влиял на тесты. Тестовые env фиксируются в conftest.
 4. **Alembic использует синхронный URL:** `postgresql+asyncpg://` →
-   `postgresql+psycopg://`, `sqlite+aiosqlite://` → `sqlite://` (см.
-   `alembic/env.py::_sync_url`). Поэтому в deps есть `psycopg[binary]`.
-5. **Безопасность:** секреты только в `.env` (в `.gitignore`), пароли через
-   bcrypt, CORS ограничен, rate-limit (slowapi) — на этапе 3, валидация всех
-   входов через Pydantic, structured logging с маскировкой секретов.
-6. **Nginx** терминирует TLS и раздаёт статику; в dev поднимается опционально
-   через `--profile nginx`, бэкенд ходит напрямую на :8000.
+   `postgresql+psycopg://`, `sqlite+aiosqlite://` → `sqlite://`. В deps есть
+   `psycopg[binary]`.
+5. **Enum'ы:** `StrEnum` / `IntEnum` (Python 3.12+), в БД — `String` + CHECK.
+   Не нативный PG ENUM (гибче для миграций и совместимы с SQLite).
+6. **Каскады:** ORM-level (`cascade="all, delete-orphan"`) + DB-level
+   (`ondelete="CASCADE"`). Работает на обеих СУБД благодаря FK enforcement.
+7. **Безопасность:** секреты в `.env`, пароли через bcrypt, CORS ограничен,
+   rate-limit (slowapi), валидация через Pydantic, structlog маскирует секреты.
+8. **Nginx:** TLS termination + статика; в dev — `--profile nginx`.
 
 ---
 
 ## План реализации по этапам
 
-1. ✅ **Скелет проекта** — репозиторий, Docker, FastAPI, async PostgreSQL,
-   Alembic, конфиг, healthcheck, базовые тесты.
-2. ⬜ **Модели БД** — все таблицы, миграции, демо-данные.
-3. ⬜ **Авторизация и безопасность** — валидация initData, JWT, middleware,
-   rate-limit, тесты.
-4. ⬜ **Каталог API + YML парсер + загрузка фото** — эндпоинты, парсер, тесты.
-5. ⬜ **Mini App фронтенд** — главная, каталог, карточка, корзина, профиль, info.
-6. ⬜ **Заказы и личный кабинет** — оформление, история, статусы, тесты.
-7. ⬜ **Платежи** — Telegram Payments + ЮKassa webhook + тесты.
-8. ⬜ **Бот aiogram** — кнопка Mini App, уведомления, кнопка для канала.
-9. ⬜ **Админка/CRM (SQLAdmin)** + кастомные вьюхи + YML импорт.
-10. ⬜ **Уведомления о смене статуса** → пользователю и менеджерам.
-11. ⬜ **Документация** — README, DEPLOY.md, обновление этого файла.
+1. ✅ **Скелет проекта**
+2. ✅ **Модели БД** — 17 таблиц, seed, тесты инвариантов
+3. ⬜ **Авторизация и безопасность** — валидация initData, JWT, middleware, rate-limit
+4. ⬜ **Каталог API + YML парсер + загрузка фото**
+5. ⬜ **Mini App фронтенд**
+6. ⬜ **Заказы и личный кабинет**
+7. ⬜ **Платежи** — Telegram Payments + ЮKassa webhook
+8. ⬜ **Бот aiogram**
+9. ⬜ **Админка/CRM (SQLAdmin)**
+10. ⬜ **Уведомления о смене статуса**
+11. ⬜ **Документация** — DEPLOY.md
 
 ---
 
-## Этап 1 — СКЕЛЕТ (готово ✅)
+## Этап 2 — МОДЕЛИ БД (готово ✅)
 
-**Создано:**
-- Корневые файлы: `.gitignore`, `.env.example`, `Makefile`,
-  `docker-compose.yml`, `docker-compose.dev.yml`.
-- `backend/pyproject.toml` (uv, все зависимости включая dev),
-  `backend/Dockerfile` (multi-stage: builder + prod + dev),
-  `backend/.dockerignore`.
-- `backend/app/`: `__init__.py`, `config.py` (pydantic-settings),
-  `db.py` (async SQLAlchemy, lazy engine), `logging.py` (structlog + маскировка
-  секретов), `main.py` (FastAPI: lifespan, CORS, health/health-ready, error
-  handler, каркас роутеров под /api).
-- `backend/app/models/__init__.py` — пакет моделей (пока пустой, на этапе 2).
-- Пустые пакеты: `schemas`, `routers`, `services`, `bot`, `admin`, `admin/views`.
-- `backend/alembic/`: `env.py` (sync URL-преобразование, autogenerate),
-  `script.py.mako`, `alembic.ini`.
-- `backend/tests/`: `conftest.py` (in-memory SQLite, фикстуры client/db_session),
-  `test_meta.py` (healthcheck), `test_config.py` (Settings).
-- Структура директорий `miniapp/`, `nginx/`, `scripts/`, `docs/` + gitkeep.
+**Модели (17 таблиц):**
+- `users` (Telegram auth, профиль)
+- `admin_users` (SQLAdmin login/password, bcrypt)
+- `categories` (фильтр каталога, slug, sort)
+- `products` (товар, slug, description, base_price, tags)
+- `product_variants` (граммовки 25/50/75/100 г, цена, SKU, unique product+weight)
+- `product_images` (фото на сервере, is_main, sort, cascade delete)
+- `banners` (слайдер: image_path, title, link, sort)
+- `carts` (1 на user) + `cart_items` (variant + qty, unique cart+variant)
+- `orders` (number, total, status_payment, status_delivery, CHECK constraints)
+- `order_items` (снапшот: unit_price, snapshot_name, snapshot_weight_g)
+- `delivery_info` (type, address, ym_payment_link — ссылка от менеджера)
+- `pickup_points` (адреса ПВЗ/самовывоза, lat/lon для карты)
+- `faq_items` (вопрос-ответ)
+- `notification_targets` (кому слать уведомления в ТГ, role CHECK)
+- `payment_events` (аудит платежей: provider, external_id, raw_payload)
+- `yml_imports` (журнал импортов: source, status, counters)
+- `enums.py` (StrEnum для статусов, типов, IntEnum для весов)
 
-**Проверки (зелёные):**
-- `ruff check app tests` → All checks passed.
-- `ruff format --check app tests` → 16 files already formatted.
-- `pytest -q` → 7 passed.
-- `docker compose config --quiet` → валиден.
-- `alembic current` (на sqlite) → контекст создаётся (миграций пока нет).
+**Seed (`app/seed.py`):** 7 категорий, 11 товаров с 4 вариантами каждый (44 variant),
+3 баннера, 4 FAQ, 1 ПВЗ, админ-пользователь, notification target.
 
-**Команды (через Make):**
-- `make install` — `uv sync` зависимостей.
-- `make dev` — поднять docker dev-окружение с хот-релоадом.
-- `make test` / `make test-cov` — тесты.
-- `make lint` / `make format` — ruff.
-- `make migrate` / `make migrate-new m="..."` — alembic.
+**Тесты (9 модельных):** уникальность telegram_id, уникальность variant weight,
+разные веса ок, 1 корзина на user, дефолтные статусы заказа, снапшот цены, CASCADE delete,
+valid role CHECK. Итого: 16 passed.
+
+**Git:** commit `e1a931f`.
 
 ---
 
-## Этап 2 — МОДЕЛИ БД (далее)
+## Этап 3 — АВТОРИЗАЦИЯ И БЕЗОПАСНОСТЬ (далее)
 
-Создать все ORM-модели из плана (§4): users, categories, products,
-product_variants, product_images, banners, carts/cart_items, orders/order_items,
-delivery_info, pickup_points, faq_items, payment_events, yml_imports,
-notification_targets, admin_users.
+Реализовать:
+- `app/security.py`: валидация Telegram initData (HMAC-SHA256), проверка auth_date
+- `app/deps.py`: DI-зависимости — текущий пользователь из JWT, опциональный
+- JWT: access (15 мин) + refresh (30 дней), создание/верификация
+- Middleware: rate-limit (slowapi), request ID
+- Middleware: подстановка пользователя в contextvars (для логов/аудита)
+- Тесты: валидный initData, replay-атака, подделка подписи, истёкший auth_date
 
-Затем:
-- автогенерировать первую миграцию (`make migrate-new m="initial schema"`),
-- написать `app/seed.py` для демо-данных (каталог чаёв, баннеры, FAQ),
-- тесты на инварианты моделей (уникальность, default'ы, связи).
-
-**С чего начать новую сессию:** прочитать этот файл + план §4, реализовать
-модели в `backend/app/models/`, подключить их в `models/__init__.py`.
+**С чего начать новую сессию:** прочитать `app/security.py` (не существует), создать
+его с `validate_telegram_init_data()`, затем JWT-утилиты и DI-зависимости.
