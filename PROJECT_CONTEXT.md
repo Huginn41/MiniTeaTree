@@ -50,11 +50,11 @@ Telegram Mini App магазин чая «Чайное Дерево».
 2. ✅ **Модели БД** — 17 таблиц, seed, тесты инвариантов — commit `e1a931f`
 3. ✅ **Авторизация и безопасность** — валидация initData, JWT, middleware, rate-limit, 33 теста — commit `0aaafbc`
 4. ✅ **Каталог API + YML парсер + загрузка фото** — 49 тестов — commit `6a42666`
-5. 🔄 **Mini App фронтенд** — `frontend/index.html` начат, не закоммичен
-6. 🔄 **Заказы и личный кабинет** — роутер и тесты написаны, не закоммичены
+5. ✅ **Mini App фронтенд** — commit `7712265`
+6. ✅ **Заказы и личный кабинет** — 9 тестов — commit `f0bc8db`
 7. ⬜ **Платежи** — Telegram Payments + ЮKassa webhook
 8. ⬜ **Бот aiogram**
-9. ⬜ **Админка/CRM (SQLAdmin)**
+9. ✅ **Админка/CRM (SQLAdmin)** — commit `289ad2e`
 10. ⬜ **Уведомления о смене статуса**
 11. ⬜ **Документация** — DEPLOY.md
 
@@ -117,9 +117,7 @@ valid role CHECK. Итого: 16 passed.
 
 ---
 
-## Этап 5 — ЗАКАЗЫ И ЛИЧНЫЙ КАБИНЕТ (в работе 🔄)
-
-### Что сделано (не закоммичено):
+## Этап 5 — ЗАКАЗЫ И ЛИЧНЫЙ КАБИНЕТ (готово ✅)
 
 **`app/routers/orders.py`** — роутер подключён в `main.py`:
 - `GET /api/profile/me` → профиль пользователя
@@ -127,24 +125,49 @@ valid role CHECK. Итого: 16 passed.
 - `GET /api/orders/{order_number}` → детали заказа
 - `POST /api/orders` → создать заказ из корзины, очистить корзину
 
-**Логика создания заказа:**
-- Валидация `delivery_type` из `DELIVERY_TYPE_VALUES`
-- Снапшот цен и названий в `order_items`
-- Номер заказа: `ЧД-000001` (через `COUNT(*)`)
-- Создаётся `delivery_info`, корзина очищается
+Логика: валидация `delivery_type`, снапшот цен, номер `ЧД-000001` через `COUNT(*)`.
 
-**`backend/tests/test_orders.py`** — 10 тестов:
-- `test_get_profile` — профиль авторизованного пользователя
-- `test_list_orders_empty` — пустой список заказов
-- `test_create_order` — создание заказа, проверка снапшота и итоговой суммы
-- `test_create_order_clears_cart` — корзина пуста после заказа
-- `test_create_order_empty_cart` — 400 при пустой корзине
-- `test_create_order_invalid_delivery_type` — 400 при невалидном типе доставки
-- `test_get_order_detail` — детали по номеру заказа
-- `test_get_order_not_found` — 404 для несуществующего заказа
-- `test_unauthorized_orders` — 401 без токена
+**Git:** commit `f0bc8db`. Тестов: 9 passed (итого 58).
+
+---
+
+## Этап 5 (фронт) — MINI APP ФРОНТЕНД (готово ✅)
+
+**`frontend/index.html`** — Single-page Mini App на ванильном JS + Tailwind CDN:
+- Авторизация через Telegram initData (Mini App) или JWT из localStorage (dev)
+- Главная: баннеры + категории + популярные товары
+- Каталог: фильтрация по категориям, карточки товаров
+- Страница товара: галерея, описание, варианты, добавление в корзину
+- Корзина: управление количеством, удаление, переход к оформлению
+- Форма оформления (`checkout`): самовывоз / курьер, адрес, телефон, комментарий
+- Детали заказа (`order-detail`): статусы, состав, сумма
+- Профиль: данные Telegram + список заказов
+
+**Git:** commit `7712265`.
+
+---
+
+## Этап 9 — АДМИНКА/CRM SQLAdmin (готово ✅)
+
+**`app/admin/__init__.py`** — `setup_admin()` вызывается в lifespan:
+- Маршрут: `/admin`
+- Авторизация: `AdminUser` (bcrypt) или `admin_username`/`admin_password` из `.env`
+- `SessionMiddleware` добавлена в `main.py` (secret_key из `jwt_secret`)
+
+**15 представлений** (3 раздела):
+- Каталог: Category, Product, ProductVariant, ProductImage, Banner
+- Заказы: Order (только статусы + delivery_cost), OrderItem (read-only), DeliveryInfo (ссылка менеджера)
+- CRM: User (только phone/is_admin), FaqItem, PickupPoint, NotificationTarget
+- Система: AdminUser, YmlImport (read-only), PaymentEvent (read-only)
+
+**Git:** commit `289ad2e`.
+
+---
+
+## Что дальше
 
 **С чего начать новую сессию:**
-1. Запустить тесты: `cd backend && pytest tests/test_orders.py -v`
-2. Если все зелёные — закоммитить этап 5
-3. Перейти к фронтенду (`frontend/index.html`) или этапу 6 (платежи)
+- **Этап 7: Платежи** — `POST /api/payments/create-invoice` (Telegram Payments + ЮKassa), webhook `POST /api/payments/webhook`, обновление `status_payment` заказа.
+- **Этап 8: Бот aiogram** — уведомление магазина о новом заказе, кнопка «Оформить» → Mini App.
+- **Этап 10: Уведомления** — отправка клиенту при смене `status_delivery`.
+- **Этап 11: DEPLOY.md** — инструкция по деплою на VPS.
