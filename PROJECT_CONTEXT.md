@@ -4,7 +4,7 @@
 что готово, что дальше, принятые архитектурные решения и известные проблемы.
 Цель — можно продолжить работу с любого места (в новой сессии).
 
-Дата последнего обновления: 2026-06-16 (сессия 2)
+Дата последнего обновления: 2026-06-16 (сессия 3)
 
 ---
 
@@ -52,11 +52,11 @@ Telegram Mini App магазин чая «Чайное Дерево».
 4. ✅ **Каталог API + YML парсер + загрузка фото** — 49 тестов — commit `6a42666`
 5. ✅ **Mini App фронтенд** — commit `7712265`
 6. ✅ **Заказы и личный кабинет** — 9 тестов — commit `f0bc8db`
-7. ⬜ **Платежи** — Telegram Payments + ЮKassa webhook
-8. ⬜ **Бот aiogram**
+7. ✅ **Платежи** — Telegram Payments + ЮKassa webhook — commit `3b98194`
+8. ✅ **Бот aiogram** — /start + уведомления менеджерам — commit `2eac040`
 9. ✅ **Админка/CRM (SQLAdmin)** — commit `289ad2e`
-10. ⬜ **Уведомления о смене статуса**
-11. ⬜ **Документация** — DEPLOY.md
+10. ✅ **Уведомления о смене статуса** — commit `427d7c4`
+11. ✅ **Документация** — `docs/DEPLOY.md`
 
 ---
 
@@ -164,10 +164,48 @@ valid role CHECK. Итого: 16 passed.
 
 ---
 
+## Этап 7 — ПЛАТЕЖИ (готово ✅)
+
+- `app/services/payment.py`: создание invoice link через Bot API, обработка pre_checkout_query, successful_payment
+- `app/routers/payments.py`: `POST /api/payments/{order_number}/invoice`, `POST /api/payments/webhook/telegram/{token_suffix}`
+- Идемпотентность: повторный successful_payment не дублирует событие
+- Логи в `PaymentEvent`: все действия с провайдером
+
+**Git:** commit `3b98194`. Тестов: 12 (итого 70).
+
+---
+
+## Этап 8 — БОТ AIOGRAM (готово ✅)
+
+- `app/bot/__init__.py`: `setup_bot(app)` — регистрирует `/bot/webhook` endpoint
+- `app/bot/handlers.py`: обработчик `/start` → InlineKeyboard с кнопкой Mini App
+- `app/bot/notify.py`: `notify_new_order()` — уведомление активных NotificationTarget при создании заказа
+- Критично: Router создаётся внутри `create_dispatcher()` (не на уровне модуля) — избегает `Router already attached`
+- `setup_bot()` вызывается в `create_app()`, НЕ в lifespan — иначе тесты через ASGITransport не видят маршруты
+
+**Git:** commit `2eac040`. Тестов: 7 (итого 77).
+
+---
+
+## Этап 10 — УВЕДОМЛЕНИЯ СТАТУСА (готово ✅)
+
+- `app/bot/status_notify.py`: 7 шаблонов сообщений для статусов доставки
+- `PATCH /api/orders/{order_number}/status` (admin-only): меняет статус, при `delivered` ставит `delivered_at`, вызывает `notify_status_changed()`
+- `OrderStatusUpdate` схема в `app/schemas/__init__.py`
+
+**Git:** commit `427d7c4`. Тестов: 8 (итого 85).
+
+---
+
+## Этап 11 — DEPLOY.MD (готово ✅)
+
+- `docs/DEPLOY.md`: полная инструкция по деплою на VPS (Ubuntu/Debian + Docker)
+- Разделы: требования, `.env`, TLS/certbot, первый запуск, webhook, Mini App настройка, обновления, бэкап
+
+**Итого по проекту: 85 тестов, все этапы завершены.**
+
+---
+
 ## Что дальше
 
-**С чего начать новую сессию:**
-- **Этап 7: Платежи** — `POST /api/payments/create-invoice` (Telegram Payments + ЮKassa), webhook `POST /api/payments/webhook`, обновление `status_payment` заказа.
-- **Этап 8: Бот aiogram** — уведомление магазина о новом заказе, кнопка «Оформить» → Mini App.
-- **Этап 10: Уведомления** — отправка клиенту при смене `status_delivery`.
-- **Этап 11: DEPLOY.md** — инструкция по деплою на VPS.
+Проект полностью реализован. Для деплоя: см. `docs/DEPLOY.md`.
