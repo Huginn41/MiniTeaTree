@@ -188,11 +188,12 @@ def _register_routers(app: FastAPI) -> None:
         return JSONResponse(content={"access_token": access, "refresh_token": refresh})
 
     # --- Catalog + Info + Cart (этап 4) ---
-    from app.routers import cart, catalog, info
+    from app.routers import cart, catalog, info, orders
 
     api.include_router(catalog.router)
     api.include_router(info.router)
     api.include_router(cart.router)
+    api.include_router(orders.router)
 
     app.include_router(api)
 

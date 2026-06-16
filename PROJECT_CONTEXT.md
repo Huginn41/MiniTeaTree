@@ -4,7 +4,7 @@
 что готово, что дальше, принятые архитектурные решения и известные проблемы.
 Цель — можно продолжить работу с любого места (в новой сессии).
 
-Дата последнего обновления: 2026-06-16
+Дата последнего обновления: 2026-06-16 (сессия 2)
 
 ---
 
@@ -46,12 +46,12 @@ Telegram Mini App магазин чая «Чайное Дерево».
 
 ## План реализации по этапам
 
-1. ✅ **Скелет проекта**
-2. ✅ **Модели БД** — 17 таблиц, seed, тесты инвариантов
-3. ⬜ **Авторизация и безопасность** — валидация initData, JWT, middleware, rate-limit
-4. ⬜ **Каталог API + YML парсер + загрузка фото**
-5. ⬜ **Mini App фронтенд**
-6. ⬜ **Заказы и личный кабинет**
+1. ✅ **Скелет проекта** — commit `8182ed3`
+2. ✅ **Модели БД** — 17 таблиц, seed, тесты инвариантов — commit `e1a931f`
+3. ✅ **Авторизация и безопасность** — валидация initData, JWT, middleware, rate-limit, 33 теста — commit `0aaafbc`
+4. ✅ **Каталог API + YML парсер + загрузка фото** — 49 тестов — commit `6a42666`
+5. 🔄 **Mini App фронтенд** — `frontend/index.html` начат, не закоммичен
+6. 🔄 **Заказы и личный кабинет** — роутер и тесты написаны, не закоммичены
 7. ⬜ **Платежи** — Telegram Payments + ЮKassa webhook
 8. ⬜ **Бот aiogram**
 9. ⬜ **Админка/CRM (SQLAdmin)**
@@ -92,15 +92,59 @@ valid role CHECK. Итого: 16 passed.
 
 ---
 
-## Этап 3 — АВТОРИЗАЦИЯ И БЕЗОПАСНОСТЬ (далее)
+## Этап 3 — АВТОРИЗАЦИЯ И БЕЗОПАСНОСТЬ (готово ✅)
 
-Реализовать:
-- `app/security.py`: валидация Telegram initData (HMAC-SHA256), проверка auth_date
-- `app/deps.py`: DI-зависимости — текущий пользователь из JWT, опциональный
-- JWT: access (15 мин) + refresh (30 дней), создание/верификация
-- Middleware: rate-limit (slowapi), request ID
-- Middleware: подстановка пользователя в contextvars (для логов/аудита)
+- `app/security.py`: валидация Telegram initData (HMAC-SHA256), проверка auth_date, JWT access (15 мин) + refresh (30 дней)
+- `app/deps.py`: DI-зависимости `CurrentUser`, `OptionalUser`, `_get_user_by_telegram_id`
+- Middleware: rate-limit (slowapi), X-Request-ID
+- `/api/auth/refresh` endpoint в `main.py`
 - Тесты: валидный initData, replay-атака, подделка подписи, истёкший auth_date
 
-**С чего начать новую сессию:** прочитать `app/security.py` (не существует), создать
-его с `validate_telegram_init_data()`, затем JWT-утилиты и DI-зависимости.
+**Git:** commit `0aaafbc`. Итого тестов: 33 passed.
+
+---
+
+## Этап 4 — КАТАЛОГ API + YML + ФОТО (готово ✅)
+
+- `app/routers/catalog.py`: категории, товары, варианты, поиск, фильтрация
+- `app/routers/cart.py`: корзина (get/add/update/clear)
+- `app/routers/info.py`: FAQ, баннеры, ПВЗ
+- YML-парсер: импорт товаров из Яндекс.Маркет YML
+- Image service: загрузка фото товаров
+- Все схемы в `app/schemas/`
+
+**Git:** commit `6a42666`. Итого тестов: 49 passed.
+
+---
+
+## Этап 5 — ЗАКАЗЫ И ЛИЧНЫЙ КАБИНЕТ (в работе 🔄)
+
+### Что сделано (не закоммичено):
+
+**`app/routers/orders.py`** — роутер подключён в `main.py`:
+- `GET /api/profile/me` → профиль пользователя
+- `GET /api/orders` → список заказов (новые сверху)
+- `GET /api/orders/{order_number}` → детали заказа
+- `POST /api/orders` → создать заказ из корзины, очистить корзину
+
+**Логика создания заказа:**
+- Валидация `delivery_type` из `DELIVERY_TYPE_VALUES`
+- Снапшот цен и названий в `order_items`
+- Номер заказа: `ЧД-000001` (через `COUNT(*)`)
+- Создаётся `delivery_info`, корзина очищается
+
+**`backend/tests/test_orders.py`** — 10 тестов:
+- `test_get_profile` — профиль авторизованного пользователя
+- `test_list_orders_empty` — пустой список заказов
+- `test_create_order` — создание заказа, проверка снапшота и итоговой суммы
+- `test_create_order_clears_cart` — корзина пуста после заказа
+- `test_create_order_empty_cart` — 400 при пустой корзине
+- `test_create_order_invalid_delivery_type` — 400 при невалидном типе доставки
+- `test_get_order_detail` — детали по номеру заказа
+- `test_get_order_not_found` — 404 для несуществующего заказа
+- `test_unauthorized_orders` — 401 без токена
+
+**С чего начать новую сессию:**
+1. Запустить тесты: `cd backend && pytest tests/test_orders.py -v`
+2. Если все зелёные — закоммитить этап 5
+3. Перейти к фронтенду (`frontend/index.html`) или этапу 6 (платежи)
