@@ -34,5 +34,9 @@ class Category(TimestampMixin, Base):
 
     products = relationship("Product", back_populates="category", lazy="selectin")
 
+    def __str__(self) -> str:
+        prefix = f"{self.icon} " if self.icon else ""
+        return f"{prefix}{self.name}"
+
     def __repr__(self) -> str:
         return f"<Category id={self.id} slug={self.slug!r}>"

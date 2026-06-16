@@ -446,15 +446,15 @@
     }
     .product-card-small:active { transform: scale(0.97); }
     .product-card-small .pcard-img {
-      width: 100%; height: 120px;
-      object-fit: cover;
+      width: 100%; aspect-ratio: 1 / 1;
       background: var(--md-surface-container);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 36px;
+      overflow: hidden;
     }
-    .product-card-small .pcard-img img { width: 100%; height: 120px; object-fit: cover; display: block; }
+    .product-card-small .pcard-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .product-card-small .pcard-body { padding: 10px; }
     .product-card-small .pcard-name {
       font-size: 13px;
@@ -489,14 +489,15 @@
     }
     .product-card-grid:active { transform: scale(0.97); }
     .product-card-grid .pcard-img {
-      width: 100%; height: 130px;
+      width: 100%; aspect-ratio: 1 / 1;
       background: var(--md-surface-container);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 40px;
+      overflow: hidden;
     }
-    .product-card-grid .pcard-img img { width: 100%; height: 130px; object-fit: cover; display: block; }
+    .product-card-grid .pcard-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .product-card-grid .pcard-body { padding: 10px; }
 
     /* ===== Chip scroll ===== */
@@ -509,22 +510,110 @@
       -webkit-overflow-scrolling: touch;
     }
 
-    /* ===== Product Detail ===== */
-    .product-images-scroll {
-      display: flex;
-      overflow-x: auto;
-      gap: 10px;
-      margin: -16px -16px 0;
-      -webkit-overflow-scrolling: touch;
+    /* ===== Product Detail Gallery ===== */
+    .product-gallery-wrap {
+      position: relative;
+      width: 100vw;
+      margin-left: -16px;
+      margin-top: -16px;
+      background: var(--md-surface-container);
     }
-    .product-images-scroll img {
+    .product-gallery {
+      display: flex;
+      overflow-x: scroll;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .product-gallery::-webkit-scrollbar { display: none; }
+    .product-gallery img {
+      scroll-snap-align: start;
       flex-shrink: 0;
-      width: 100%;
-      max-width: 100vw;
-      height: 260px;
+      width: 100vw;
+      height: 280px;
       object-fit: cover;
       display: block;
-      background: var(--md-surface-container);
+      cursor: pointer;
+    }
+    .gallery-dots {
+      position: absolute;
+      bottom: 8px;
+      left: 0; right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      pointer-events: none;
+    }
+    .gallery-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.5);
+      transition: background 0.2s;
+    }
+    .gallery-dot.active { background: #fff; }
+
+    /* Lightbox */
+    .lb-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(28px) brightness(0.7);
+      -webkit-backdrop-filter: blur(28px) brightness(0.7);
+      overflow: hidden;
+    }
+    .lb-overlay.open { display: block; }
+    .lb-track {
+      display: flex;
+      height: 100%;
+      will-change: transform;
+    }
+    .lb-track img {
+      flex-shrink: 0;
+      width: 100vw;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      padding: 72px 8px 48px;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+    .lb-close {
+      position: absolute;
+      top: 14px; right: 14px;
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.6);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none; outline: none;
+      z-index: 1;
+    }
+    .lb-close svg { width: 20px; height: 20px; fill: rgba(255,255,255,0.9); }
+    .lb-prev, .lb-next {
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.45);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none; outline: none;
+      user-select: none;
+      z-index: 1;
+    }
+    .lb-prev svg, .lb-next svg { width: 28px; height: 28px; fill: rgba(255,255,255,0.9); }
+    .lb-prev { left: 10px; }
+    .lb-next { right: 10px; }
+    .lb-counter {
+      position: absolute;
+      bottom: 20px; left: 0; right: 0;
+      text-align: center;
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+      pointer-events: none;
+      z-index: 1;
     }
 
     .product-info-sheet {
@@ -1116,8 +1205,15 @@
 
       // Images
       if (p.images.length) {
-        html += `<div class="product-images-scroll" id="pimg-scroll">
-          ${p.images.map(img => `<img src="${img.path}" alt="${esc(img.alt || p.name)}" loading="lazy"/>`).join('')}
+        const n = p.images.length;
+        const dotHtml = n > 1
+          ? `<div class="gallery-dots">${p.images.map((_, i) => `<div class="gallery-dot${i===0?' active':''}"></div>`).join('')}</div>`
+          : '';
+        html += `<div class="product-gallery-wrap">
+          <div class="product-gallery" id="pimg-gallery">
+            ${p.images.map((img, i) => `<img src="${img.path}" alt="${esc(img.alt || p.name)}" loading="${i===0?'eager':'lazy'}" data-li="${i}"/>`).join('')}
+          </div>
+          ${dotHtml}
         </div>`;
       } else {
         html += `<div style="height:220px;background:var(--md-surface-container);display:flex;align-items:center;justify-content:center;font-size:64px;margin:-16px -16px 0">🍵</div>`;
@@ -1157,6 +1253,99 @@
       </div>`;
 
       c.innerHTML = html;
+      if (p.images.length) this._initGallery(p.images);
+    },
+
+    _initGallery(images) {
+      const gallery = document.getElementById('pimg-gallery');
+      if (!gallery) return;
+
+      const n = images.length;
+      let lbIdx = 0;
+
+      // ── Dots по нативному скроллу ─────────────────────────────────
+      const dots = gallery.parentNode.querySelectorAll('.gallery-dot');
+      function updateDots() {
+        const idx = Math.round(gallery.scrollLeft / window.innerWidth);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+      if (dots.length) gallery.addEventListener('scroll', updateDots, { passive: true });
+
+      // ── Лайтбокс в body — position:fixed работает от viewport, не от transform ──
+      document.getElementById('lb-overlay')?.remove();
+      const lb = document.createElement('div');
+      lb.id = 'lb-overlay';
+      lb.className = 'lb-overlay';
+      const navHide = n <= 1 ? ' style="display:none"' : '';
+      lb.innerHTML = `
+        <div class="lb-track">
+          ${images.map(img => `<img src="${img.path}" alt="" draggable="false"/>`).join('')}
+        </div>
+        <button class="lb-close" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+        <button class="lb-prev"${navHide} aria-label="Назад">
+          <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg>
+        </button>
+        <button class="lb-next"${navHide} aria-label="Вперёд">
+          <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </button>
+        <div class="lb-counter"></div>`;
+      document.body.appendChild(lb);
+
+      const lbTrack = lb.querySelector('.lb-track');
+      const lbCtr   = lb.querySelector('.lb-counter');
+      const VW = () => window.innerWidth;
+
+      function lbGo(idx, animate = true) {
+        lbIdx = Math.max(0, Math.min(n - 1, idx));
+        lbTrack.style.transition = animate
+          ? 'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94)' : 'none';
+        lbTrack.style.transform = `translateX(${-lbIdx * VW()}px)`;
+        lbCtr.textContent = n > 1 ? `${lbIdx + 1} / ${n}` : '';
+      }
+
+      function openLb(idx) {
+        lbGo(idx, false);
+        lb.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeLb() {
+        lb.classList.remove('open');
+        document.body.style.overflow = '';
+        gallery.scrollTo({ left: lbIdx * VW(), behavior: 'instant' });
+        updateDots();
+      }
+
+      gallery.querySelectorAll('img').forEach(img =>
+        img.addEventListener('click', () => openLb(parseInt(img.dataset.li)))
+      );
+      lb.querySelector('.lb-close').addEventListener('click', closeLb);
+      lb.querySelector('.lb-prev')?.addEventListener('click', e => { e.stopPropagation(); lbGo(lbIdx - 1); });
+      lb.querySelector('.lb-next')?.addEventListener('click', e => { e.stopPropagation(); lbGo(lbIdx + 1); });
+
+      // Свайп с живой тягой — галерею не трогает
+      let lbX = null;
+      lb.addEventListener('touchstart', e => {
+        if (e.target.closest('button')) return;
+        lbX = e.touches[0].clientX;
+        lbTrack.style.transition = 'none';
+      }, { passive: true });
+      lb.addEventListener('touchmove', e => {
+        if (lbX === null) return;
+        const dx = e.touches[0].clientX - lbX;
+        const base = -lbIdx * VW();
+        // сопротивление на краях
+        const atEdge = (dx > 0 && lbIdx === 0) || (dx < 0 && lbIdx === n - 1);
+        lbTrack.style.transform = `translateX(${base + (atEdge ? dx * 0.2 : dx)}px)`;
+      }, { passive: true });
+      lb.addEventListener('touchend', e => {
+        if (lbX === null) return;
+        const dx = e.changedTouches[0].clientX - lbX;
+        lbX = null;
+        if (Math.abs(dx) > 50) lbGo(lbIdx + (dx < 0 ? 1 : -1));
+        else lbGo(lbIdx); // snap back
+      });
     },
 
     // ─── Cart ─────────────────────────────────────────────────────────────────

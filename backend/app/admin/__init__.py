@@ -103,6 +103,30 @@ class AdminAuth(AuthenticationBackend):
         return True
 
 
+_ADMIN_CSS = ("""
+<style>
+/* Подпункты меню — визуально вложены */
+.navbar-nav .nav-item .nav-link:not([data-bs-toggle]) {
+  padding-left: 2.8rem !important;
+  font-size: 0.82rem !important;
+  opacity: 0.82;
+}
+.navbar-nav .nav-item .nav-link:not([data-bs-toggle]):hover { opacity: 1; }
+
+/* Стрелка на раскрывающихся категориях */
+[data-bs-toggle="collapse"].nav-link::after {
+  content: "▾";
+  float: right;
+  font-size: 12px;
+  transition: transform 0.2s;
+  margin-top: 3px;
+}
+[data-bs-toggle="collapse"].nav-link.collapsed::after {
+  transform: rotate(-90deg);
+}
+</style>
+</head>""").encode("utf-8")
+
 _ADMIN_JS = ("""
 <script>
 (function(){
@@ -151,60 +175,240 @@ _ADMIN_JS = ("""
   }
 
   // ---- 3. Кнопки загрузки файлов ----
-  function initFileUploads(){
-    document.querySelectorAll('input[type="text"]').forEach(function(inp){
-      var id = inp.id||''; var nm = inp.name||'';
-      if(id.indexOf('path')===-1 && nm.indexOf('path')===-1) return;
+  function applyFileUpload(inp){
+    if(inp._fuDone) return;
+    if(!inp.parentNode) return;
+    var combined = (inp.id||'') + ' ' + (inp.name||'');
+    if(combined.indexOf('path') === -1) return;
+    inp._fuDone = true;
 
-      // Скрываем оригинальный input, он будет хранить путь и отправляться в форме
-      inp.style.display = 'none';
+    var fi = document.createElement('input');
+    fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
 
-      // Видимое поле — только для отображения имени файла
-      var display = document.createElement('input');
-      display.type = 'text';
-      display.readOnly = true;
-      display.className = inp.className;
-      display.style.cssText = 'background:#f8f9fa;cursor:default;flex:1;';
-      display.placeholder = 'Файл не выбран';
-      // Показываем имя уже загруженного файла (если путь есть)
-      if(inp.value){ display.value = inp.value.split('/').pop(); }
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-outline-secondary mt-1';
+    btn.style.cssText = 'display:block;';
+    btn.textContent = '📁 Загрузить фото';
 
-      var fileInput = document.createElement('input');
-      fileInput.type = 'file'; fileInput.accept = 'image/*'; fileInput.style.display = 'none';
+    inp.insertAdjacentElement('afterend', fi);
+    fi.insertAdjacentElement('afterend', btn);
 
-      var btn = document.createElement('button');
-      btn.type = 'button'; btn.textContent = '📁 Выбрать файл';
-      btn.className = 'btn btn-sm btn-outline-secondary';
+    // Превью
+    var preview = document.createElement('img');
+    preview.style.cssText = 'display:none;width:120px;height:120px;object-fit:cover;border-radius:8px;margin-top:8px;border:2px solid #dee2e6;';
+    btn.insertAdjacentElement('afterend', preview);
+    if(inp.value){ preview.src = inp.value; preview.style.display = 'block'; }
 
-      var wrap = document.createElement('div');
-      wrap.style.cssText = 'display:flex;align-items:center;gap:8px;';
-      inp.parentNode.insertBefore(wrap, inp);
-      wrap.appendChild(inp);
-      wrap.appendChild(display);
-      wrap.appendChild(fileInput);
-      wrap.appendChild(btn);
-
-      btn.onclick = function(){ fileInput.click(); };
-      fileInput.onchange = function(){
-        var file = fileInput.files[0]; if(!file) return;
-        var fd = new FormData(); fd.append('file', file);
-        btn.textContent = '⏳ ...'; btn.disabled = true;
-        fetch('/admin-api/upload',{method:'POST',body:fd})
-          .then(function(r){return r.json();})
-          .then(function(d){
-            inp.value = d.path;
-            display.value = file.name;
-            btn.textContent = '📁 Выбрать файл'; btn.disabled = false;
-          })
-          .catch(function(){ btn.textContent = '❌ Ошибка'; btn.disabled = false; });
-      };
+    btn.addEventListener('click', function(){ fi.click(); });
+    fi.addEventListener('change', function(){
+      var file = fi.files[0]; if(!file) return;
+      var localUrl = URL.createObjectURL(file);
+      preview.src = localUrl; preview.style.display = 'block'; preview.style.opacity = '0.5';
+      var fd = new FormData(); fd.append('file', file);
+      btn.textContent = '⏳ Загрузка...'; btn.disabled = true;
+      fetch('/admin-api/upload', {method:'POST', body:fd})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          inp.value = d.path;
+          preview.src = d.path; preview.style.opacity = '1';
+          URL.revokeObjectURL(localUrl);
+          btn.textContent = '✅ ' + file.name;
+          btn.disabled = false;
+        })
+        .catch(function(){ btn.textContent = '❌ Ошибка'; btn.disabled = false; preview.style.opacity = '1'; });
     });
   }
 
+  function initFileUploads(){
+    document.querySelectorAll('input[type="text"]').forEach(applyFileUpload);
+  }
+
+  // ---- 4. Блок управления фото товара (только на странице edit/create товара) ----
+  function initProductImages(){
+    var m = window.location.pathname.match(/\/admin\/product\/(edit|create)\/(\d+)/);
+    if(!m) return;
+    var productId = m[2];
+
+    var container = document.createElement('div');
+    container.style.cssText = 'margin-bottom:24px;padding:20px;background:#f8f9fa;border-radius:12px;';
+    container.innerHTML = '<h4 style="margin:0 0 16px;font-size:16px;font-weight:700">📸 Фото товара</h4>'
+      + '<div id="img-grid" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px"></div>'
+      + '<label class="btn btn-outline-primary" style="cursor:pointer">'
+      +   '📁 Загрузить фото (можно несколько)'
+      +   '<input type="file" accept="image/*" multiple style="display:none" id="img-upload-input">'
+      + '</label>'
+      + '<span id="img-upload-status" style="margin-left:12px;font-size:13px;color:#888"></span>';
+
+    // Вставляем В НАЧАЛО формы, перед fieldset
+    var fieldset = document.querySelector('form fieldset');
+    if(fieldset) fieldset.parentNode.insertBefore(container, fieldset);
+
+    function renderImages(imgs){
+      var grid = document.getElementById('img-grid');
+      grid.innerHTML = '';
+      imgs.forEach(function(img){
+        var card = document.createElement('div');
+        card.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;border:2px solid '+(img.is_main?'#3d5afe':'#dee2e6')+';';
+        card.innerHTML = '<img src="'+img.path+'" style="width:100px;height:80px;object-fit:cover;display:block">'
+          + '<div style="position:absolute;top:2px;right:2px;display:flex;gap:2px">'
+          +   '<button type="button" title="Главное фото" onclick="setMain('+img.id+')" style="background:'+(img.is_main?'#3d5afe':'rgba(0,0,0,0.5)')+';border:none;border-radius:4px;padding:2px 5px;color:#fff;cursor:pointer;font-size:11px">⭐</button>'
+          +   '<button type="button" title="Удалить" onclick="delImg('+img.id+')" style="background:rgba(200,0,0,0.75);border:none;border-radius:4px;padding:2px 5px;color:#fff;cursor:pointer;font-size:11px">✕</button>'
+          + '</div>';
+        grid.appendChild(card);
+      });
+      if(!imgs.length) grid.innerHTML = '<span style="color:#aaa;font-size:13px">Фото пока нет</span>';
+    }
+
+    function loadImages(){
+      fetch('/admin-api/product/'+productId+'/images')
+        .then(function(r){ return r.json(); })
+        .then(renderImages);
+    }
+
+    window.delImg = function(id){
+      fetch('/admin-api/product-image/'+id, {method:'DELETE'}).then(loadImages);
+    };
+    window.setMain = function(id){
+      fetch('/admin-api/product-image/'+id+'/set-main', {method:'POST'}).then(loadImages);
+    };
+
+    document.getElementById('img-upload-input').addEventListener('change', function(){
+      var files = Array.from(this.files); if(!files.length) return;
+      var status = document.getElementById('img-upload-status');
+      var grid = document.getElementById('img-grid');
+      status.textContent = '⏳ Загрузка ' + files.length + ' фото...';
+      var done = 0; var errors = 0;
+      files.forEach(function(file){
+        var fd = new FormData(); fd.append('file', file);
+        var previewUrl = URL.createObjectURL(file);
+        var previewEl = document.createElement('img');
+        previewEl.src = previewUrl;
+        previewEl.style.cssText = 'width:100px;height:100px;object-fit:cover;border-radius:8px;opacity:0.5;border:2px dashed #aaa;';
+        grid.appendChild(previewEl);
+        fetch('/admin-api/product/'+productId+'/images', {method:'POST', body:fd})
+          .then(function(r){ return r.json(); })
+          .then(function(){ done++; URL.revokeObjectURL(previewUrl); if(done+errors===files.length){ status.textContent = errors ? '⚠️ '+done+' загружено, '+errors+' ошибок' : '✅ Загружено '+done+' фото'; loadImages(); }})
+          .catch(function(){ errors++; previewEl.remove(); if(done+errors===files.length){ status.textContent = '❌ Ошибок: '+errors; loadImages(); }});
+      });
+    });
+
+    loadImages();
+  }
+
+  // ---- 5. Превью вариантов цен под полем базовой цены ----
+  function initPricePreview(){
+    var priceEl = document.querySelector('#base_price');
+    if(!priceEl) return;
+
+    var preview = document.createElement('div');
+    preview.style.cssText = 'display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;';
+
+    var weights = [25, 50, 75, 100];
+    var cards = weights.map(function(w){
+      var card = document.createElement('div');
+      card.style.cssText = [
+        'flex:1;min-width:70px;padding:8px 10px;border-radius:8px;',
+        'background:#f0f4ff;border:1px solid #d0d9f0;text-align:center;',
+        'pointer-events:none;user-select:none;'
+      ].join('');
+      card.innerHTML = '<div style="font-size:11px;color:#888;margin-bottom:2px">'+w+' г</div>'
+                     + '<div class="pv" style="font-size:15px;font-weight:700;color:#3d5afe">—</div>';
+      preview.appendChild(card);
+      return card.querySelector('.pv');
+    });
+
+    function update(){
+      var val = parseFloat(priceEl.value);
+      weights.forEach(function(w, i){
+        cards[i].textContent = isNaN(val) ? '—' : Math.round(val * w) + ' ₽';
+      });
+    }
+
+    priceEl.addEventListener('input', update);
+    update();
+
+    priceEl.parentNode.appendChild(preview);
+  }
+
+  // ---- 5. Перевод интерфейса на русский ----
+  var _RU = {
+    // Кнопки / текст
+    'Save':'Сохранить','Cancel':'Отмена','Delete':'Удалить',
+    'Create':'Создать','Edit':'Редактировать','Search':'Поиск',
+    'Reset':'Сбросить','Export':'Экспорт','Add':'Добавить',
+    'Confirm':'Подтвердить','Submit':'Отправить','Go':'Перейти',
+    'Back to list':'← К списку',
+    'Yes, delete!':'Да, удалить!','No, cancel':'Нет, отмена',
+    'Are you sure?':'Вы уверены?',
+    'View':'Просмотр',
+    'Details':'Подробности',
+    'Actions':'Действия',
+    'Select all':'Выбрать все',
+    'Deselect all':'Снять выбор',
+    'Delete selected':'Удалить выбранные',
+    'items':'записей','of':'из',
+    'per page':'на странице',
+    'Previous':'Назад','Next':'Вперёд',
+    'Loading...':'Загрузка...',
+  };
+  // Атрибуты title/placeholder/aria-label
+  var _RU_ATTR = {
+    'Edit':'Редактировать','Delete':'Удалить','View':'Просмотр',
+    'Search':'Поиск...','Go to page':'Перейти к странице',
+    'Select row':'Выбрать строку','Select all rows':'Выбрать все строки',
+  };
+
+  function _translateNode(el){
+    // title / aria-label
+    ['title','aria-label','placeholder'].forEach(function(attr){
+      var v = el.getAttribute && el.getAttribute(attr);
+      if(v && _RU_ATTR[v.trim()]) el.setAttribute(attr, _RU_ATTR[v.trim()]);
+    });
+    // Текстовые узлы внутри элемента (не трогаем дочерние теги)
+    el.childNodes.forEach(function(n){
+      if(n.nodeType === 3){
+        var t = n.textContent.trim();
+        if(_RU[t]) n.textContent = n.textContent.replace(t, _RU[t]);
+      }
+    });
+  }
+
+  function translateUI(){
+    // Все элементы с текстом или атрибутами
+    document.querySelectorAll(
+      'button, a.btn, input[type="submit"], a[title], span, td, th, label, small, p.help-block, .modal-body, .modal-footer'
+    ).forEach(_translateNode);
+
+    // placeholder отдельно
+    document.querySelectorAll('input[placeholder]').forEach(function(el){
+      if(el.placeholder==='Search') el.placeholder='Поиск...';
+    });
+  }
+
+  // Перехватываем динамически добавляемый контент (модалки, toast-ы)
+  var _observer = new MutationObserver(function(mutations){
+    mutations.forEach(function(m){
+      m.addedNodes.forEach(function(n){
+        if(n.nodeType===1){
+          _translateNode(n);
+          n.querySelectorAll && n.querySelectorAll('button,span,td,th,a,p,small,label').forEach(_translateNode);
+          // Кнопки загрузки для динамически добавленных строк инлайн-форм
+          n.querySelectorAll && n.querySelectorAll('input[type="text"]').forEach(applyFileUpload);
+          if(n.tagName==='INPUT' && n.type==='text') applyFileUpload(n);
+        }
+      });
+    });
+  });
+  _observer.observe(document.body, {childList:true, subtree:true});
+
   function init(){
     collapseInactive();
+    initProductImages();
     initSlugAuto();
+    initPricePreview();
     initFileUploads();
+    translateUI();
   }
 
   if(document.readyState==='loading'){
@@ -223,6 +427,7 @@ class _AdminCollapseMiddleware(BaseHTTPMiddleware):
             body = b""
             async for chunk in response.body_iterator:
                 body += chunk
+            body = body.replace(b"</head>", _ADMIN_CSS)
             body = body.replace(b"</body>", _ADMIN_JS)
             headers = dict(response.headers)
             headers["content-length"] = str(len(body))
@@ -276,6 +481,81 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         with open(_UPLOADS_DIR / name, "wb") as f:
             shutil.copyfileobj(file.file, f)
         return _JSONResponse({"path": f"/static/uploads/{name}"})
+
+    @app.get("/admin-api/product/{product_id}/images")
+    async def admin_product_images(product_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from app.models.product import ProductImage
+        from sqlalchemy import select
+        async with get_session_factory()() as session:
+            res = await session.execute(
+                select(ProductImage).where(ProductImage.product_id == product_id).order_by(ProductImage.sort)
+            )
+            imgs = res.scalars().all()
+            return _JSONResponse([{"id": i.id, "path": i.path, "is_main": i.is_main, "alt": i.alt or "", "sort": i.sort} for i in imgs])
+
+    @app.post("/admin-api/product/{product_id}/images")
+    async def admin_product_image_upload(product_id: int, request: Request, file: UploadFile = _File(...)):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+        ext = os.path.splitext(file.filename or "")[1].lower()
+        if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+            ext = ".jpg"
+        name = f"{_uuid.uuid4().hex}{ext}"
+        with open(_UPLOADS_DIR / name, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        path = f"/static/uploads/{name}"
+        from app.db import get_session_factory
+        from app.models.product import ProductImage
+        from sqlalchemy import select, func
+        async with get_session_factory()() as session:
+            count_res = await session.execute(
+                select(func.count()).where(ProductImage.product_id == product_id)
+            )
+            count = count_res.scalar() or 0
+            img = ProductImage(product_id=product_id, path=path, is_main=(count == 0), sort=count)
+            session.add(img)
+            await session.commit()
+            await session.refresh(img)
+            return _JSONResponse({"id": img.id, "path": img.path, "is_main": img.is_main})
+
+    @app.delete("/admin-api/product-image/{image_id}")
+    async def admin_delete_product_image(image_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from app.models.product import ProductImage
+        from sqlalchemy import select
+        async with get_session_factory()() as session:
+            res = await session.execute(select(ProductImage).where(ProductImage.id == image_id))
+            img = res.scalar_one_or_none()
+            if img:
+                await session.delete(img)
+                await session.commit()
+        return _JSONResponse({"ok": True})
+
+    @app.post("/admin-api/product-image/{image_id}/set-main")
+    async def admin_set_main_image(image_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from app.models.product import ProductImage
+        from sqlalchemy import select
+        async with get_session_factory()() as session:
+            res = await session.execute(select(ProductImage).where(ProductImage.id == image_id))
+            img = res.scalar_one_or_none()
+            if not img:
+                return _JSONResponse(status_code=404, content={"error": "Not found"})
+            all_res = await session.execute(
+                select(ProductImage).where(ProductImage.product_id == img.product_id)
+            )
+            for i in all_res.scalars().all():
+                i.is_main = (i.id == image_id)
+            await session.commit()
+        return _JSONResponse({"ok": True})
 
     @app.post("/admin-api/order/{order_id}/status")
     async def admin_update_order_status(order_id: int, request: Request):
@@ -538,7 +818,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "sort_order": "Порядок",
             "name": "Название",
             "category": "Категория",
-            "base_price": "Базовая цена",
+            "base_price": "Цена за 1 г. (₽)",
             "slug": "API тег",
             "description": "Описание",
             "origin": "Происхождение",
@@ -546,17 +826,40 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "is_active": "Активен",
         }
         column_formatters = {
-            "base_price": lambda m, a: f"{float(m.base_price):.0f} ₽",
+            "base_price": lambda m, a: f"{float(m.base_price):.2f} ₽/г",
         }
         form_columns = [
             "category", "name", "slug", "base_price",
             "description", "origin", "tags", "sort_order", "is_active",
         ]
-        inline_models = [
-            (ProductVariant, {"form_columns": ["weight_g", "price", "sku", "in_stock"]}),
-            (ProductImage, {"form_columns": ["path", "is_main", "sort", "alt"]}),
-        ]
         page_size = 50
+
+        async def after_model_change(self, data, model, is_created, request):
+            from app.db import get_session_factory
+            from app.models.product import ProductVariant
+            from sqlalchemy import select
+
+            price_per_gram = float(model.base_price)
+            async with get_session_factory()() as session:
+                for weight in (25, 50, 75, 100):
+                    res = await session.execute(
+                        select(ProductVariant).where(
+                            ProductVariant.product_id == model.id,
+                            ProductVariant.weight_g == weight,
+                        )
+                    )
+                    variant = res.scalar_one_or_none()
+                    price = round(price_per_gram * weight, 2)
+                    if variant:
+                        variant.price = price
+                    else:
+                        session.add(ProductVariant(
+                            product_id=model.id,
+                            weight_g=weight,
+                            price=price,
+                            in_stock=True,
+                        ))
+                await session.commit()
 
     class BannerAdmin(ModelView, model=Banner):
         name = "↳ Баннеры"
