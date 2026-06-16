@@ -12,7 +12,7 @@ from app.db import get_db
 from app.deps import CurrentUser, get_current_user
 from app.models.cart import Cart, CartItem
 from app.models.delivery import DeliveryInfo
-from app.models.enums import DELIVERY_TYPE_VALUES, PAYMENT_STATUS_VALUES
+from app.models.enums import DELIVERY_STATUS_VALUES, DELIVERY_TYPE_VALUES, PAYMENT_STATUS_VALUES
 from app.models.order import Order, OrderItem
 from app.models.product import Product, ProductVariant
 from app.schemas import (
@@ -20,6 +20,7 @@ from app.schemas import (
     OrderCreate,
     OrderDetail,
     OrderItemSnapshot,
+    OrderStatusUpdate,
     ProfileOut,
 )
 
@@ -264,4 +265,72 @@ async def create_order(
             "address": delivery.address,
             "contact_phone": delivery.contact_phone,
         },
+    )
+
+
+@router.patch("/orders/{order_number}/status", response_model=OrderDetail)
+async def update_order_status(
+    order_number: str,
+    body: OrderStatusUpdate,
+    user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> OrderDetail:
+    """Обновляет статус доставки заказа (только для is_admin=True).
+
+    После смены статуса отправляет уведомление клиенту через бота.
+    """
+    if not user.user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    if body.status_delivery not in DELIVERY_STATUS_VALUES:
+        raise HTTPException(status_code=400, detail="Invalid status_delivery")
+
+    stmt = select(Order).where(Order.number == order_number)
+    result = await session.execute(stmt)
+    order = result.scalar_one_or_none()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    old_status = order.status_delivery
+    order.status_delivery = body.status_delivery
+
+    if body.status_delivery == "delivered":
+        order.delivered_at = datetime.now(timezone.utc)
+
+    await session.commit()
+    await session.refresh(order, ["items", "delivery_info", "user"])
+
+    # Уведомляем клиента если статус изменился
+    if old_status != body.status_delivery and order.user:
+        try:
+            from app.bot.status_notify import notify_status_changed
+            await notify_status_changed(order, body.status_delivery, order.user.telegram_id)
+        except Exception:
+            pass
+
+    di = order.delivery_info
+    return OrderDetail(
+        id=order.id,
+        number=order.number,
+        total_amount=float(order.total_amount),
+        delivery_cost=float(order.delivery_cost),
+        status_payment=order.status_payment,
+        status_delivery=order.status_delivery,
+        comment=order.comment,
+        paid_at=order.paid_at,
+        delivered_at=order.delivered_at,
+        created_at=order.created_at,
+        items=[
+            OrderItemSnapshot(
+                id=oi.id,
+                product_id=oi.product_id,
+                variant_id=oi.variant_id,
+                quantity=oi.quantity,
+                unit_price=float(oi.unit_price),
+                snapshot_name=oi.snapshot_name,
+                snapshot_weight_g=oi.snapshot_weight_g,
+            )
+            for oi in order.items
+        ],
+        delivery_info={"type": di.type, "address": di.address or "", "contact_phone": di.contact_phone} if di else None,
     )

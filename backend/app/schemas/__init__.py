@@ -223,6 +223,12 @@ class OrderCreate(BaseModel):
     contact_phone: str | None = None
 
 
+class OrderStatusUpdate(BaseModel):
+    """Обновление статуса доставки менеджером."""
+
+    status_delivery: str
+
+
 # ===================== Профиль =====================
 
 class ProfileOut(BaseModel):
