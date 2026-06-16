@@ -24,6 +24,7 @@ os.environ["JWT_SECRET"] = "test-secret-at-least-16-chars"
 os.environ["BOT_TOKEN"] = "0:fake"
 os.environ["DEBUG"] = "true"
 os.environ["CORS_ORIGINS"] = ""
+os.environ["YOOKASSA_PROVIDER_TOKEN"] = "test_provider_token"
 
 from app.config import get_settings
 
