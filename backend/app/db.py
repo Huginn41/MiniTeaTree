@@ -73,6 +73,7 @@ def _build_engine(database_url: str) -> AsyncEngine:
         def _enable_fk(dbapi_conn, _record):  # pragma: no cover
             cur = dbapi_conn.cursor()
             cur.execute("PRAGMA foreign_keys=ON")
+            cur.execute("PRAGMA case_sensitive_like=OFF")
             cur.close()
 
     return eng
