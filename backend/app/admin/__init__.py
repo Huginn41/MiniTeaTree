@@ -283,7 +283,6 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     from app.config import get_settings
     from app.models.admin import AdminUser
     from app.models.banner import Banner
-    from app.models.cart import CartItem
     from app.models.category import Category
     from app.models.content import FaqItem, PickupPoint
     from app.models.delivery import DeliveryInfo

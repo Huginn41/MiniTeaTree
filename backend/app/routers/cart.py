@@ -107,7 +107,8 @@ async def add_to_cart(
         existing = CartItem(cart_id=cart.id, variant_id=body.variant_id, quantity=body.quantity)
         session.add(existing)
 
-    await session.flush()
+    await session.commit()
+    await session.refresh(existing)
 
     # Данные товара.
     product_stmt = select(Product).where(Product.id == variant.product_id)
@@ -145,11 +146,12 @@ async def update_cart_item(
 
     if body.quantity == 0:
         await session.delete(target)
-        await session.flush()
+        await session.commit()
         raise HTTPException(status_code=204, detail="Removed")
 
     target.quantity = body.quantity
-    await session.flush()
+    await session.commit()
+    await session.refresh(target)
 
     variant = target.variant
     product_stmt = select(Product).where(Product.id == variant.product_id)
@@ -185,4 +187,4 @@ async def delete_cart_item(
         raise HTTPException(status_code=404, detail="Cart item not found")
 
     await session.delete(target)
-    await session.flush()
+    await session.commit()

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -12,7 +12,7 @@ from app.db import get_db
 from app.deps import CurrentUser, get_current_user
 from app.models.cart import Cart, CartItem
 from app.models.delivery import DeliveryInfo
-from app.models.enums import DELIVERY_STATUS_VALUES, DELIVERY_TYPE_VALUES, PAYMENT_STATUS_VALUES
+from app.models.enums import DELIVERY_STATUS_VALUES, DELIVERY_TYPE_VALUES
 from app.models.order import Order, OrderItem
 from app.models.product import Product, ProductVariant
 from app.schemas import (
@@ -295,7 +295,7 @@ async def update_order_status(
     order.status_delivery = body.status_delivery
 
     if body.status_delivery == "delivered":
-        order.delivered_at = datetime.now(timezone.utc)
+        order.delivered_at = datetime.now(UTC)
 
     await session.commit()
     await session.refresh(order, ["items", "delivery_info", "user"])
