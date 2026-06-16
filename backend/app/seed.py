@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 
-from passlib.hash import bcrypt
+import bcrypt as _bcrypt_lib
 from sqlalchemy import select
 
 from app.db import Base, configure_engine, get_engine, get_session_factory
@@ -237,7 +237,7 @@ PICKUP_POINTS = [
 async def _seed_categories(factory) -> dict[str, int]:
     """Создаёт категории, возвращает {slug: id}."""
     slug_to_id: dict[str, int] = {}
-    async with factory()() as session:
+    async with factory() as session:
         for cat_data in CATEGORIES:
             exists = await session.execute(
                 select(Category).where(Category.slug == cat_data["slug"])
@@ -256,7 +256,7 @@ async def _seed_categories(factory) -> dict[str, int]:
 
 async def _seed_products(slug_to_id: dict[str, int], factory) -> None:
     """Создаёт товары с вариантами."""
-    async with factory()() as session:
+    async with factory() as session:
         for prod_data in PRODUCTS:
             exists = await session.execute(select(Product).where(Product.slug == prod_data["slug"]))
             if exists.scalar_one_or_none() is not None:
@@ -299,7 +299,7 @@ async def _seed_products(slug_to_id: dict[str, int], factory) -> None:
 
 
 async def _seed_banners(factory) -> None:
-    async with factory()() as session:
+    async with factory() as session:
         for b in BANNERS:
             exists = await session.execute(
                 select(Banner).where(Banner.image_path == b["image_path"])
@@ -311,7 +311,7 @@ async def _seed_banners(factory) -> None:
 
 
 async def _seed_faq(factory) -> None:
-    async with factory()() as session:
+    async with factory() as session:
         for f in FAQ_ITEMS:
             exists = await session.execute(select(FaqItem).where(FaqItem.question == f["question"]))
             if exists.scalar_one_or_none() is not None:
@@ -321,7 +321,7 @@ async def _seed_faq(factory) -> None:
 
 
 async def _seed_pickup_points(factory) -> None:
-    async with factory()() as session:
+    async with factory() as session:
         for pp in PICKUP_POINTS:
             exists = await session.execute(
                 select(PickupPoint).where(PickupPoint.address == pp["address"])
@@ -336,7 +336,7 @@ async def _seed_admin(factory) -> None:
     from app.config import get_settings
 
     settings = get_settings()
-    async with factory()() as session:
+    async with factory() as session:
         exists = await session.execute(
             select(AdminUser).where(AdminUser.username == settings.admin_username)
         )
@@ -345,7 +345,10 @@ async def _seed_admin(factory) -> None:
         session.add(
             AdminUser(
                 username=settings.admin_username,
-                password_hash=bcrypt.hash(settings.admin_password.get_secret_value()),
+                password_hash=_bcrypt_lib.hashpw(
+                    settings.admin_password.get_secret_value().encode(),
+                    _bcrypt_lib.gensalt(),
+                ).decode(),
                 is_superuser=True,
             )
         )
@@ -357,7 +360,7 @@ async def _seed_notification_targets(factory) -> None:
     from app.config import get_settings
 
     settings = get_settings()
-    async with factory()() as session:
+    async with factory() as session:
         for tid in settings.admin_telegram_id_list:
             exists = await session.execute(
                 select(NotificationTarget).where(NotificationTarget.telegram_id == tid)
