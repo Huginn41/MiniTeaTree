@@ -1,0 +1,28 @@
+# ============================================================
+#  Переопределения для локальной разработки.
+#  Запуск: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#  - хот-релоад uvicorn (--reload)
+#  - пробрасываем исходники внутрь контейнера
+#  - nginx отключаем ( ходим напрямую на :8000 )
+# ============================================================
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ./backend:/app
+      - media_data:/app/app/static/media
+    environment:
+      APP_ENV: development
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+    ports:
+      - "8000:8000"
+
+  nginx:
+    profiles: ["nginx"]   # по умолчанию не запускается в dev; поднять через --profile nginx

@@ -1,0 +1,96 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ---------- Virtual envs ----------
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ---------- uv / poetry ----------
+# keep uv.lock (uncomment to ignore)
+# uv.lock
+poetry.lock
+
+# ---------- Tests / coverage ----------
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# ---------- IDE ----------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ---------- Env / secrets ----------
+.env
+.env.*
+!.env.example
+
+# ---------- Docker ----------
+# не игнорируем docker-compose.override.yml разработчика — но если есть локально, игнорируем
+docker-compose.override.yml
+
+# ---------- Runtime data / media uploads ----------
+backend/app/static/media/products/*
+!backend/app/static/media/products/.gitkeep
+backend/app/static/media/banners/*
+!backend/app/static/media/banners/.gitkeep
+
+# ---------- Database ----------
+*.sqlite3
+*.db
+pgdata/
+postgres-data/
+
+# ---------- Nginx / TLS ----------
+nginx/ssl/*
+!nginx/ssl/.gitkeep
+nginx/logs/
+
+# ---------- Backups ----------
+backups/
+*.dump
+*.sql.gz
+
+# ---------- Frontend build (на будущее) ----------
+node_modules/
+miniapp/dist/
+miniapp/.parcel-cache/
+
+# ---------- Misc ----------
+*.log
+*.pid
