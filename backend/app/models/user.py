@@ -38,5 +38,33 @@ class User(TimestampMixin, Base):
     cart = relationship("Cart", back_populates="user", uselist=False, lazy="selectin")
     orders = relationship("Order", back_populates="user", lazy="selectin")
 
+    @property
+    def display_name(self) -> str:
+        parts = [self.first_name or "", self.last_name or ""]
+        name = " ".join(p for p in parts if p).strip()
+        if self.username:
+            name = f"{name} (@{self.username})" if name else f"@{self.username}"
+        return name or f"tg:{self.telegram_id}"
+
+    @property
+    def total_orders(self) -> int:
+        return len(self.orders) if self.orders else 0
+
+    @property
+    def total_spent(self) -> float:
+        return sum(float(o.total_amount) for o in self.orders) if self.orders else 0.0
+
+    @property
+    def avg_check(self) -> float:
+        if not self.orders:
+            return 0.0
+        return self.total_spent / len(self.orders)
+
+    @property
+    def first_order_date(self):
+        if not self.orders:
+            return None
+        return min(o.created_at for o in self.orders)
+
     def __repr__(self) -> str:
         return f"<User id={self.id} tg={self.telegram_id}>"

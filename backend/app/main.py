@@ -82,7 +82,9 @@ def create_app() -> FastAPI:
     # ---------- Middleware ----------
     # SessionMiddleware нужна для SQLAdmin (хранение состояния аутентификации).
     from starlette.middleware.sessions import SessionMiddleware
+    from app.admin import _AdminCollapseMiddleware
 
+    app.add_middleware(_AdminCollapseMiddleware)
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.jwt_secret.get_secret_value(),
@@ -120,6 +122,18 @@ def create_app() -> FastAPI:
 
     # ---------- Роутеры ----------
     _register_routers(app)
+
+    # ---------- Статика ----------
+    from pathlib import Path
+    from fastapi.staticfiles import StaticFiles
+
+    static_dir = Path(__file__).parent.parent / "static"
+    static_dir.mkdir(exist_ok=True)
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+    frontend_dir = Path(__file__).parent.parent.parent / "frontend"
+    if frontend_dir.exists():
+        app.mount("/app", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
 
     # ---------- Telegram-бот (webhook endpoint) ----------
     from app.bot import setup_bot

@@ -355,14 +355,13 @@
       display: flex;
       overflow-x: auto;
       gap: 12px;
-      margin: 0 -16px;
-      padding: 4px 16px 12px;
+      padding: 4px 0 12px;
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
     }
     .banner-card {
       flex-shrink: 0;
-      width: calc(100vw - 48px);
+      width: calc(100% - 24px);
       max-width: 400px;
       border-radius: var(--radius-lg);
       overflow: hidden;
@@ -383,8 +382,8 @@
       background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
       color: white;
     }
-    .banner-overlay h3 { font-size: 15px; font-weight: 700; }
-    .banner-overlay p  { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+    .banner-overlay h3 { font-size: 15px; font-weight: 700; margin: 0 0 2px; }
+    .banner-overlay p  { font-size: 12px; opacity: 0.85; margin: 0; }
 
     /* ===== Category Grid ===== */
     .category-grid {
@@ -904,6 +903,12 @@
     d.textContent = s;
     return d.innerHTML;
   }
+
+  function imgUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http') || path.startsWith('/')) return path;
+    return '/static/' + path;
+  }
   function fmtPrice(n) {
     return Number(n).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
@@ -1024,7 +1029,7 @@
         html += `<div class="banner-scroll">
           ${banners.map(b => `
             <div class="banner-card">
-              <img src="${b.image_path}" alt="${esc(b.title || '')}" loading="lazy"/>
+              <img src="${imgUrl(b.image_path)}" alt="${esc(b.title || '')}" loading="lazy"/>
               ${b.title ? `<div class="banner-overlay"><h3>${esc(b.title)}</h3>${b.subtitle ? `<p>${esc(b.subtitle)}</p>` : ''}</div>` : ''}
             </div>
           `).join('')}
@@ -1368,15 +1373,17 @@
 
       // Шаги процесса: показываем прогресс заказа
       const steps = [
-        { key: 'new',                       label: 'Заказ принят' },
-        { key: 'manager_contacted',          label: 'Менеджер связался' },
-        { key: 'awaiting_delivery_payment',  label: 'Ожидает оплаты доставки' },
-        { key: 'delivery_paid',              label: 'Доставка оплачена' },
-        { key: 'shipping',                   label: 'В пути' },
-        { key: 'delivered',                  label: 'Доставлен' },
+        { key: 'new',      label: 'Заказ принят' },
+        { key: 'shipping', label: 'В пути' },
+        { key: 'delivered', label: 'Доставлен' },
       ];
-      const cancelledOrDone = ['cancelled', 'delivered'];
-      const currentStepIdx = steps.findIndex(s => s.key === o.status_delivery);
+      const _stepMap = {
+        new: 0, manager_contacted: 0,
+        awaiting_delivery_payment: 0, delivery_paid: 0,
+        shipping: 1, delivered: 2,
+      };
+      const isDelivered = o.status_delivery === 'delivered';
+      const currentStepIdx = _stepMap[o.status_delivery] ?? 0;
       const isCancelled = o.status_delivery === 'cancelled';
 
       let progressHtml = '';
@@ -1387,8 +1394,8 @@
       } else {
         progressHtml = `<div style="display:flex;flex-direction:column;gap:0">
           ${steps.map((step, i) => {
-            const done = i < currentStepIdx;
-            const active = i === currentStepIdx;
+            const done = isDelivered || i < currentStepIdx;
+            const active = !isDelivered && i === currentStepIdx;
             const color = done || active ? 'var(--md-primary)' : 'var(--md-outline)';
             const bgDot = done ? 'var(--md-primary)' : active ? 'var(--md-primary-container)' : 'var(--md-surface-container)';
             const borderDot = done || active ? 'var(--md-primary)' : 'var(--md-outline)';
@@ -1563,7 +1570,7 @@
   }
   function _delLabel(s) {
     return {
-      new: 'Новый', manager_contacted: 'Менеджер', awaiting_delivery_payment: 'Ожидает оплату',
+      new: 'Новый', manager_contacted: 'Обрабатывается', awaiting_delivery_payment: 'Ожидает оплату',
       delivery_paid: 'Оплачено', shipping: 'В доставке', delivered: 'Доставлен', cancelled: 'Отменён',
     }[s] || s;
   }

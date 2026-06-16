@@ -100,8 +100,8 @@ def parse_init_data(init_data: str, bot_token: str) -> InitDataResult:
     pairs = sorted((k, v) for k, vals in parsed.items() for v in vals if k != "hash")
     data_check_string = "\n".join(f"{k}={v}" for k, v in pairs)
 
-    # HMAC-SHA256
-    secret_key = hashlib.sha256(bot_token.encode()).digest()
+    # HMAC-SHA256 (Mini App: ключ = HMAC("WebAppData", bot_token))
+    secret_key = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
     computed_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(computed_hash, hash_value):
