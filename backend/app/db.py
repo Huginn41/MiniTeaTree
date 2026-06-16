@@ -61,7 +61,21 @@ def _build_engine(database_url: str) -> AsyncEngine:
         kwargs["max_overflow"] = settings.db_max_overflow
         kwargs["pool_timeout"] = settings.db_pool_timeout
         kwargs["pool_recycle"] = settings.db_pool_recycle
-    return create_async_engine(database_url, **kwargs)
+    else:
+        # SQLite: enforcement foreign keys включаем слушателем ниже (каскады
+        # иначе игнорируются). check_same_thread — для тестов/asyncio.
+        kwargs["connect_args"] = {"check_same_thread": False}
+    eng = create_async_engine(database_url, **kwargs)
+    if is_sqlite:
+        from sqlalchemy import event as _event
+
+        @_event.listens_for(eng.sync_engine, "connect")
+        def _enable_fk(dbapi_conn, _record):  # pragma: no cover
+            cur = dbapi_conn.cursor()
+            cur.execute("PRAGMA foreign_keys=ON")
+            cur.close()
+
+    return eng
 
 
 # Лениво инициализируемые движок и фабрика сессий.
