@@ -242,8 +242,8 @@ async def _seed_categories(factory) -> dict[str, int]:
             exists = await session.execute(
                 select(Category).where(Category.slug == cat_data["slug"])
             )
-            if exists.scalar_one_or_none() is not None:
-                cat = exists.scalar_one()
+            cat = exists.scalar_one_or_none()
+            if cat is not None:
                 slug_to_id[cat.slug] = cat.id
                 continue
             cat = Category(**cat_data)
