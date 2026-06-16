@@ -56,12 +56,6 @@ class Settings(BaseSettings):
     jwt_refresh_ttl_days: int = 30
     telegram_initdata_max_age_seconds: int = 86400
 
-    # ---------- Платежи (ЮKassa / Telegram Payments) ----------
-    yookassa_provider_token: SecretStr = SecretStr("")
-    yookassa_shop_id: str = ""
-    yookassa_secret_key: SecretStr = SecretStr("")
-    yookassa_webhook_url: str = ""
-
     # ---------- Безопасность ----------
     max_upload_bytes: int = 5 * 1024 * 1024  # 5 МБ
 

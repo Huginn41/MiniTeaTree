@@ -177,6 +177,7 @@ class DeliveryInfoOut(BaseModel):
     type: str
     address: str = ""
     contact_phone: str | None = None
+    ym_payment_link: str | None = None
 
     model_config = {"from_attributes": True}
 

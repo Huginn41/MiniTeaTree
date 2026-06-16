@@ -16,6 +16,7 @@ from app.models.enums import DELIVERY_STATUS_VALUES, DELIVERY_TYPE_VALUES
 from app.models.order import Order, OrderItem
 from app.models.product import Product, ProductVariant
 from app.schemas import (
+    DeliveryInfoOut,
     OrderBrief,
     OrderCreate,
     OrderDetail,
@@ -104,14 +105,6 @@ async def get_order(
         raise HTTPException(status_code=404, detail="Order not found")
 
     delivery_out = None
-    if order.delivery_info:
-        di = order.delivery_info
-        delivery_out = {
-            "type": di.type,
-            "address": di.address or "",
-            "contact_phone": di.contact_phone,
-        }
-
     return OrderDetail(
         id=order.id,
         number=order.number,
@@ -135,7 +128,7 @@ async def get_order(
             )
             for oi in order.items
         ],
-        delivery_info=delivery_out,
+        delivery_info=DeliveryInfoOut.model_validate(order.delivery_info) if order.delivery_info else None,
     )
 
 
@@ -260,11 +253,7 @@ async def create_order(
             )
             for oi in order.items
         ],
-        delivery_info={
-            "type": delivery.type,
-            "address": delivery.address,
-            "contact_phone": delivery.contact_phone,
-        },
+        delivery_info=DeliveryInfoOut.model_validate(delivery),
     )
 
 
@@ -332,5 +321,5 @@ async def update_order_status(
             )
             for oi in order.items
         ],
-        delivery_info={"type": di.type, "address": di.address or "", "contact_phone": di.contact_phone} if di else None,
+        delivery_info=DeliveryInfoOut.model_validate(di) if di else None,
     )
