@@ -637,8 +637,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     .variant-btn:active { transform: scale(0.96); }
-    .variant-btn.available:hover,
-    .variant-btn.available:active {
+    .variant-btn.available.selected {
       border-color: var(--md-primary);
       background: var(--md-primary-container);
     }
@@ -646,6 +645,35 @@
     .variant-btn .v-weight { font-size: 15px; font-weight: 700; color: var(--md-on-surface); }
     .variant-btn .v-price  { font-size: 13px; color: var(--md-primary); margin-top: 2px; font-weight: 600; }
     .variant-btn .v-oos    { font-size: 11px; color: var(--md-error); margin-top: 3px; }
+
+    .variant-actions {
+      display: none;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .variant-actions.visible { display: flex; }
+    .variant-actions .btn-cart {
+      flex: 1;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--md-primary);
+      background: transparent;
+      color: var(--md-primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .variant-actions .btn-buy {
+      flex: 1;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
 
     /* ===== Cart ===== */
     .cart-item {
@@ -1236,16 +1264,21 @@
 
         ${p.variants.length ? `
           <div style="margin-top:20px">
-            <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase">Выберите вес и добавьте в корзину</p>
-            <div class="variant-grid">
+            <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase">Выберите вес</p>
+            <div class="variant-grid" id="variant-grid">
               ${p.variants.map(v => `
                 <button class="variant-btn ${v.in_stock ? 'available' : 'out'}"
-                  ${v.in_stock ? `onclick="App.addToCart(${v.id})"` : 'disabled'}>
+                  data-variant-id="${v.id}" data-price="${v.price}" data-weight="${v.weight_g}"
+                  ${!v.in_stock ? 'disabled' : ''}>
                   <div class="v-weight">${v.weight_g} г</div>
                   <div class="v-price">${fmtPrice(v.price)} ₽</div>
                   ${!v.in_stock ? '<div class="v-oos">Нет в наличии</div>' : ''}
                 </button>
               `).join('')}
+            </div>
+            <div class="variant-actions" id="variant-actions">
+              <button class="btn-cart" id="btn-to-cart">В корзину</button>
+              <button class="btn-buy" id="btn-buy">Купить</button>
             </div>
           </div>
         ` : ''}
@@ -1254,6 +1287,42 @@
 
       c.innerHTML = html;
       if (p.images.length) this._initGallery(p.images);
+      this._initVariantSelect();
+    },
+
+    _initVariantSelect() {
+      const grid    = document.getElementById('variant-grid');
+      const actions = document.getElementById('variant-actions');
+      const btnCart = document.getElementById('btn-to-cart');
+      const btnBuy  = document.getElementById('btn-buy');
+      if (!grid || !actions) return;
+
+      let selectedId = null;
+
+      grid.querySelectorAll('.variant-btn.available').forEach(btn => {
+        btn.addEventListener('click', () => {
+          grid.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedId = parseInt(btn.dataset.variantId);
+          actions.classList.add('visible');
+          tg?.HapticFeedback?.selectionChanged?.();
+          setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 50);
+        });
+      });
+
+      btnCart.addEventListener('click', async () => {
+        if (!selectedId) return;
+        await App.addToCart(selectedId);
+        actions.classList.remove('visible');
+        grid.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('selected'));
+        selectedId = null;
+      });
+
+      btnBuy.addEventListener('click', async () => {
+        if (!selectedId) return;
+        await App.addToCart(selectedId);
+        App.navigate('cart');
+      });
     },
 
     _initGallery(images) {
