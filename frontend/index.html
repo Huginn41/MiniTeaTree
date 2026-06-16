@@ -2,129 +2,882 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Чайное Дерево</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f0fdf4',
-              100: '#dcfce7',
-              200: '#bbf7d0',
-              300: '#86efac',
-              400: '#4ade80',
-              500: '#166534',
-              600: '#14532d',
-              700: '#052e16',
-              800: '#022c22',
-              900: '#011e17',
-            }
-          }
-        }
-      }
-    }
-  </script>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #f0fdf4;
+    /* ===== MD3 Color Tokens ===== */
+    :root {
+      --md-primary: #2D6A4F;
+      --md-primary-light: #40916C;
+      --md-on-primary: #FFFFFF;
+      --md-primary-container: #D8F3DC;
+      --md-on-primary-container: #1B4332;
+      --md-secondary: #74A57F;
+      --md-secondary-container: #E8F5E9;
+      --md-surface: #FFFDF5;
+      --md-surface-container: #F4EEE3;
+      --md-surface-container-high: #EDE7DB;
+      --md-surface-variant: #F0EBE1;
+      --md-on-surface: #1C1B1B;
+      --md-on-surface-variant: #4A4A4A;
+      --md-outline: #C8C0B4;
+      --md-outline-variant: #E5DDD3;
+      --md-error: #B3261E;
+      --md-error-container: #FCDAD7;
+      --md-scrim: rgba(0,0,0,0.4);
+      --md-shadow-1: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.10);
+      --md-shadow-2: 0 3px 8px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.08);
+      --md-shadow-3: 0 6px 16px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08);
+      --radius-xs: 8px;
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-xl: 28px;
+    }
+
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--md-surface);
+      color: var(--md-on-surface);
       -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
     }
-    /* Custom scrollbar for Telegram style */
+
+    body {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100svh;
+      padding-bottom: 80px;
+      position: relative;
+    }
+
     ::-webkit-scrollbar { width: 0; height: 0; }
-    /* Skeleton loading */
+
+    /* ===== Typography ===== */
+    .label-small   { font-size: 11px; font-weight: 500; letter-spacing: 0.5px; line-height: 1.4; }
+    .label-medium  { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; line-height: 1.4; }
+    .label-large   { font-size: 14px; font-weight: 600; letter-spacing: 0.1px; line-height: 1.4; }
+    .body-small    { font-size: 12px; font-weight: 400; line-height: 1.5; }
+    .body-medium   { font-size: 14px; font-weight: 400; line-height: 1.5; }
+    .body-large    { font-size: 16px; font-weight: 400; line-height: 1.6; }
+    .title-small   { font-size: 14px; font-weight: 600; line-height: 1.4; }
+    .title-medium  { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .title-large   { font-size: 22px; font-weight: 700; line-height: 1.3; }
+    .headline-small{ font-size: 24px; font-weight: 700; line-height: 1.2; }
+
+    /* ===== Top Bar ===== */
+    #top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+      padding: 0 4px 0 8px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: var(--md-shadow-2);
+    }
+
+    #back-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px; height: 40px;
+      cursor: pointer;
+      opacity: 0.9;
+      transition: opacity 0.15s;
+      background: none;
+      border: none;
+      color: inherit;
+      padding: 0;
+    }
+    #back-btn:active { opacity: 0.6; }
+    #back-btn.visible { display: flex; }
+
+    #header-title {
+      flex: 1;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      padding-left: 4px;
+    }
+
+    /* ===== Main Content ===== */
+    #app-content {
+      padding: 16px;
+      min-height: calc(100svh - 56px - 80px);
+    }
+
+    /* ===== Page Transition ===== */
+    .page-enter {
+      animation: pageEnter 0.22s cubic-bezier(0.2, 0, 0, 1) both;
+    }
+    @keyframes pageEnter {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== Bottom Navigation ===== */
+    #bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--md-surface);
+      border-top: 1px solid var(--md-outline-variant);
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    .nav-bar {
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 4px 0 8px;
+      color: var(--md-on-surface-variant);
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    .nav-item .nav-icon-wrap {
+      position: relative;
+      width: 64px; height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      transition: background 0.2s;
+    }
+
+    .nav-item.active { color: var(--md-on-primary-container); }
+    .nav-item.active .nav-icon-wrap {
+      background: var(--md-primary-container);
+    }
+
+    .nav-item .nav-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.4px;
+      line-height: 1;
+    }
+
+    .nav-badge {
+      position: absolute;
+      top: -2px; right: 8px;
+      min-width: 16px; height: 16px;
+      border-radius: 8px;
+      background: var(--md-error);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
+
+    /* ===== Cards ===== */
+    .md-card {
+      background: var(--md-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--md-shadow-1);
+      overflow: hidden;
+      border: 1px solid var(--md-outline-variant);
+    }
+    .md-card-filled {
+      background: var(--md-surface-container);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    /* ===== Buttons ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      letter-spacing: 0.1px;
+      transition: box-shadow 0.15s, background 0.15s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-filled {
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+      border-radius: 100px;
+      padding: 14px 24px;
+      font-size: 15px;
+    }
+    .btn-filled:hover { box-shadow: var(--md-shadow-2); }
+
+    .btn-tonal {
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+      border-radius: 100px;
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+    .btn-outlined {
+      background: transparent;
+      color: var(--md-primary);
+      border: 1.5px solid var(--md-outline);
+      border-radius: 100px;
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+
+    .btn-icon {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--md-surface-container);
+      color: var(--md-on-surface);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-icon:active { transform: scale(0.92); }
+
+    /* ===== Ripple ===== */
+    .ripple-container { position: relative; overflow: hidden; }
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transform: scale(0);
+      animation: rippleAnim 0.45s linear;
+      pointer-events: none;
+    }
+    @keyframes rippleAnim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    /* ===== Chips ===== */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1.5px solid var(--md-outline-variant);
+      background: var(--md-surface);
+      color: var(--md-on-surface-variant);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .chip.active {
+      background: var(--md-primary-container);
+      border-color: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+      font-weight: 600;
+    }
+
+    /* ===== Skeleton ===== */
     .skeleton {
-      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background: linear-gradient(90deg,
+        var(--md-surface-container) 25%,
+        var(--md-surface-container-high) 50%,
+        var(--md-surface-container) 75%
+      );
       background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
+      animation: shimmer 1.4s ease-in-out infinite;
+      border-radius: var(--radius-sm);
     }
-    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-    /* Bottom nav */
-    .nav-item { transition: color 0.2s; }
-    .nav-item.active { color: #166534; }
-    .nav-item:not(.active) { color: #6b7280; }
-    /* Badge */
-    .cart-badge {
-      position: absolute; top: -6px; right: -6px;
-      min-width: 18px; height: 18px; border-radius: 9px;
-      background: #dc2626; color: white; font-size: 11px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 600; padding: 0 4px;
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
+
+    /* ===== Divider ===== */
+    .divider {
+      height: 1px;
+      background: var(--md-outline-variant);
+      margin: 12px 0;
+    }
+
+    /* ===== Section Header ===== */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin: 20px 0 12px;
+    }
+    .section-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--md-on-surface);
+      letter-spacing: -0.1px;
+    }
+    .section-header a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--md-primary-light);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    /* ===== Banner Slider ===== */
+    .banner-scroll {
+      display: flex;
+      overflow-x: auto;
+      gap: 12px;
+      margin: 0 -16px;
+      padding: 4px 16px 12px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .banner-card {
+      flex-shrink: 0;
+      width: calc(100vw - 48px);
+      max-width: 400px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--md-shadow-2);
+      scroll-snap-align: start;
+      position: relative;
+    }
+    .banner-card img {
+      width: 100%; height: 160px;
+      object-fit: cover;
+      display: block;
+      background: var(--md-surface-container);
+    }
+    .banner-overlay {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 32px 16px 14px;
+      background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
+      color: white;
+    }
+    .banner-overlay h3 { font-size: 15px; font-weight: 700; }
+    .banner-overlay p  { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+    /* ===== Category Grid ===== */
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .category-tile {
+      background: var(--md-surface-container);
+      border-radius: var(--radius-md);
+      padding: 14px 8px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, transform 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .category-tile:active { transform: scale(0.96); background: var(--md-primary-container); }
+    .category-tile .cat-icon {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--md-surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: var(--md-shadow-1);
+    }
+    .category-tile span {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--md-on-primary-container);
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* ===== Product Cards ===== */
+    .products-scroll {
+      display: flex;
+      overflow-x: auto;
+      gap: 10px;
+      margin: 0 -16px;
+      padding: 4px 16px 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .product-card-small {
+      flex-shrink: 0;
+      width: 148px;
+      background: var(--md-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--md-outline-variant);
+      overflow: hidden;
+      box-shadow: var(--md-shadow-1);
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .product-card-small:active { transform: scale(0.97); }
+    .product-card-small .pcard-img {
+      width: 100%; height: 120px;
+      object-fit: cover;
+      background: var(--md-surface-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+    .product-card-small .pcard-img img { width: 100%; height: 120px; object-fit: cover; display: block; }
+    .product-card-small .pcard-body { padding: 10px; }
+    .product-card-small .pcard-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--md-on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .product-card-small .pcard-cat {
+      font-size: 11px;
+      color: var(--md-on-surface-variant);
+      margin-top: 2px;
+    }
+    .product-card-small .pcard-price {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--md-primary);
+      margin-top: 6px;
+    }
+
+    .products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .product-card-grid {
+      background: var(--md-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--md-outline-variant);
+      overflow: hidden;
+      box-shadow: var(--md-shadow-1);
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .product-card-grid:active { transform: scale(0.97); }
+    .product-card-grid .pcard-img {
+      width: 100%; height: 130px;
+      background: var(--md-surface-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+    .product-card-grid .pcard-img img { width: 100%; height: 130px; object-fit: cover; display: block; }
+    .product-card-grid .pcard-body { padding: 10px; }
+
+    /* ===== Chip scroll ===== */
+    .chips-scroll {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      margin: 0 -16px;
+      padding: 4px 16px 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ===== Product Detail ===== */
+    .product-images-scroll {
+      display: flex;
+      overflow-x: auto;
+      gap: 10px;
+      margin: -16px -16px 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    .product-images-scroll img {
+      flex-shrink: 0;
+      width: 100%;
+      max-width: 100vw;
+      height: 260px;
+      object-fit: cover;
+      display: block;
+      background: var(--md-surface-container);
+    }
+
+    .product-info-sheet {
+      background: var(--md-surface);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      margin-top: -24px;
+      position: relative;
+      z-index: 1;
+      padding: 20px 16px 0;
+    }
+
+    .variant-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+    .variant-btn {
+      border: 1.5px solid var(--md-outline-variant);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--md-surface);
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .variant-btn:active { transform: scale(0.96); }
+    .variant-btn.available:hover,
+    .variant-btn.available:active {
+      border-color: var(--md-primary);
+      background: var(--md-primary-container);
+    }
+    .variant-btn.out { opacity: 0.45; cursor: default; }
+    .variant-btn .v-weight { font-size: 15px; font-weight: 700; color: var(--md-on-surface); }
+    .variant-btn .v-price  { font-size: 13px; color: var(--md-primary); margin-top: 2px; font-weight: 600; }
+    .variant-btn .v-oos    { font-size: 11px; color: var(--md-error); margin-top: 3px; }
+
+    /* ===== Cart ===== */
+    .cart-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--md-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--md-outline-variant);
+      margin-bottom: 8px;
+      box-shadow: var(--md-shadow-1);
+      animation: pageEnter 0.2s ease both;
+    }
+    .cart-item-img {
+      width: 60px; height: 60px;
+      border-radius: var(--radius-sm);
+      background: var(--md-surface-container);
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+    .cart-item-img img { width: 60px; height: 60px; object-fit: cover; }
+
+    .qty-control {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--md-surface-container);
+      border-radius: 100px;
+      padding: 2px;
+    }
+    .qty-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--md-primary);
+      font-size: 18px;
+      font-weight: 700;
+      transition: background 0.12s;
+    }
+    .qty-btn:hover { background: var(--md-primary-container); }
+    .qty-btn:active { transform: scale(0.9); }
+    .qty-value { min-width: 24px; text-align: center; font-size: 14px; font-weight: 700; color: var(--md-on-surface); }
+
+    /* ===== Order Status Badges ===== */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .status-badge.pending    { background: #FFF3E0; color: #E65100; }
+    .status-badge.paid       { background: #E8F5E9; color: #2E7D32; }
+    .status-badge.failed     { background: var(--md-error-container); color: var(--md-error); }
+    .status-badge.cancelled  { background: var(--md-surface-container); color: var(--md-on-surface-variant); }
+    .status-badge.refunded   { background: #E3F2FD; color: #1565C0; }
+    .status-badge.new        { background: #E8EAF6; color: #3949AB; }
+    .status-badge.shipping   { background: #F3E5F5; color: #7B1FA2; }
+    .status-badge.delivered  { background: #E8F5E9; color: #2E7D32; }
+
+    /* ===== Profile Avatar ===== */
+    .avatar-circle {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ===== Form Inputs ===== */
+    .input-field { position: relative; margin-bottom: 4px; }
+    .input-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .md-input {
+      width: 100%;
+      background: var(--md-surface-container);
+      border: 1.5px solid var(--md-outline-variant);
+      border-radius: var(--radius-sm);
+      padding: 13px 14px;
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--md-on-surface);
+      transition: border-color 0.15s, background 0.15s;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .md-input:focus {
+      border-color: var(--md-primary);
+      background: var(--md-surface);
+    }
+    .md-input::placeholder { color: var(--md-on-surface-variant); opacity: 0.6; }
+
+    .radio-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--md-outline-variant);
+      background: var(--md-surface);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .radio-card input[type="radio"] { accent-color: var(--md-primary); width: 18px; height: 18px; }
+    .radio-card:has(input:checked) {
+      border-color: var(--md-primary);
+      background: var(--md-primary-container);
+    }
+
+    /* ===== Empty States ===== */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      text-align: center;
+      gap: 12px;
+    }
+    .empty-state .empty-icon {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: var(--md-surface-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin-bottom: 4px;
+    }
+    .empty-state h3 { font-size: 18px; font-weight: 700; color: var(--md-on-surface); }
+    .empty-state p  { font-size: 14px; color: var(--md-on-surface-variant); line-height: 1.5; }
+
+    /* ===== FAB ===== */
+    .fab {
+      position: fixed;
+      bottom: 96px;
+      right: 16px;
+      width: 56px; height: 56px;
+      border-radius: 16px;
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--md-shadow-3);
+      z-index: 90;
+      transition: transform 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fab:active { transform: scale(0.94); }
+
+    /* ===== Toast ===== */
+    #toast {
+      position: fixed;
+      bottom: 96px;
+      left: 16px; right: 16px;
+      max-width: 448px;
+      margin: 0 auto;
+      background: #323232;
+      color: white;
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: var(--md-shadow-3);
+      z-index: 200;
+      transform: translateY(24px);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ===== Order card in profile ===== */
+    .order-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: var(--md-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--md-outline-variant);
+      cursor: pointer;
+      transition: background 0.12s;
+      -webkit-tap-highlight-color: transparent;
+      text-align: left;
+      width: 100%;
+    }
+    .order-row:active { background: var(--md-surface-container); }
+    .order-row .order-num-dot {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--md-secondary-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ===== Detail Timeline ===== */
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--md-outline-variant);
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row .dr-label { font-size: 13px; color: var(--md-on-surface-variant); }
+    .detail-row .dr-value { font-size: 13px; font-weight: 600; color: var(--md-on-surface); text-align: right; }
   </style>
 </head>
-<body class="max-w-lg mx-auto min-h-screen pb-20">
+<body>
+
+  <!-- ===== Toast ===== -->
+  <div id="toast"></div>
 
   <!-- ===== Top Bar ===== -->
-  <header class="sticky top-0 z-30 bg-brand-500 text-white px-4 py-3 flex items-center gap-3 shadow-md">
-    <div id="back-btn" class="hidden cursor-pointer p-1 -ml-1" onclick="App.goBack()">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+  <header id="top-bar">
+    <button id="back-btn" onclick="App.goBack()" aria-label="Назад">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
       </svg>
-    </div>
-    <h1 id="header-title" class="text-lg font-bold flex-1">🌿 Чайное Дерево</h1>
+    </button>
+    <h1 id="header-title">Чайное Дерево</h1>
   </header>
 
   <!-- ===== Main Content ===== -->
-  <main id="app-content" class="px-4 py-4">
-    <!-- Dynamic content rendered here by JS -->
-  </main>
+  <main id="app-content"></main>
 
   <!-- ===== Bottom Navigation ===== -->
-  <nav class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-gray-200 z-30">
-    <div class="flex justify-around py-2">
-      <button class="nav-item flex flex-col items-center gap-0.5 px-3 py-1" data-view="home" onclick="App.navigate('home')">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/>
-        </svg>
-        <span class="text-xs">Главная</span>
+  <nav id="bottom-nav">
+    <div class="nav-bar">
+      <button class="nav-item active" data-view="home" onclick="App.navigate('home')">
+        <div class="nav-icon-wrap">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/>
+          </svg>
+        </div>
+        <span class="nav-label">Главная</span>
       </button>
-      <button class="nav-item flex flex-col items-center gap-0.5 px-3 py-1" data-view="catalog" onclick="App.navigate('catalog')">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-        <span class="text-xs">Каталог</span>
+
+      <button class="nav-item" data-view="catalog" onclick="App.navigate('catalog')">
+        <div class="nav-icon-wrap">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" stroke-linejoin="round"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5" stroke-linejoin="round"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5" stroke-linejoin="round"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="nav-label">Каталог</span>
       </button>
-      <button class="nav-item flex flex-col items-center gap-0.5 px-3 py-1 relative" data-view="cart" onclick="App.navigate('cart')">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 8l-1.68 8H18M7 13L5.4 5M7 13l-2.68 8m0 0a2 2 0 104 0m-4 0a2 2 0 114 0m10-8a2 2 0 104 0m-4 0a2 2 0 114 0"/>
-        </svg>
-        <span class="text-xs">Корзина</span>
-        <span id="cart-badge" class="cart-badge hidden">0</span>
+
+      <button class="nav-item" data-view="cart" onclick="App.navigate('cart')">
+        <div class="nav-icon-wrap" style="position:relative;">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+          </svg>
+          <span id="cart-badge" class="nav-badge" style="display:none">0</span>
+        </div>
+        <span class="nav-label">Корзина</span>
       </button>
-      <button class="nav-item flex flex-col items-center gap-0.5 px-3 py-1" data-view="profile" onclick="App.navigate('profile')">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-        </svg>
-        <span class="text-xs">Профиль</span>
+
+      <button class="nav-item" data-view="profile" onclick="App.navigate('profile')">
+        <div class="nav-icon-wrap">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <span class="nav-label">Профиль</span>
       </button>
     </div>
   </nav>
 
   <!-- ===== JavaScript ===== -->
   <script>
-  // ---------- Telegram WebApp Init ----------
+  // ─── Telegram WebApp ───────────────────────────────────────────────────────
   const tg = window.Telegram?.WebApp || null;
   if (tg) {
     tg.ready();
     tg.expand();
-    tg.setHeaderColor('#166534');
-    tg.setBackgroundColor('#f0fdf4');
+    tg.setHeaderColor('#2D6A4F');
+    tg.setBackgroundColor('#FFFDF5');
   }
 
   const API_BASE = '/api';
 
-  // ---------- API Helper ----------
+  // ─── Auth headers ──────────────────────────────────────────────────────────
   const authHeaders = () => {
     const h = { 'Content-Type': 'application/json' };
     if (tg?.initDataUnsafe?.user) {
       h['Authorization'] = `Bearer ${tg.initData}`;
     } else {
-      // Dev fallback: store token in localStorage.
       const t = localStorage.getItem('access_token');
       if (t) h['Authorization'] = `Bearer ${t}`;
     }
@@ -132,8 +885,7 @@
   };
 
   async function api(path, opts = {}) {
-    const url = API_BASE + path;
-    const res = await fetch(url, {
+    const res = await fetch(API_BASE + path, {
       ...opts,
       headers: { ...authHeaders(), ...(opts.headers || {}) },
     });
@@ -145,73 +897,120 @@
     return res.json();
   }
 
-  // ---------- App State ----------
+  // ─── Utils ─────────────────────────────────────────────────────────────────
+  function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+  function fmtPrice(n) {
+    return Number(n).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  }
+  function initials(first, last) {
+    return ((first?.[0] || '') + (last?.[0] || '')).toUpperCase() || '?';
+  }
+
+  // ─── Toast ─────────────────────────────────────────────────────────────────
+  let _toastTimer;
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  // ─── Ripple ────────────────────────────────────────────────────────────────
+  function addRipple(el) {
+    el.addEventListener('click', e => {
+      const r = document.createElement('span');
+      r.className = 'ripple';
+      const rect = el.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+      el.appendChild(r);
+      setTimeout(() => r.remove(), 500);
+    });
+  }
+
+  // ─── App State ─────────────────────────────────────────────────────────────
   const App = {
     currentView: 'home',
     viewStack: [],
     categories: [],
     cartCount: 0,
 
-    // ----- Navigation -----
     navigate(view, data) {
-      if (this.currentView !== view) {
-        this.viewStack.push(this.currentView);
-      }
+      if (this.currentView !== view) this.viewStack.push(this.currentView);
       this.currentView = view;
       this.render(view, data);
-      this.updateNav(view);
-      this.updateBackBtn();
-      window.scrollTo(0, 0);
+      this.syncNav(view);
+      this.syncBackBtn();
+      window.scrollTo({ top: 0 });
     },
 
     goBack() {
-      if (this.viewStack.length) {
-        this.currentView = this.viewStack.pop();
-        this.render(this.currentView);
-        this.updateNav(this.currentView);
-        this.updateBackBtn();
-        window.scrollTo(0, 0);
-      }
+      if (!this.viewStack.length) return;
+      this.currentView = this.viewStack.pop();
+      this.render(this.currentView);
+      this.syncNav(this.currentView);
+      this.syncBackBtn();
+      window.scrollTo({ top: 0 });
     },
 
-    updateNav(view) {
+    syncNav(view) {
       document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.toggle('active', el.dataset.view === view);
       });
     },
 
-    updateBackBtn() {
+    syncBackBtn() {
       const btn = document.getElementById('back-btn');
-      const show = this.currentView !== 'home' && this.currentView !== 'catalog';
-      btn.classList.toggle('hidden', !show);
+      const show = !['home', 'catalog'].includes(this.currentView);
+      btn.classList.toggle('visible', show);
     },
 
     setHeader(title) {
       document.getElementById('header-title').textContent = title;
     },
 
-    // ----- Render -----
     async render(view, data) {
       const c = document.getElementById('app-content');
+      c.innerHTML = '';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'page-enter';
+      c.appendChild(wrapper);
       try {
         switch (view) {
-          case 'home': await this.renderHome(c); break;
-          case 'catalog': await this.renderCatalog(c, data); break;
-          case 'product': await this.renderProduct(c, data); break;
-          case 'cart': await this.renderCart(c); break;
-          case 'checkout': await this.renderCheckout(c); break;
-          case 'order-detail': await this.renderOrderDetail(c, data); break;
-          case 'profile': await this.renderProfile(c); break;
-          default: c.innerHTML = '<p class="text-gray-500">Страница не найдена</p>';
+          case 'home':         await this.renderHome(wrapper); break;
+          case 'catalog':      await this.renderCatalog(wrapper, data); break;
+          case 'product':      await this.renderProduct(wrapper, data); break;
+          case 'cart':         await this.renderCart(wrapper); break;
+          case 'checkout':     await this.renderCheckout(wrapper); break;
+          case 'order-detail': await this.renderOrderDetail(wrapper, data); break;
+          case 'profile':      await this.renderProfile(wrapper); break;
+          default:
+            wrapper.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>Страница не найдена</h3></div>`;
         }
       } catch (e) {
-        c.innerHTML = `<div class="text-center py-10"><p class="text-red-500">⚠️ ${e.message}</p><button onclick="App.navigate('home')" class="mt-4 text-brand-500 underline">На главную</button></div>`;
+        wrapper.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <h3>Что-то пошло не так</h3>
+            <p>${esc(e.message)}</p>
+            <button class="btn btn-tonal" onclick="App.navigate('home')" style="margin-top:8px">На главную</button>
+          </div>`;
       }
     },
 
-    // ----- Home -----
+    // ─── Home ────────────────────────────────────────────────────────────────
     async renderHome(c) {
-      this.setHeader('🌿 Чайное Дерево');
+      this.setHeader('Чайное Дерево');
       const [banners, cats] = await Promise.all([
         api('/info/banners'),
         api('/catalog/categories'),
@@ -222,37 +1021,40 @@
 
       // Banners
       if (banners.length) {
-        html += `<div class="mb-6">
-          <div class="flex overflow-x-auto gap-3 -mx-4 px-4 snap-x">
-            ${banners.map(b => `
-              <div class="snap-start shrink-0 w-72 rounded-xl overflow-hidden bg-white shadow-sm">
-                <img src="${b.image_path}" alt="${b.title||''}" class="w-full h-36 object-cover bg-gray-200"/>
-                ${b.title ? `<div class="p-3"><h3 class="font-semibold text-brand-600">${esc(b.title)}</h3>${b.subtitle?`<p class="text-sm text-gray-500 mt-1">${esc(b.subtitle)}</p>`:''}</div>` : ''}
-              </div>
-            `).join('')}
-          </div>
+        html += `<div class="banner-scroll">
+          ${banners.map(b => `
+            <div class="banner-card">
+              <img src="${b.image_path}" alt="${esc(b.title || '')}" loading="lazy"/>
+              ${b.title ? `<div class="banner-overlay"><h3>${esc(b.title)}</h3>${b.subtitle ? `<p>${esc(b.subtitle)}</p>` : ''}</div>` : ''}
+            </div>
+          `).join('')}
         </div>`;
       }
 
-      // Categories grid
-      html += `<h2 class="text-lg font-bold text-brand-700 mb-3">Категории</h2>`;
-      html += `<div class="grid grid-cols-2 gap-3 mb-6">
+      // Categories
+      html += `<div class="section-header" style="margin-top:16px">
+        <h2>Категории</h2>
+        <a onclick="App.navigate('catalog')">Все →</a>
+      </div>`;
+      html += `<div class="category-grid">
         ${cats.map(cat => `
-          <button onclick="App.navigate('catalog', '${cat.slug}')"
-            class="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-left border border-brand-100">
-            <div class="text-2xl mb-2">${cat.icon || '🍃'}</div>
-            <span class="font-medium text-brand-600 text-sm">${esc(cat.name)}</span>
+          <button class="category-tile" onclick="App.navigate('catalog', '${cat.slug}')">
+            <div class="cat-icon">${cat.icon || '🍃'}</div>
+            <span>${esc(cat.name)}</span>
           </button>
         `).join('')}
       </div>`;
 
-      // Popular (first 4 products)
+      // Popular
       try {
         const products = await api('/catalog/products');
         if (products.length) {
-          html += `<h2 class="text-lg font-bold text-brand-700 mb-3">Популярное</h2>`;
-          html += `<div class="flex overflow-x-auto gap-3 -mx-4 px-4 pb-2">
-            ${products.slice(0, 6).map(p => this._productCard(p)).join('')}
+          html += `<div class="section-header">
+            <h2>Популярное</h2>
+            <a onclick="App.navigate('catalog')">Все →</a>
+          </div>`;
+          html += `<div class="products-scroll">
+            ${products.slice(0, 8).map(p => this._productCardSmall(p)).join('')}
           </div>`;
         }
       } catch (_) {}
@@ -260,274 +1062,291 @@
       c.innerHTML = html;
     },
 
-    // ----- Catalog -----
+    // ─── Catalog ─────────────────────────────────────────────────────────────
     async renderCatalog(c, categorySlug) {
-      this.setHeader('🍃 Каталог');
+      this.setHeader('Каталог');
       const cats = this.categories.length ? this.categories : await api('/catalog/categories');
       this.categories = cats;
 
       const params = categorySlug ? `?category_slug=${categorySlug}` : '';
       const products = await api(`/catalog/products${params}`);
 
-      let html = '';
+      const currentCat = cats.find(c => c.slug === categorySlug);
+      const title = currentCat ? currentCat.name : 'Каталог';
+      this.setHeader(title);
 
-      // Category pills
-      html += `<div class="flex overflow-x-auto gap-2 -mx-4 px-4 pb-3 mb-4">
-        <button onclick="App.navigate('catalog')" class="shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition ${!categorySlug ? 'bg-brand-500 text-white' : 'bg-white text-brand-600 border border-brand-200'}">Все</button>
+      let html = `<div class="chips-scroll">
+        <span class="chip${!categorySlug ? ' active' : ''}" onclick="App.navigate('catalog')">Все</span>
         ${cats.map(cat => `
-          <button onclick="App.navigate('catalog', '${cat.slug}')" class="shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition ${categorySlug===cat.slug ? 'bg-brand-500 text-white' : 'bg-white text-brand-600 border border-brand-200'}">${esc(cat.icon||'🍃')} ${esc(cat.name)}</button>
+          <span class="chip${categorySlug === cat.slug ? ' active' : ''}" onclick="App.navigate('catalog', '${cat.slug}')">
+            ${cat.icon || '🍃'} ${esc(cat.name)}
+          </span>
         `).join('')}
       </div>`;
 
       if (!products.length) {
-        html += `<p class="text-center text-gray-400 py-10">Нет товаров в этой категории</p>`;
+        html += `<div class="empty-state">
+          <div class="empty-icon">🍃</div>
+          <h3>Нет товаров</h3>
+          <p>В этой категории пока ничего нет</p>
+        </div>`;
       } else {
-        html += `<div class="grid grid-cols-2 gap-3">
-          ${products.map(p => this._productCard(p)).join('')}
+        html += `<div class="products-grid">
+          ${products.map(p => this._productCardGrid(p)).join('')}
         </div>`;
       }
 
       c.innerHTML = html;
     },
 
-    // ----- Product Detail -----
+    // ─── Product Detail ───────────────────────────────────────────────────────
     async renderProduct(c, slug) {
+      c.innerHTML = `<div style="padding:16px"><div class="skeleton" style="height:260px;border-radius:0"></div></div>`;
       const p = await api(`/catalog/products/${slug}`);
       this.setHeader(p.name);
 
+      const minPrice = p.variants.length ? Math.min(...p.variants.map(v => v.price)) : p.base_price;
+
       let html = '';
 
-      // Images carousel
+      // Images
       if (p.images.length) {
-        html += `<div class="flex overflow-x-auto gap-2 -mx-4 px-4 pb-3">
-          ${p.images.map(img => `<img src="${img.path}" alt="${esc(img.alt||'')}" class="w-full shrink-0 rounded-xl object-cover bg-gray-100" style="height:280px"/>`).join('')}
+        html += `<div class="product-images-scroll" id="pimg-scroll">
+          ${p.images.map(img => `<img src="${img.path}" alt="${esc(img.alt || p.name)}" loading="lazy"/>`).join('')}
         </div>`;
+      } else {
+        html += `<div style="height:220px;background:var(--md-surface-container);display:flex;align-items:center;justify-content:center;font-size:64px;margin:-16px -16px 0">🍵</div>`;
       }
 
-      // Info
-      html += `<div class="bg-white rounded-xl p-4 shadow-sm -mt-3 relative z-10">
-        <div class="flex items-start justify-between">
+      html += `<div class="product-info-sheet">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
           <div>
-            <h2 class="text-xl font-bold text-brand-700">${esc(p.name)}</h2>
-            ${p.origin ? `<p class="text-sm text-gray-500 mt-0.5">📍 ${esc(p.origin)}</p>` : ''}
+            <h2 style="font-size:20px;font-weight:700;color:var(--md-on-surface);line-height:1.3">${esc(p.name)}</h2>
+            ${p.origin ? `<p style="font-size:13px;color:var(--md-on-surface-variant);margin-top:4px">📍 ${esc(p.origin)}</p>` : ''}
           </div>
-          <span class="text-lg font-bold text-brand-500">от ${fmtPrice(Math.min(...p.variants.map(v=>v.price)))} ₽</span>
+          <div style="font-size:18px;font-weight:800;color:var(--md-primary);white-space:nowrap;padding-top:2px">от ${fmtPrice(minPrice)} ₽</div>
         </div>
-        ${p.description ? `<p class="text-sm text-gray-600 mt-3 leading-relaxed">${esc(p.description)}</p>` : ''}
-        ${p.tags.length ? `<div class="flex flex-wrap gap-1.5 mt-3">${p.tags.map(t => `<span class="px-2 py-0.5 bg-brand-50 text-brand-600 rounded-full text-xs">${esc(t)}</span>`).join('')}</div>` : ''}
-      </div>`;
 
-      // Variants
-      if (p.variants.length) {
-        html += `<div class="mt-4 bg-white rounded-xl p-4 shadow-sm">
-          <h3 class="font-bold text-brand-600 mb-3">Выберите вес</h3>
-          <div class="grid grid-cols-2 gap-2">
-            ${p.variants.map((v, i) => `
-              <button onclick="App.addToCart(${v.id})"
-                class="border ${v.in_stock ? 'border-brand-200 hover:bg-brand-50' : 'border-gray-200 opacity-50'} rounded-lg p-3 text-center transition">
-                <div class="font-semibold text-brand-600">${v.weight_g} г</div>
-                <div class="text-sm mt-1 ${v.in_stock ? 'text-gray-700' : 'text-gray-400'}">${fmtPrice(v.price)} ₽</div>
-                ${!v.in_stock ? '<div class="text-xs text-red-400 mt-1">Нет в наличии</div>' : ''}
-              </button>
-            `).join('')}
+        ${p.tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
+          ${p.tags.map(t => `<span style="padding:4px 10px;background:var(--md-secondary-container);color:var(--md-on-primary-container);border-radius:100px;font-size:11px;font-weight:600">${esc(t)}</span>`).join('')}
+        </div>` : ''}
+
+        ${p.description ? `<p style="font-size:14px;color:var(--md-on-surface-variant);line-height:1.65;margin-top:14px">${esc(p.description)}</p>` : ''}
+
+        ${p.variants.length ? `
+          <div style="margin-top:20px">
+            <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase">Выберите вес и добавьте в корзину</p>
+            <div class="variant-grid">
+              ${p.variants.map(v => `
+                <button class="variant-btn ${v.in_stock ? 'available' : 'out'}"
+                  ${v.in_stock ? `onclick="App.addToCart(${v.id})"` : 'disabled'}>
+                  <div class="v-weight">${v.weight_g} г</div>
+                  <div class="v-price">${fmtPrice(v.price)} ₽</div>
+                  ${!v.in_stock ? '<div class="v-oos">Нет в наличии</div>' : ''}
+                </button>
+              `).join('')}
+            </div>
           </div>
-        </div>`;
-      }
+        ` : ''}
+        <div style="height:24px"></div>
+      </div>`;
 
       c.innerHTML = html;
     },
 
-    // ----- Cart -----
+    // ─── Cart ─────────────────────────────────────────────────────────────────
     async renderCart(c) {
-      this.setHeader('🛒 Корзина');
+      this.setHeader('Корзина');
       let html = '';
-
       try {
         const cart = await api('/cart');
         if (!cart.items.length) {
-          html = `<div class="text-center py-16">
-            <div class="text-6xl mb-4">🍵</div>
-            <p class="text-gray-500">Корзина пуста</p>
-            <button onclick="App.navigate('catalog')" class="mt-4 bg-brand-500 text-white px-6 py-2 rounded-full text-sm font-medium">Перейти в каталог</button>
+          html = `<div class="empty-state">
+            <div class="empty-icon">🛒</div>
+            <h3>Корзина пуста</h3>
+            <p>Выберите чай из каталога</p>
+            <button class="btn btn-filled" onclick="App.navigate('catalog')" style="margin-top:8px">Перейти в каталог</button>
           </div>`;
         } else {
-          html = `<div class="space-y-3 mb-4">
-            ${cart.items.map(item => `
-              <div class="bg-white rounded-xl p-3 shadow-sm flex gap-3 items-center">
-                <div class="w-16 h-16 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
-                  ${item.main_image ? `<img src="${item.main_image}" class="w-full h-full object-cover"/>` : `<div class="w-full h-full flex items-center justify-center text-2xl">🍵</div>`}
+          html += `<div id="cart-items">`;
+          cart.items.forEach(item => {
+            html += `
+              <div class="cart-item">
+                <div class="cart-item-img">
+                  ${item.main_image ? `<img src="${item.main_image}" alt="${esc(item.product_name)}"/>` : '🍵'}
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="font-medium text-brand-700 text-sm truncate">${esc(item.product_name)}</p>
-                  <p class="text-xs text-gray-500">${item.variant.weight_g} г · ${fmtPrice(item.variant.price)} ₽</p>
+                <div style="flex:1;min-width:0">
+                  <p style="font-size:14px;font-weight:600;color:var(--md-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(item.product_name)}</p>
+                  <p style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${item.variant.weight_g} г</p>
+                  <p style="font-size:14px;font-weight:700;color:var(--md-primary);margin-top:4px">${fmtPrice(item.variant.price * item.quantity)} ₽</p>
                 </div>
-                <div class="flex items-center gap-2">
-                  <button onclick="App.updateCartItem(${item.id}, ${item.quantity - 1})" class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200">−</button>
-                  <span class="w-6 text-center font-medium text-sm">${item.quantity}</span>
-                  <button onclick="App.updateCartItem(${item.id}, ${item.quantity + 1})" class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200">+</button>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+                  <button class="btn-icon" onclick="App.removeCartItem(${item.id})" style="width:32px;height:32px;background:var(--md-error-container);color:var(--md-error)">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
+                  <div class="qty-control">
+                    <button class="qty-btn" onclick="App.updateCartItem(${item.id}, ${item.quantity - 1})">−</button>
+                    <span class="qty-value">${item.quantity}</span>
+                    <button class="qty-btn" onclick="App.updateCartItem(${item.id}, ${item.quantity + 1})">+</button>
+                  </div>
                 </div>
-                <button onclick="App.removeCartItem(${item.id})" class="ml-1 text-gray-400 hover:text-red-500">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
-              </div>
-            `).join('')}
-          </div>`;
+              </div>`;
+          });
+          html += `</div>`;
 
-          // Total
-          html += `<div class="bg-white rounded-xl p-4 shadow-sm">
-            <div class="flex justify-between items-center mb-4">
-              <span class="text-gray-600">Итого:</span>
-              <span class="text-xl font-bold text-brand-600">${fmtPrice(cart.total_amount)} ₽</span>
-            </div>
-            <button onclick="App.checkout()" class="w-full bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-medium transition">Оформить заказ</button>
-          </div>`;
+          html += `
+            <div class="md-card" style="padding:16px;margin-top:8px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <span style="font-size:15px;color:var(--md-on-surface-variant)">Итого</span>
+                <span style="font-size:22px;font-weight:800;color:var(--md-primary)">${fmtPrice(cart.total_amount)} ₽</span>
+              </div>
+              <button class="btn btn-filled ripple-container" style="width:100%" onclick="App.checkout()">
+                Оформить заказ
+              </button>
+            </div>`;
         }
       } catch (e) {
-        if (e.message.includes('401') || e.message.includes('Unauthorized')) {
-          html = `<div class="text-center py-16">
-            <div class="text-6xl mb-4">🔒</div>
-            <p class="text-gray-500">Войдите через Telegram</p>
-          </div>`;
-        } else {
-          throw e;
-        }
+        html = `<div class="empty-state">
+          <div class="empty-icon">🔒</div>
+          <h3>Нужна авторизация</h3>
+          <p>Откройте приложение через Telegram</p>
+        </div>`;
       }
-
       c.innerHTML = html;
+      c.querySelectorAll('.ripple-container').forEach(addRipple);
     },
 
-    // ----- Profile -----
+    // ─── Profile ──────────────────────────────────────────────────────────────
     async renderProfile(c) {
-      this.setHeader('👤 Профиль');
+      this.setHeader('Профиль');
       let html = '';
-
       try {
         const user = await api('/profile/me');
-        html = `<div class="bg-white rounded-xl p-5 shadow-sm mb-4">
-          <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-full bg-brand-100 flex items-center justify-center text-2xl">🌿</div>
-            <div>
-              <h2 class="font-bold text-brand-700 text-lg">${esc(user.first_name || '')} ${esc(user.last_name || '')}</h2>
-              ${user.username ? `<p class="text-sm text-gray-500">@${esc(user.username)}</p>` : ''}
+        const name = [user.first_name, user.last_name].filter(Boolean).join(' ');
+        html = `
+          <div class="md-card" style="padding:20px;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:16px">
+              <div class="avatar-circle">${initials(user.first_name, user.last_name)}</div>
+              <div>
+                <h2 style="font-size:18px;font-weight:700">${esc(name || 'Пользователь')}</h2>
+                ${user.username ? `<p style="font-size:13px;color:var(--md-on-surface-variant);margin-top:2px">@${esc(user.username)}</p>` : ''}
+                ${user.phone ? `<p style="font-size:13px;color:var(--md-on-surface-variant);margin-top:2px">${esc(user.phone)}</p>` : ''}
+              </div>
             </div>
-          </div>
-        </div>`;
+          </div>`;
 
-        // My Orders
         try {
           const orders = await api('/orders');
-          html += `<h3 class="font-bold text-brand-700 mb-3">Мои заказы</h3>`;
+          html += `<p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">МОИ ЗАКАЗЫ</p>`;
           if (!orders.length) {
-            html += `<p class="text-gray-400 text-sm">Заказов пока нет</p>`;
+            html += `<div class="md-card-filled" style="padding:24px;text-align:center">
+              <p style="color:var(--md-on-surface-variant);font-size:14px">Заказов пока нет</p>
+              <button class="btn btn-tonal" onclick="App.navigate('catalog')" style="margin-top:12px">Перейти в каталог</button>
+            </div>`;
           } else {
-            html += `<div class="space-y-3">
+            html += `<div style="display:flex;flex-direction:column;gap:8px">
               ${orders.map(o => `
-                <button onclick="App.navigate('order-detail', '${o.number}')" class="bg-white rounded-xl p-4 shadow-sm w-full text-left">
-                  <div class="flex justify-between items-start">
-                    <span class="font-semibold text-brand-600">${o.number}</span>
-                    <span class="text-sm px-2 py-0.5 rounded-full bg-brand-50 text-brand-600">${statusLabel(o.status_payment)}</span>
+                <button class="order-row" onclick="App.navigate('order-detail', '${o.number}')">
+                  <div class="order-num-dot">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--md-primary)">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
                   </div>
-                  <p class="text-sm text-gray-500 mt-1">${fmtPrice(o.total_amount)} ₽ · ${fmtDate(o.created_at)} · ${o.items_count} шт.</p>
+                  <div style="flex:1;min-width:0">
+                    <p style="font-size:14px;font-weight:700;color:var(--md-on-surface)">${o.number}</p>
+                    <p style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${fmtDate(o.created_at)} · ${o.items_count} шт. · ${fmtPrice(o.total_amount)} ₽</p>
+                  </div>
+                  <span class="status-badge ${o.status_payment}">${_payLabel(o.status_payment)}</span>
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--md-outline);flex-shrink:0">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                  </svg>
                 </button>
               `).join('')}
             </div>`;
           }
-        } catch (_) {
-          html += `<p class="text-gray-400 text-sm">Заказы скоро появятся здесь</p>`;
-        }
-      } catch (e) {
-        if (e.message.includes('401') || e.message.includes('Unauthorized')) {
-          html = `<div class="text-center py-16">
-            <div class="text-6xl mb-4">🔒</div>
-            <p class="text-gray-500">Войдите через Telegram</p>
-          </div>`;
-        } else {
-          throw e;
-        }
+        } catch (_) {}
+      } catch (_) {
+        html = `<div class="empty-state">
+          <div class="empty-icon">🔒</div>
+          <h3>Нужна авторизация</h3>
+          <p>Откройте приложение через Telegram</p>
+        </div>`;
       }
-
       c.innerHTML = html;
     },
 
-    // ----- Checkout -----
+    // ─── Checkout ─────────────────────────────────────────────────────────────
     async renderCheckout(c) {
       this.setHeader('Оформление заказа');
       c.innerHTML = `
-        <form id="checkout-form" class="space-y-4" onsubmit="App.submitOrder(event)">
-          <div class="bg-white rounded-xl p-4 shadow-sm">
-            <h3 class="font-bold text-brand-600 mb-3">Способ получения</h3>
-            <div class="space-y-2">
-              <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50">
-                <input type="radio" name="delivery_type" value="pickup" checked class="accent-brand-500"/>
-                <div>
-                  <div class="font-medium text-sm">Самовывоз</div>
-                  <div class="text-xs text-gray-500">Из магазина / пункта выдачи</div>
-                </div>
-              </label>
-              <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50">
-                <input type="radio" name="delivery_type" value="courier" class="accent-brand-500"/>
-                <div>
-                  <div class="font-medium text-sm">Курьер</div>
-                  <div class="text-xs text-gray-500">Доставка по адресу</div>
-                </div>
-              </label>
-            </div>
-          </div>
+        <form id="checkout-form" onsubmit="App.submitOrder(event)">
 
-          <div class="bg-white rounded-xl p-4 shadow-sm">
-            <h3 class="font-bold text-brand-600 mb-3">Контакты</h3>
-            <div class="space-y-3">
+          <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">СПОСОБ ПОЛУЧЕНИЯ</p>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+            <label class="radio-card">
+              <input type="radio" name="delivery_type" value="pickup" checked/>
               <div>
-                <label class="text-sm text-gray-600 mb-1 block">Телефон</label>
-                <input type="tel" id="contact_phone" name="contact_phone" placeholder="+7 (999) 999-99-99"
-                  class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-400"/>
+                <div style="font-size:15px;font-weight:600">Самовывоз</div>
+                <div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">Из магазина или пункта выдачи</div>
               </div>
-              <div id="address-field">
-                <label class="text-sm text-gray-600 mb-1 block">Адрес доставки</label>
-                <input type="text" id="address" name="address" placeholder="Город, улица, дом, квартира"
-                  class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-400"/>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="delivery_type" value="courier"/>
+              <div>
+                <div style="font-size:15px;font-weight:600">Курьер</div>
+                <div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">Доставка по адресу</div>
               </div>
+            </label>
+          </div>
+
+          <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">КОНТАКТЫ</p>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+            <div>
+              <label class="input-label">Телефон</label>
+              <input class="md-input" type="tel" name="contact_phone" placeholder="+7 (999) 999-99-99"/>
+            </div>
+            <div id="address-field" style="display:none">
+              <label class="input-label">Адрес доставки</label>
+              <input class="md-input" type="text" name="address" placeholder="Город, улица, дом, квартира"/>
             </div>
           </div>
 
-          <div class="bg-white rounded-xl p-4 shadow-sm">
-            <label class="text-sm text-gray-600 mb-1 block">Комментарий к заказу</label>
-            <textarea name="comment" rows="2" placeholder="Пожелания, уточнения..."
-              class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-400 resize-none"></textarea>
-          </div>
+          <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">КОММЕНТАРИЙ</p>
+          <textarea class="md-input" name="comment" rows="3" placeholder="Пожелания к заказу..." style="resize:none;margin-bottom:20px"></textarea>
 
-          <button type="submit" id="submit-order-btn"
-            class="w-full bg-brand-500 hover:bg-brand-600 text-white py-3.5 rounded-xl font-semibold text-base transition">
+          <button type="submit" id="submit-order-btn" class="btn btn-filled ripple-container" style="width:100%">
             Подтвердить заказ
           </button>
-        </form>
-      `;
+        </form>`;
 
-      // Скрываем адрес для самовывоза
       document.querySelectorAll('input[name="delivery_type"]').forEach(r => {
         r.addEventListener('change', () => {
           document.getElementById('address-field').style.display =
             r.value === 'courier' ? 'block' : 'none';
         });
       });
-      document.getElementById('address-field').style.display = 'none';
+      c.querySelectorAll('.ripple-container').forEach(addRipple);
     },
 
     async submitOrder(e) {
       e.preventDefault();
       const btn = document.getElementById('submit-order-btn');
       btn.disabled = true;
-      btn.textContent = 'Отправляем...';
+      btn.textContent = 'Отправляем…';
       try {
         const form = e.target;
         const delivery_type = form.querySelector('input[name="delivery_type"]:checked').value;
-        const body = {
-          delivery_type,
-          contact_phone: form.contact_phone.value || null,
-          address: delivery_type === 'courier' ? (form.address.value || '') : '',
-          comment: form.comment.value || null,
-        };
-        const order = await api('/orders', { method: 'POST', body: JSON.stringify(body) });
+        const order = await api('/orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            delivery_type,
+            contact_phone: form.contact_phone.value || null,
+            address: delivery_type === 'courier' ? (form.address?.value || '') : '',
+            comment: form.comment.value || null,
+          }),
+        });
         this.cartCount = 0;
         this.updateCartBadge();
         tg?.HapticFeedback?.notificationOccurred('success');
@@ -536,67 +1355,68 @@
         btn.disabled = false;
         btn.textContent = 'Подтвердить заказ';
         if (tg) tg.showPopup({ title: 'Ошибка', message: err.message, buttons: [{ type: 'ok' }] });
-        else alert(err.message);
+        else showToast(err.message);
       }
     },
 
-    // ----- Order Detail -----
+    // ─── Order Detail ─────────────────────────────────────────────────────────
     async renderOrderDetail(c, orderNumber) {
-      this.setHeader('Заказ ' + orderNumber);
+      this.setHeader(orderNumber);
       const o = await api(`/orders/${orderNumber}`);
 
-      const delivLabel = { pickup: 'Самовывоз', courier: 'Курьер', post: 'Почта' };
-      const payLabel = { pending: 'Ожидает оплаты', paid: 'Оплачен', refunded: 'Возврат', failed: 'Ошибка', cancelled: 'Отменён' };
-      const delivStatus = { new: 'Новый', confirmed: 'Подтверждён', shipped: 'Отправлен', delivered: 'Доставлен', cancelled: 'Отменён' };
-
-      const payColor = { pending: 'bg-yellow-50 text-yellow-700', paid: 'bg-green-50 text-green-700', failed: 'bg-red-50 text-red-600', cancelled: 'bg-gray-100 text-gray-500', refunded: 'bg-blue-50 text-blue-600' };
-      const delColor = { new: 'bg-blue-50 text-blue-600', confirmed: 'bg-brand-50 text-brand-600', shipped: 'bg-purple-50 text-purple-600', delivered: 'bg-green-50 text-green-700', cancelled: 'bg-gray-100 text-gray-500' };
+      const delivLabel = { pickup: 'Самовывоз', courier: 'Курьер', post: 'Почта России' };
 
       let html = `
-        <div class="bg-white rounded-xl p-4 shadow-sm mb-4">
-          <div class="flex items-start justify-between mb-3">
+        <div class="md-card" style="padding:16px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
             <div>
-              <h2 class="font-bold text-brand-700 text-lg">${o.number}</h2>
-              <p class="text-xs text-gray-400 mt-0.5">${fmtDate(o.created_at)}</p>
+              <p style="font-size:20px;font-weight:800;color:var(--md-primary)">${o.number}</p>
+              <p style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${fmtDate(o.created_at)}</p>
             </div>
-            <div class="flex flex-col gap-1 items-end">
-              <span class="text-xs px-2 py-1 rounded-full font-medium ${payColor[o.status_payment] || 'bg-gray-100 text-gray-500'}">${payLabel[o.status_payment] || o.status_payment}</span>
-              <span class="text-xs px-2 py-1 rounded-full font-medium ${delColor[o.status_delivery] || 'bg-gray-100 text-gray-500'}">${delivStatus[o.status_delivery] || o.status_delivery}</span>
+            <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+              <span class="status-badge ${o.status_payment}">${_payLabel(o.status_payment)}</span>
+              <span class="status-badge ${o.status_delivery}">${_delLabel(o.status_delivery)}</span>
             </div>
           </div>
-          ${o.delivery_info ? `<p class="text-sm text-gray-500">${delivLabel[o.delivery_info.type] || o.delivery_info.type}${o.delivery_info.address ? ' · ' + esc(o.delivery_info.address) : ''}</p>` : ''}
+          ${o.delivery_info ? `
+            <div style="background:var(--md-surface-container);border-radius:var(--radius-sm);padding:10px 12px">
+              <p style="font-size:13px;font-weight:600;color:var(--md-on-surface)">${delivLabel[o.delivery_info.type] || o.delivery_info.type}</p>
+              ${o.delivery_info.address ? `<p style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${esc(o.delivery_info.address)}</p>` : ''}
+            </div>
+          ` : ''}
         </div>
 
-        <div class="bg-white rounded-xl p-4 shadow-sm mb-4">
-          <h3 class="font-bold text-brand-600 mb-3">Состав заказа</h3>
-          <div class="space-y-3">
-            ${o.items.map(item => `
-              <div class="flex justify-between items-center">
-                <div>
-                  <p class="text-sm font-medium text-brand-700">${esc(item.snapshot_name)}</p>
-                  <p class="text-xs text-gray-500">${item.snapshot_weight_g} г · ${item.quantity} шт.</p>
-                </div>
-                <span class="text-sm font-semibold text-brand-600">${fmtPrice(item.unit_price * item.quantity)} ₽</span>
+        <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">СОСТАВ ЗАКАЗА</p>
+        <div class="md-card" style="padding:0 16px;margin-bottom:12px">
+          ${o.items.map(item => `
+            <div class="detail-row">
+              <div>
+                <p style="font-size:14px;font-weight:600;color:var(--md-on-surface)">${esc(item.snapshot_name)}</p>
+                <p style="font-size:12px;color:var(--md-on-surface-variant)">${item.snapshot_weight_g} г · ${item.quantity} шт.</p>
               </div>
-            `).join('')}
+              <span style="font-size:14px;font-weight:700;color:var(--md-primary)">${fmtPrice(item.unit_price * item.quantity)} ₽</span>
+            </div>
+          `).join('')}
+          <div style="display:flex;justify-content:space-between;padding:14px 0 12px">
+            <span style="font-size:15px;font-weight:700">Итого</span>
+            <span style="font-size:18px;font-weight:800;color:var(--md-primary)">${fmtPrice(o.total_amount)} ₽</span>
           </div>
-          <div class="border-t border-gray-100 mt-3 pt-3 flex justify-between items-center">
-            <span class="font-bold text-gray-700">Итого</span>
-            <span class="text-lg font-bold text-brand-600">${fmtPrice(o.total_amount)} ₽</span>
-          </div>
-        </div>`;
+        </div>
 
-      if (o.comment) {
-        html += `<div class="bg-white rounded-xl p-4 shadow-sm mb-4">
-          <p class="text-sm text-gray-500 italic">${esc(o.comment)}</p>
-        </div>`;
-      }
+        ${o.comment ? `
+          <div class="md-card-filled" style="padding:12px 14px;margin-bottom:12px">
+            <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);margin-bottom:4px">КОММЕНТАРИЙ</p>
+            <p style="font-size:14px;color:var(--md-on-surface)">${esc(o.comment)}</p>
+          </div>` : ''}
 
-      html += `<button onclick="App.navigate('profile')" class="w-full text-center text-brand-500 py-3 text-sm">← К списку заказов</button>`;
+        <button class="btn btn-outlined" style="width:100%;margin-top:4px" onclick="App.navigate('profile')">
+          ← К списку заказов
+        </button>`;
+
       c.innerHTML = html;
     },
 
-    // ----- Cart Actions -----
+    // ─── Cart Actions ─────────────────────────────────────────────────────────
     async addToCart(variantId) {
       try {
         await api('/cart/items', {
@@ -605,21 +1425,16 @@
         });
         this.cartCount++;
         this.updateCartBadge();
-        tg?.HapticFeedback?.notificationOccurred('success');
-        if (tg) tg.showPopup({ title: 'Добавлено', message: 'Товар добавлен в корзину', buttons: [{ type: 'ok' }] });
-        else alert('Товар добавлен в корзину');
+        tg?.HapticFeedback?.impactOccurred('light');
+        showToast('Добавлено в корзину');
       } catch (err) {
-        if (tg) tg.showPopup({ title: 'Ошибка', message: err.message, buttons: [{ type: 'ok' }] });
-        else alert(err.message);
+        showToast(err.message);
       }
     },
 
     async updateCartItem(itemId, qty) {
       if (qty <= 0) return this.removeCartItem(itemId);
-      await api(`/cart/items/${itemId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ quantity: qty }),
-      });
+      await api(`/cart/items/${itemId}`, { method: 'PATCH', body: JSON.stringify({ quantity: qty }) });
       this.render('cart');
     },
 
@@ -630,72 +1445,67 @@
       this.render('cart');
     },
 
-    checkout() {
-      this.navigate('checkout');
-    },
+    checkout() { this.navigate('checkout'); },
 
     updateCartBadge() {
       const el = document.getElementById('cart-badge');
       if (this.cartCount > 0) {
         el.textContent = this.cartCount;
-        el.classList.remove('hidden');
+        el.style.display = 'flex';
       } else {
-        el.classList.add('hidden');
+        el.style.display = 'none';
       }
     },
 
-    // ----- Product Card Component -----
-    _productCard(p) {
+    // ─── Component Helpers ────────────────────────────────────────────────────
+    _productCardSmall(p) {
       const minPrice = p.variants.length ? Math.min(...p.variants.map(v => v.price)) : p.base_price;
       return `
-        <button onclick="App.navigate('product', '${p.slug}')"
-          class="shrink-0 w-40 bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow text-left border border-gray-100">
-          <div class="w-full h-32 bg-gray-100 flex items-center justify-center overflow-hidden">
-            ${p.main_image ? `<img src="${p.main_image}" alt="${esc(p.name)}" class="w-full h-full object-cover"/>` : `<span class="text-4xl">🍵</span>`}
+        <div class="product-card-small" onclick="App.navigate('product', '${p.slug}')">
+          <div class="pcard-img">
+            ${p.main_image ? `<img src="${p.main_image}" alt="${esc(p.name)}" loading="lazy"/>` : '🍵'}
           </div>
-          <div class="p-2.5">
-            <p class="font-medium text-brand-700 text-sm truncate">${esc(p.name)}</p>
-            <p class="text-xs text-gray-500 mt-0.5">${p.category.icon || '🍃'} ${esc(p.category.name)}</p>
-            <p class="text-sm font-bold text-brand-500 mt-1">от ${fmtPrice(minPrice)} ₽</p>
+          <div class="pcard-body">
+            <div class="pcard-name">${esc(p.name)}</div>
+            <div class="pcard-cat">${p.category.icon || '🍃'} ${esc(p.category.name)}</div>
+            <div class="pcard-price">от ${fmtPrice(minPrice)} ₽</div>
           </div>
-        </button>
-      `;
+        </div>`;
+    },
+
+    _productCardGrid(p) {
+      const minPrice = p.variants.length ? Math.min(...p.variants.map(v => v.price)) : p.base_price;
+      return `
+        <div class="product-card-grid" onclick="App.navigate('product', '${p.slug}')">
+          <div class="pcard-img">
+            ${p.main_image ? `<img src="${p.main_image}" alt="${esc(p.name)}" loading="lazy"/>` : '🍵'}
+          </div>
+          <div class="pcard-body">
+            <div class="pcard-name" style="font-size:14px">${esc(p.name)}</div>
+            <div class="pcard-cat" style="font-size:11px;margin-top:3px">${esc(p.category.name)}</div>
+            <div class="pcard-price" style="font-size:15px;margin-top:8px">от ${fmtPrice(minPrice)} ₽</div>
+          </div>
+        </div>`;
     },
   };
 
-  // ---------- Utilities ----------
-  function esc(s) {
-    if (!s) return '';
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
+  // ─── Labels ────────────────────────────────────────────────────────────────
+  function _payLabel(s) {
+    return { pending: 'Ожидает', paid: 'Оплачен', refunded: 'Возврат', failed: 'Ошибка', cancelled: 'Отменён' }[s] || s;
+  }
+  function _delLabel(s) {
+    return {
+      new: 'Новый', manager_contacted: 'Менеджер', awaiting_delivery_payment: 'Ожидает оплату',
+      delivery_paid: 'Оплачено', shipping: 'В доставке', delivered: 'Доставлен', cancelled: 'Отменён',
+    }[s] || s;
   }
 
-  function fmtPrice(n) {
-    return Number(n).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-  }
-
-  function fmtDate(iso) {
-    if (!iso) return '';
-    return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-  }
-
-  function statusLabel(s) {
-    const map = {
-      pending: 'Ожидает', paid: 'Оплачен', refunded: 'Возврат',
-      failed: 'Ошибка', cancelled: 'Отменён',
-    };
-    return map[s] || s;
-  }
-
-  // ---------- Init ----------
+  // ─── Init ──────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
     App.navigate('home');
-    // Инициализируем счётчик корзины в фоне
     try {
       const cart = await api('/cart');
-      const count = cart.items?.reduce((s, i) => s + i.quantity, 0) || 0;
-      App.cartCount = count;
+      App.cartCount = cart.items?.reduce((s, i) => s + i.quantity, 0) || 0;
       App.updateCartBadge();
     } catch (_) {}
   });
