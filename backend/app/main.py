@@ -40,6 +40,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.db import configure_engine
 
     configure_engine()
+
+    from app.admin import setup_admin
+    from app.db import get_engine
+
+    setup_admin(app, get_engine())
+
     log = get_logger("app.lifespan")
     log.info(
         "startup",
@@ -74,6 +80,16 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     # ---------- Middleware ----------
+    # SessionMiddleware нужна для SQLAdmin (хранение состояния аутентификации).
+    from starlette.middleware.sessions import SessionMiddleware
+
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.jwt_secret.get_secret_value(),
+        https_only=settings.is_production,
+        max_age=86400 * 7,  # 7 дней
+    )
+
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
