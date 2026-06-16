@@ -121,6 +121,10 @@ def create_app() -> FastAPI:
     # ---------- Роутеры ----------
     _register_routers(app)
 
+    # ---------- Telegram-бот (webhook endpoint) ----------
+    from app.bot import setup_bot
+    setup_bot(app)
+
     # ---------- Healthcheck ----------
     @app.get("/health", tags=["meta"])
     async def health() -> dict[str, str]:

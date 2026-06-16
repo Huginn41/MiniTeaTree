@@ -229,6 +229,13 @@ async def create_order(
     await session.commit()
     await session.refresh(order, ["items", "delivery_info"])
 
+    # Уведомляем менеджеров в фоне (ошибка не ломает ответ клиенту).
+    try:
+        from app.bot.notify import notify_new_order
+        await notify_new_order(order, session)
+    except Exception:
+        pass
+
     return OrderDetail(
         id=order.id,
         number=order.number,
