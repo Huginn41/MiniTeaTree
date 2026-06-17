@@ -127,7 +127,7 @@ _ADMIN_CSS = ("""
 </style>
 </head>""").encode("utf-8")
 
-_ADMIN_JS = ("""
+_ADMIN_JS = (r"""
 <script>
 (function(){
 
@@ -402,8 +402,20 @@ _ADMIN_JS = ("""
   });
   _observer.observe(document.body, {childList:true, subtree:true});
 
+  // ---- 6. Ссылка на дашборд в сайдбаре ----
+  function addDashboardLink(){
+    var nav = document.querySelector('.navbar-nav');
+    if(!nav || document.querySelector('a[href="/admin/dashboard"]')) return;
+    var li = document.createElement('li');
+    li.className = 'nav-item';
+    li.innerHTML = '<a class="nav-link" href="/admin/dashboard" style="font-weight:600;color:#3d5afe">'
+      + '<i class="fa-solid fa-chart-line me-2"></i>Дашборд</a>';
+    nav.prepend(li);
+  }
+
   function init(){
     collapseInactive();
+    addDashboardLink();
     initProductImages();
     initSlugAuto();
     initPricePreview();
@@ -439,6 +451,8 @@ class _AdminCollapseMiddleware(BaseHTTPMiddleware):
 # ---------- Регистрация ----------
 
 def setup_admin(app: FastAPI, engine: Any) -> None:
+    from app.admin.dashboard import setup_dashboard
+    setup_dashboard(app)
     from app.config import get_settings
     from app.models.admin import AdminUser
     from app.models.banner import Banner
