@@ -604,14 +604,17 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     from app.models.user import User
     from app.models.yml_import import YmlImport
 
+    from pathlib import Path as _Path
     settings = get_settings()
     authentication_backend = AdminAuth(secret_key=settings.jwt_secret.get_secret_value())
+    _templates_dir = str(_Path(__file__).parent / "templates")
     admin = Admin(
         app=app,
         engine=engine,
         authentication_backend=authentication_backend,
-        title="Чайное Дерево — CRM",
+        title="Чайное Дерево",
         base_url="/admin",
+        templates_dir=_templates_dir,
     )
 
     # ===== ЗАКАЗЫ =====
