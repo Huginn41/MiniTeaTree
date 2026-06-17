@@ -228,6 +228,10 @@ aside .btn-secondary:hover { background: #3d5afe !important; color: #fff !import
 }
 .form-label { font-size: 13px !important; font-weight: 600 !important; color: #495057 !important; }
 
+/* --- Иконки: только у главных пунктов --- */
+.dropdown-menu .nav-link .nav-link-icon,
+.nav-link.ps-lg-3 .nav-link-icon { display: none !important; }
+
 /* --- Бейджи --- */
 .badge { border-radius: 6px !important; font-weight: 600 !important; }
 
@@ -512,20 +516,42 @@ _ADMIN_JS = (r"""
   });
   _observer.observe(document.body, {childList:true, subtree:true});
 
-  // ---- 6. Ссылка на дашборд в сайдбаре ----
+  // ---- 6. Ссылка на дашборд + иконки категорий ----
+  var _CATEGORY_ICONS = {
+    'Заказы':              'fa-solid fa-box',
+    'CRM':                 'fa-solid fa-users',
+    'Настройки магазина':  'fa-solid fa-store',
+    'Система':             'fa-solid fa-gear',
+  };
+
   function addDashboardLink(){
     var nav = document.querySelector('.navbar-nav');
     if(!nav || document.querySelector('a[href="/admin/dashboard"]')) return;
     var li = document.createElement('li');
     li.className = 'nav-item';
-    li.innerHTML = '<a class="nav-link" href="/admin/dashboard" style="font-weight:600;color:#3d5afe">'
-      + '<i class="fa-solid fa-chart-line me-2"></i>Дашборд</a>';
+    li.innerHTML = '<a class="nav-link" href="/admin/dashboard">'
+      + '<span class="nav-link-icon d-md-none d-lg-inline-block"><i class="fa-solid fa-chart-line"></i></span>'
+      + '<span class="nav-link-title">Дашборд</span></a>';
     nav.prepend(li);
+  }
+
+  function fixCategoryIcons(){
+    // Добавить иконки к главным пунктам (категориям)
+    document.querySelectorAll('.nav-link.dropdown-toggle').forEach(function(link){
+      var titleEl = link.querySelector('.nav-link-title');
+      if(!titleEl) return;
+      var name = titleEl.textContent.trim();
+      var icon = _CATEGORY_ICONS[name];
+      if(!icon) return;
+      var iconEl = link.querySelector('.nav-link-icon');
+      if(iconEl) iconEl.innerHTML = '<i class="'+icon+'"></i>';
+    });
   }
 
   function init(){
     collapseInactive();
     addDashboardLink();
+    fixCategoryIcons();
     initProductImages();
     initSlugAuto();
     initPricePreview();
