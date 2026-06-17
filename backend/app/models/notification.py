@@ -32,7 +32,7 @@ class NotificationTarget(TimestampMixin, Base):
     name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="manager")
     is_active: Mapped[bool] = mapped_column(
-        Boolean, server_default=text("1"), nullable=False, default=True
+        Boolean, server_default=text("true"), nullable=False, default=True
     )
 
     def __repr__(self) -> str:

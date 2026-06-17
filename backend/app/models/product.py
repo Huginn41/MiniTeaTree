@@ -36,7 +36,7 @@ class Product(TimestampMixin, Base):
     # Теги через запятую (для быстрого фильтра без отдельной таблицы).
     tags: Mapped[str | None] = mapped_column(String(256), nullable=True)
     is_active: Mapped[bool] = mapped_column(
-        Boolean, server_default=text("1"), nullable=False, default=True
+        Boolean, server_default=text("true"), nullable=False, default=True
     )
     # Порядок сортировки в каталоге.
     sort_order: Mapped[int] = mapped_column(
@@ -83,7 +83,7 @@ class ProductVariant(TimestampMixin, Base):
     sku: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     # Доступность (наличие). Если False — нет в продаже.
     in_stock: Mapped[bool] = mapped_column(
-        Boolean, server_default=text("1"), nullable=False, default=True
+        Boolean, server_default=text("true"), nullable=False, default=True
     )
 
     product = relationship("Product", back_populates="variants")
