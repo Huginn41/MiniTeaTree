@@ -31,7 +31,7 @@ class User(TimestampMixin, Base):
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # Является ли админом (определяется по ADMIN_TELEGRAM_IDS в настройках).
     is_admin: Mapped[bool] = mapped_column(
-        Boolean, server_default=text("0"), nullable=False, default=False
+        Boolean, server_default=text("false"), nullable=False, default=False
     )
 
     # Связи (lazy — загружаются по запросу, чтобы не тащить всё подряд).

@@ -106,7 +106,7 @@ class ProductImage(TimestampMixin, Base):
     path: Mapped[str] = mapped_column(String(512), nullable=False)
     # Главное фото для карточки/каталога. У товара должно быть ≤1 главного.
     is_main: Mapped[bool] = mapped_column(
-        Boolean, server_default=text("0"), nullable=False, default=False
+        Boolean, server_default=text("false"), nullable=False, default=False
     )
     sort: Mapped[int] = mapped_column(Integer, server_default=text("0"), nullable=False, default=0)
     # alt-текст для доступности.
