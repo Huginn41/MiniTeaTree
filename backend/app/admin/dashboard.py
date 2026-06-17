@@ -122,7 +122,9 @@ table td { font-size:13px; vertical-align:middle; border-color:#f5f6fa; padding:
             <button class="btn btn-outline-secondary period-btn" data-period="90" onclick="setPeriod(this,90)">90 дней</button>
           </div>
         </div>
-        <canvas id="ordersChart" height="90"></canvas>
+        <div style="position:relative;height:260px">
+          <canvas id="ordersChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -203,6 +205,7 @@ function renderChart(rows){
     },
     options:{
       responsive:true,
+      maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
       plugins:{legend:{position:'top',labels:{font:{size:12}}}},
       scales:{
