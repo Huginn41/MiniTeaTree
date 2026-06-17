@@ -105,139 +105,99 @@ class AdminAuth(AuthenticationBackend):
 
 _ADMIN_CSS = ("""
 <style>
-@font-face { font-family:'Futura'; src:url('/static/fonts/FuturaLightC.otf') format('opentype'); font-weight:300; }
-@font-face { font-family:'Futura'; src:url('/static/fonts/FuturaBookC.otf')  format('opentype'); font-weight:400; }
-@font-face { font-family:'Futura'; src:url('/static/fonts/FuturaDemiC.otf')  format('opentype'); font-weight:600; }
+/* ── Шрифт Futura ── */
+@font-face { font-family:'Futura'; src:url('/static/fonts/FuturaLightC.otf') format('opentype'); font-weight:300; font-display:swap; }
+@font-face { font-family:'Futura'; src:url('/static/fonts/FuturaBookC.otf')  format('opentype'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Futura'; src:url('/static/fonts/FuturaDemiC.otf')  format('opentype'); font-weight:600; font-display:swap; }
+*, body { font-family:'Futura','Century Gothic',-apple-system,sans-serif !important; }
 
-/* --- Шрифт --- */
-body, .navbar, .nav-link, .card, .btn, input, select, textarea, table {
-  font-family: 'Futura', 'Century Gothic', -apple-system, sans-serif !important;
+/* ── Фон ── */
+body { background:#f4f6fb !important; }
+.page-wrapper { background:#f4f6fb !important; }
+
+/* ── Скрыть дефолтный сайдбар Tabler ── */
+.wrapper > aside.navbar-vertical { display:none !important; }
+.wrapper { display:block !important; }
+.page-wrapper { margin-left:0 !important; }
+
+/* ── Топ-навбар (общие стили для всех страниц) ── */
+.ct-topnav {
+  background:#fff; border-bottom:1px solid #e9ecef;
+  box-shadow:0 1px 8px rgba(0,0,0,.06); height:56px;
+  display:flex; align-items:center; padding:0 24px; gap:4px;
+  position:sticky; top:0; z-index:1000;
 }
-
-/* --- Фон --- */
-body { background: #f4f6fb !important; }
-.page-wrapper { background: #f4f6fb !important; }
-
-/* --- Сайдбар: светлый --- */
-aside.navbar-vertical {
-  background: #fff !important;
-  border-right: 1px solid #e9ecef !important;
-  box-shadow: 2px 0 12px rgba(0,0,0,.05) !important;
+.ct-brand {
+  font-weight:800; font-size:16px; color:#212529;
+  text-decoration:none; margin-right:16px; white-space:nowrap;
+  letter-spacing:-.3px;
 }
-aside.navbar-vertical[data-bs-theme] { --tblr-navbar-color:#495057; }
-aside.navbar-vertical .navbar-brand h3 {
-  color: #212529 !important;
-  font-weight: 700 !important;
-  font-size: 16px !important;
+.ct-brand:hover { color:#3d5afe; text-decoration:none; }
+.ct-nav-item { position:relative; }
+.ct-nav-link {
+  display:flex; align-items:center; gap:6px;
+  padding:0 12px; height:56px; font-size:13.5px; font-weight:500;
+  color:#495057; text-decoration:none;
+  border-bottom:2px solid transparent; transition:all .15s;
+  white-space:nowrap; cursor:pointer; background:none; border-top:none; border-left:none; border-right:none;
 }
-aside.navbar-vertical .navbar-toggler { border-color: #dee2e6 !important; }
-aside.navbar-vertical .navbar-toggler-icon { filter: invert(1) !important; }
-
-/* --- Ссылки сайдбара --- */
-aside.navbar-vertical .nav-link {
-  color: #495057 !important;
-  border-radius: 8px !important;
-  margin: 1px 8px !important;
-  transition: all .15s !important;
-  font-size: 13.5px !important;
+.ct-nav-link:hover { color:#3d5afe; border-bottom-color:#3d5afe; text-decoration:none; }
+.ct-nav-link.active { color:#3d5afe; border-bottom-color:#3d5afe; font-weight:600; }
+.ct-nav-link i { font-size:14px; opacity:.75; }
+.ct-sep { width:1px; height:20px; background:#dee2e6; margin:0 8px; flex-shrink:0; }
+.ct-logout { margin-left:auto; display:flex; align-items:center; gap:8px; }
+.ct-logout a {
+  font-size:13px; color:#6c757d; text-decoration:none;
+  padding:6px 12px; border-radius:8px; border:1px solid #dee2e6; transition:all .15s;
 }
-aside.navbar-vertical .nav-link:hover {
-  background: #f0f4ff !important;
-  color: #3d5afe !important;
+.ct-logout a:hover { color:#3d5afe; border-color:#3d5afe; }
+
+/* Дропдаун меню */
+.ct-dropdown { position:relative; }
+.ct-dropdown-menu {
+  display:none; position:absolute; top:54px; left:0;
+  background:#fff; border:1px solid #e9ecef; border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.1); min-width:200px;
+  padding:6px 0; z-index:1001;
 }
-aside.navbar-vertical .nav-link.active,
-aside.navbar-vertical .nav-item.active > .nav-link {
-  background: #3d5afe !important;
-  color: #fff !important;
+.ct-dropdown:hover .ct-dropdown-menu { display:block; }
+.ct-dropdown-item {
+  display:block; padding:9px 16px; font-size:13px;
+  color:#495057; text-decoration:none; transition:all .1s;
 }
-aside.navbar-vertical .nav-link.active .nav-link-icon,
-aside.navbar-vertical .nav-item.active > .nav-link .nav-link-icon { color: #fff !important; }
+.ct-dropdown-item:hover { background:#f0f4ff; color:#3d5afe; text-decoration:none; }
+.ct-dropdown-item.active { color:#3d5afe; font-weight:600; background:#f0f4ff; }
+.ct-dropdown-arrow { font-size:10px; opacity:.5; margin-left:2px; }
 
-/* Подпункты */
-.navbar-nav .nav-item .nav-link:not([data-bs-toggle]) {
-  padding-left: 2.5rem !important;
-  font-size: 0.8rem !important;
-  opacity: 0.85;
-}
-.navbar-nav .nav-item .nav-link:not([data-bs-toggle]):hover { opacity: 1; }
+/* ── Заголовок страницы ── */
+.page-header { background:transparent !important; padding-top:20px !important; }
+.page-title { font-size:20px !important; font-weight:700 !important; color:#212529 !important; }
+.page-pretitle { color:#8c9aad !important; font-size:11px !important; text-transform:uppercase !important; letter-spacing:.5px !important; }
 
-/* Кнопка logout */
-aside .btn-secondary {
-  background: #f0f4ff !important;
-  border-color: #e0e7ff !important;
-  color: #3d5afe !important;
-  border-radius: 8px !important;
-  font-size: 13px !important;
-}
-aside .btn-secondary:hover { background: #3d5afe !important; color: #fff !important; }
+/* ── Карточки ── */
+.card { border-radius:14px !important; border:none !important; box-shadow:0 2px 10px rgba(0,0,0,.06) !important; }
+.card-header { background:#fff !important; border-bottom:1px solid #f0f2f5 !important; font-weight:600 !important; border-radius:14px 14px 0 0 !important; }
+.card-footer { background:#fff !important; border-radius:0 0 14px 14px !important; }
 
-/* Стрелка раскрывающихся разделов */
-[data-bs-toggle="collapse"].nav-link::after {
-  content: "▾"; float: right; font-size: 12px;
-  transition: transform .2s; margin-top: 3px;
-}
-[data-bs-toggle="collapse"].nav-link.collapsed::after { transform: rotate(-90deg); }
+/* ── Таблицы ── */
+.table th { font-size:11.5px !important; color:#8c9aad !important; font-weight:600 !important; text-transform:uppercase !important; letter-spacing:.4px !important; border-bottom:1px solid #f0f2f5 !important; }
+.table td { font-size:13px !important; border-color:#f5f6fa !important; }
+.table-hover tbody tr:hover td { background:#f5f7ff !important; }
 
-/* --- Заголовок страницы --- */
-.page-header { background: transparent !important; padding-top: 20px !important; }
-.page-title { font-size: 20px !important; font-weight: 700 !important; color: #212529 !important; }
-.page-pretitle { color: #8c9aad !important; font-size: 11px !important; text-transform: uppercase !important; letter-spacing: .5px !important; }
+/* ── Кнопки ── */
+.btn-primary { background:#3d5afe !important; border-color:#3d5afe !important; border-radius:8px !important; }
+.btn-primary:hover { background:#2a3eb1 !important; border-color:#2a3eb1 !important; }
+.btn { border-radius:8px !important; font-size:13px !important; }
 
-/* --- Карточки --- */
-.card {
-  border-radius: 14px !important;
-  border: none !important;
-  box-shadow: 0 2px 10px rgba(0,0,0,.06) !important;
-}
-.card-header {
-  background: #fff !important;
-  border-bottom: 1px solid #f0f2f5 !important;
-  font-weight: 600 !important;
-  border-radius: 14px 14px 0 0 !important;
-}
-.card-footer { background: #fff !important; border-radius: 0 0 14px 14px !important; }
+/* ── Формы ── */
+.form-control,.form-select { border-radius:8px !important; border-color:#dee2e6 !important; font-size:13.5px !important; }
+.form-control:focus,.form-select:focus { border-color:#3d5afe !important; box-shadow:0 0 0 3px rgba(61,90,254,.12) !important; }
+.form-label { font-size:13px !important; font-weight:600 !important; color:#495057 !important; }
 
-/* --- Таблицы --- */
-.table th {
-  font-size: 11.5px !important;
-  color: #8c9aad !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: .4px !important;
-  border-bottom: 1px solid #f0f2f5 !important;
-}
-.table td { font-size: 13px !important; border-color: #f5f6fa !important; }
-.table-hover tbody tr:hover td { background: #f5f7ff !important; }
-
-/* --- Кнопки --- */
-.btn-primary { background: #3d5afe !important; border-color: #3d5afe !important; border-radius: 8px !important; }
-.btn-primary:hover { background: #2a3eb1 !important; border-color: #2a3eb1 !important; }
-.btn-secondary { border-radius: 8px !important; }
-.btn-danger { border-radius: 8px !important; }
-.btn-sm { font-size: 12px !important; }
-
-/* --- Формы --- */
-.form-control, .form-select {
-  border-radius: 8px !important;
-  border-color: #dee2e6 !important;
-  font-size: 13.5px !important;
-}
-.form-control:focus, .form-select:focus {
-  border-color: #3d5afe !important;
-  box-shadow: 0 0 0 3px rgba(61,90,254,.12) !important;
-}
-.form-label { font-size: 13px !important; font-weight: 600 !important; color: #495057 !important; }
-
-/* --- Иконки: только у главных пунктов --- */
-.dropdown-menu .nav-link .nav-link-icon,
-.nav-link.ps-lg-3 .nav-link-icon { display: none !important; }
-
-/* --- Бейджи --- */
-.badge { border-radius: 6px !important; font-weight: 600 !important; }
-
-/* --- Пагинация --- */
-.pagination .page-link { border-radius: 8px !important; color: #3d5afe !important; border-color: #dee2e6 !important; }
-.pagination .page-item.active .page-link { background: #3d5afe !important; border-color: #3d5afe !important; color: #fff !important; }
+/* ── Пагинация / бейджи ── */
+.pagination .page-link { border-radius:8px !important; color:#3d5afe !important; }
+.pagination .page-item.active .page-link { background:#3d5afe !important; border-color:#3d5afe !important; color:#fff !important; }
+.badge { border-radius:6px !important; font-weight:600 !important; }
 </style>
 </head>""").encode("utf-8")
 
@@ -516,42 +476,8 @@ _ADMIN_JS = (r"""
   });
   _observer.observe(document.body, {childList:true, subtree:true});
 
-  // ---- 6. Ссылка на дашборд + иконки категорий ----
-  var _CATEGORY_ICONS = {
-    'Заказы':              'fa-solid fa-box',
-    'CRM':                 'fa-solid fa-users',
-    'Настройки магазина':  'fa-solid fa-store',
-    'Система':             'fa-solid fa-gear',
-  };
-
-  function addDashboardLink(){
-    var nav = document.querySelector('.navbar-nav');
-    if(!nav || document.querySelector('a[href="/admin/dashboard"]')) return;
-    var li = document.createElement('li');
-    li.className = 'nav-item';
-    li.innerHTML = '<a class="nav-link" href="/admin/dashboard">'
-      + '<span class="nav-link-icon d-md-none d-lg-inline-block"><i class="fa-solid fa-chart-line"></i></span>'
-      + '<span class="nav-link-title">Дашборд</span></a>';
-    nav.prepend(li);
-  }
-
-  function fixCategoryIcons(){
-    // Добавить иконки к главным пунктам (категориям)
-    document.querySelectorAll('.nav-link.dropdown-toggle').forEach(function(link){
-      var titleEl = link.querySelector('.nav-link-title');
-      if(!titleEl) return;
-      var name = titleEl.textContent.trim();
-      var icon = _CATEGORY_ICONS[name];
-      if(!icon) return;
-      var iconEl = link.querySelector('.nav-link-icon');
-      if(iconEl) iconEl.innerHTML = '<i class="'+icon+'"></i>';
-    });
-  }
-
   function init(){
     collapseInactive();
-    addDashboardLink();
-    fixCategoryIcons();
     initProductImages();
     initSlugAuto();
     initPricePreview();

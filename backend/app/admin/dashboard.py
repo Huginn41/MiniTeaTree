@@ -21,23 +21,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
-body { background:#f4f6fb; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh; }
-.top-nav { background:#fff; border-bottom:1px solid #e9ecef; padding:0 24px; height:56px; display:flex; align-items:center; gap:0; position:sticky; top:0; z-index:100; box-shadow:0 1px 4px rgba(0,0,0,.06); }
-.top-nav .brand { font-weight:800; color:#212529; font-size:17px; letter-spacing:-.3px; margin-right:20px; }
-.top-nav a { text-decoration:none; color:#495057; font-size:13.5px; padding:0 14px; height:56px; display:flex; align-items:center; border-bottom:2px solid transparent; transition:all .15s; }
-.top-nav a:hover { color:#3d5afe; border-bottom-color:#3d5afe; }
-.top-nav a.active { color:#3d5afe; border-bottom-color:#3d5afe; font-weight:600; }
+body { background:#f4f6fb; min-height:100vh; }
 .stat-card { border-radius:14px; border:none; box-shadow:0 2px 10px rgba(0,0,0,.06); transition:transform .15s,box-shadow .15s; }
 .stat-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.1); }
 .stat-icon { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
 .stat-value { font-size:1.85rem; font-weight:800; line-height:1.1; letter-spacing:-.5px; }
 .stat-label { font-size:.79rem; color:#6c757d; margin-top:3px; }
-.chart-card { border-radius:14px; border:none; box-shadow:0 2px 10px rgba(0,0,0,.06); }
 .section-title { font-size:14.5px; font-weight:700; color:#212529; margin-bottom:0; }
 .period-btn { border-radius:8px !important; font-size:12.5px; padding:4px 12px; }
 .period-btn.active { background:#3d5afe !important; border-color:#3d5afe !important; color:#fff !important; }
-table th { font-weight:600; font-size:12px; color:#8c9aad; text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid #f0f2f5 !important; padding-bottom:8px; }
-table td { font-size:13px; vertical-align:middle; border-color:#f5f6fa; padding:10px 8px; }
 .order-warn { background:#fffbf0 !important; }
 .order-danger { background:#fff5f5 !important; }
 .age-pill { font-size:11px; border-radius:20px; padding:2px 9px; font-weight:600; display:inline-block; }
@@ -51,13 +43,49 @@ table td { font-size:13px; vertical-align:middle; border-color:#f5f6fa; padding:
 </head>
 <body>
 
-<div class="top-nav">
-  <span class="brand">🍵 Чайное Дерево</span>
-  <a href="/admin/dashboard" class="active"><i class="fa-solid fa-chart-line me-1"></i>Дашборд</a>
-  <a href="/admin/order/list"><i class="fa-solid fa-box me-1"></i>Заказы</a>
-  <a href="/admin/user/list"><i class="fa-solid fa-users me-1"></i>Клиенты</a>
-  <a href="/admin/product/list"><i class="fa-solid fa-leaf me-1"></i>Товары</a>
-  <a href="/admin"><i class="fa-solid fa-th-large me-1"></i>Все разделы</a>
+<!-- Топ-нав — те же ct-* классы что и в layout.html -->
+<div class="ct-topnav">
+  <a class="ct-brand" href="/admin/dashboard">🍵 Чайное Дерево</a>
+  <div class="ct-nav-item">
+    <a class="ct-nav-link active" href="/admin/dashboard"><i class="fa-solid fa-chart-line"></i>Дашборд</a>
+  </div>
+  <div class="ct-sep"></div>
+  <div class="ct-nav-item ct-dropdown">
+    <span class="ct-nav-link"><i class="fa-solid fa-box"></i>Заказы <span class="ct-dropdown-arrow">▾</span></span>
+    <div class="ct-dropdown-menu">
+      <a class="ct-dropdown-item" href="/admin/order/list">Все заказы</a>
+      <a class="ct-dropdown-item" href="/admin/deliveryinfo/list">Доставки</a>
+      <a class="ct-dropdown-item" href="/admin/orderitem/list">Позиции</a>
+    </div>
+  </div>
+  <div class="ct-nav-item ct-dropdown">
+    <span class="ct-nav-link"><i class="fa-solid fa-users"></i>CRM <span class="ct-dropdown-arrow">▾</span></span>
+    <div class="ct-dropdown-menu">
+      <a class="ct-dropdown-item" href="/admin/user/list">Клиенты</a>
+      <a class="ct-dropdown-item" href="/admin/notificationtarget/list">Уведомления</a>
+    </div>
+  </div>
+  <div class="ct-nav-item ct-dropdown">
+    <span class="ct-nav-link"><i class="fa-solid fa-store"></i>Настройки <span class="ct-dropdown-arrow">▾</span></span>
+    <div class="ct-dropdown-menu">
+      <a class="ct-dropdown-item" href="/admin/product/list">Товары</a>
+      <a class="ct-dropdown-item" href="/admin/category/list">Категории</a>
+      <a class="ct-dropdown-item" href="/admin/banner/list">Баннеры</a>
+      <a class="ct-dropdown-item" href="/admin/faqitem/list">FAQ</a>
+      <a class="ct-dropdown-item" href="/admin/pickuppoint/list">Самовывоз</a>
+    </div>
+  </div>
+  <div class="ct-nav-item ct-dropdown">
+    <span class="ct-nav-link"><i class="fa-solid fa-gear"></i>Система <span class="ct-dropdown-arrow">▾</span></span>
+    <div class="ct-dropdown-menu">
+      <a class="ct-dropdown-item" href="/admin/adminuser/list">Администраторы</a>
+      <a class="ct-dropdown-item" href="/admin/ymlimport/list">YML-импорты</a>
+      <a class="ct-dropdown-item" href="/admin/paymentevent/list">Платежи</a>
+    </div>
+  </div>
+  <div class="ct-logout">
+    <a href="/admin/logout"><i class="fa fa-sign-out me-1"></i>Выйти</a>
+  </div>
 </div>
 
 <div class="container-fluid px-4 py-4" style="max-width:1400px">
