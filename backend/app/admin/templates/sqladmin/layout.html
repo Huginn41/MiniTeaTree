@@ -9,6 +9,10 @@
 *, body, .navbar, .nav-link, .card, .btn, input, select, textarea, table, .dropdown-menu {
   font-family: 'Futura', 'Century Gothic', -apple-system, sans-serif !important;
 }
+.fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab {
+  font-family: "Font Awesome 6 Free" !important;
+}
+.fa-brands, .fab { font-family: "Font Awesome 6 Brands" !important; }
 
 /* ─── Общий фон ─── */
 body { background: #f4f6fb !important; margin: 0; }
@@ -63,7 +67,7 @@ body { background: #f4f6fb !important; margin: 0; }
 }
 .ct-nav-link:hover { color: #3d5afe; border-bottom-color: #3d5afe; text-decoration: none; }
 .ct-nav-link.active { color: #3d5afe; border-bottom-color: #3d5afe; font-weight: 600; }
-.ct-nav-link i { font-size: 14px; opacity: .7; }
+.ct-nav-link i { font-size: 14px; color: #1a6b3c; }
 
 /* Дропдаун */
 .ct-dropdown { position: relative; }
@@ -152,16 +156,6 @@ body { background: #f4f6fb !important; margin: 0; }
 {% endblock %}
 
 {% block body %}
-{% set _cat_icons = {
-  'Заказы': 'fa-solid fa-box',
-  'CRM': 'fa-solid fa-users',
-  'Настройки магазина': 'fa-solid fa-store',
-  'Система': 'fa-solid fa-gear',
-  'orders': 'fa-solid fa-box',
-  'crm': 'fa-solid fa-users',
-  'catalog': 'fa-solid fa-store',
-  'system': 'fa-solid fa-gear'
-} %}
 
 <!-- ─── Топ-навбар ─── -->
 <div class="ct-topnav">
@@ -191,9 +185,7 @@ body { background: #f4f6fb !important; margin: 0; }
       {% elif item.type_ == "Category" %}
         <div class="ct-nav-item ct-dropdown">
           <span class="ct-nav-link {% if item.is_active(request) %}active{% endif %}">
-            {% if item.display_name in _cat_icons %}<i class="{{ _cat_icons[item.display_name] }}"></i>
-            {% elif item.name in _cat_icons %}<i class="{{ _cat_icons[item.name] }}"></i>
-            {% endif %}
+            {% if item.icon %}<i class="{{ item.icon }}"></i>{% endif %}
             {{ item.display_name }}
             <span class="ct-dropdown-arrow">▾</span>
           </span>

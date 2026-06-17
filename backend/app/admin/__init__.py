@@ -110,6 +110,8 @@ _ADMIN_CSS = ("""
 @font-face { font-family:'Futura'; src:url('/static/fonts/FuturaBookC.otf')  format('opentype'); font-weight:400; font-display:swap; }
 @font-face { font-family:'Futura'; src:url('/static/fonts/FuturaDemiC.otf')  format('opentype'); font-weight:600; font-display:swap; }
 *, body { font-family:'Futura','Century Gothic',-apple-system,sans-serif !important; }
+.fa-solid,.fa-regular,.fa-brands,.fas,.far,.fab { font-family:"Font Awesome 6 Free" !important; }
+.fa-brands,.fab { font-family:"Font Awesome 6 Brands" !important; }
 
 /* ── Фон ── */
 body { background:#f4f6fb !important; }
@@ -143,7 +145,7 @@ body { background:#f4f6fb !important; }
 }
 .ct-nav-link:hover { color:#3d5afe; border-bottom-color:#3d5afe; text-decoration:none; }
 .ct-nav-link.active { color:#3d5afe; border-bottom-color:#3d5afe; font-weight:600; }
-.ct-nav-link i { font-size:14px; opacity:.75; }
+.ct-nav-link i { font-size:14px; color:#1a6b3c; }
 .ct-sep { width:1px; height:20px; background:#dee2e6; margin:0 8px; flex-shrink:0; }
 .ct-logout { margin-left:auto; display:flex; align-items:center; gap:8px; }
 .ct-logout a {
@@ -663,6 +665,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         name_plural = "Заказы"
         icon = "fa-solid fa-box"
         category = "Заказы"
+        category_icon = "fa-solid fa-box"
 
         column_list = [
             "number", "user", "total_amount",
@@ -765,6 +768,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         name_plural = "Клиенты"
         icon = "fa-solid fa-users"
         category = "CRM"
+        category_icon = "fa-solid fa-users"
 
         column_list = [
             "display_name", "phone",
@@ -890,6 +894,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         name_plural = "Товары"
         icon = "fa-solid fa-leaf"
         category = "Настройки магазина"
+        category_icon = "fa-solid fa-store"
 
         column_list = ["sort_order", "name", "category", "base_price", "slug"]
         column_searchable_list = ["name", "slug"]
@@ -970,6 +975,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         name_plural = "Администраторы"
         icon = "fa-solid fa-shield"
         category = "Система"
+        category_icon = "fa-solid fa-gear"
 
         column_list = ["username", "is_superuser", "created_at"]
         column_labels = {
