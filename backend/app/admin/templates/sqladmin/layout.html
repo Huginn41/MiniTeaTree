@@ -156,7 +156,11 @@ body { background: #f4f6fb !important; margin: 0; }
   'Заказы': 'fa-solid fa-box',
   'CRM': 'fa-solid fa-users',
   'Настройки магазина': 'fa-solid fa-store',
-  'Система': 'fa-solid fa-gear'
+  'Система': 'fa-solid fa-gear',
+  'orders': 'fa-solid fa-box',
+  'crm': 'fa-solid fa-users',
+  'catalog': 'fa-solid fa-store',
+  'system': 'fa-solid fa-gear'
 } %}
 
 <!-- ─── Топ-навбар ─── -->
@@ -187,7 +191,9 @@ body { background: #f4f6fb !important; margin: 0; }
       {% elif item.type_ == "Category" %}
         <div class="ct-nav-item ct-dropdown">
           <span class="ct-nav-link {% if item.is_active(request) %}active{% endif %}">
-            {% if item.name in _cat_icons %}<i class="{{ _cat_icons[item.name] }}"></i>{% endif %}
+            {% if item.display_name in _cat_icons %}<i class="{{ _cat_icons[item.display_name] }}"></i>
+            {% elif item.name in _cat_icons %}<i class="{{ _cat_icons[item.name] }}"></i>
+            {% endif %}
             {{ item.display_name }}
             <span class="ct-dropdown-arrow">▾</span>
           </span>
