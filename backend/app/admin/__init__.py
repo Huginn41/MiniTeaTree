@@ -433,6 +433,8 @@ _ADMIN_JS = (r"""
 
 class _AdminCollapseMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        if request.url.path in ("/admin", "/admin/") and request.session.get("admin_token") == "authenticated":
+            return Response(status_code=302, headers={"location": "/admin/dashboard"})
         response = await call_next(request)
         ct = response.headers.get("content-type", "")
         if request.url.path.startswith("/admin") and "text/html" in ct:
