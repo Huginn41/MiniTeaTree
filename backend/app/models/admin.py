@@ -24,7 +24,7 @@ class AdminUser(TimestampMixin, Base):
     # bcrypt-хэш. Поле называется password_hash, чтобы случайно не залогировать.
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_superuser: Mapped[bool] = mapped_column(
-        Boolean, server_default=text("1"), nullable=False, default=True
+        Boolean, server_default=text("true"), nullable=False, default=True
     )
     # Необязательная привязка к Telegram (для 2FA/уведомлений в будущем).
     telegram_id: Mapped[int | None] = mapped_column(nullable=True)
