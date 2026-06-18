@@ -24,6 +24,18 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from datetime import timezone as _tz, timedelta as _td
+
+_MSK = _tz(_td(hours=3))
+
+
+def _fmt_dt(dt):
+    """UTC datetime → московское время, формат ДД.ММ.ГГГГ ЧЧ:ММ."""
+    if dt is None:
+        return "—"
+    return dt.replace(tzinfo=_tz.utc).astimezone(_MSK).strftime("%d.%m.%Y %H:%M")
+
+
 # ---------- Варианты статусов ----------
 
 _DELIVERY_CHOICES = [
@@ -57,7 +69,7 @@ def _status_select(order_id: int, field: str, current: str, choices: list) -> Ma
     )
     js = (
         f"fetch('/admin-api/order/{order_id}/status',"
-        f"{{method:'POST',headers:{{'Content-Type':'application/json'}},"
+        f"{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json'}},"
         f"body:JSON.stringify({{field:'{field}',value:this.value}})}}"
         f").then(r=>r.ok&&location.reload())"
     )
@@ -710,7 +722,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "total_amount": lambda m, a: Markup(f"<b>{float(m.total_amount):.0f} ₽</b>"),
             "status_delivery": lambda m, a: _status_select(m.id, "status_delivery", m.status_delivery, _DELIVERY_CHOICES),
             "status_payment": lambda m, a: _status_select(m.id, "status_payment", m.status_payment, _PAYMENT_CHOICES),
-            "created_at": lambda m, a: m.created_at.strftime("%d.%m.%Y %H:%M") if m.created_at else "—",
+            "created_at": lambda m, a: _fmt_dt(m.created_at),
         }
 
         form_columns = [
@@ -814,7 +826,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "total_spent": lambda m, a: f"{m.total_spent:.0f} ₽" if m.total_spent else "—",
             "avg_check": lambda m, a: f"{m.avg_check:.0f} ₽" if m.avg_check else "—",
             "first_order_date": lambda m, a: m.first_order_date.strftime("%d.%m.%Y") if m.first_order_date else "—",
-            "created_at": lambda m, a: m.created_at.strftime("%d.%m.%Y") if m.created_at else "—",
+            "created_at": lambda m, a: _fmt_dt(m.created_at),
         }
 
         form_columns = ["phone", "is_admin"]
@@ -1000,7 +1012,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         }
         column_formatters = {
             "is_superuser": lambda m, a: Markup("👑") if m.is_superuser else "",
-            "created_at": lambda m, a: m.created_at.strftime("%d.%m.%Y") if m.created_at else "—",
+            "created_at": lambda m, a: _fmt_dt(m.created_at),
         }
         form_columns = ["username", "is_superuser", "telegram_id"]
         page_size = 50
@@ -1020,7 +1032,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "started_at": "Запущен",
         }
         column_formatters = {
-            "started_at": lambda m, a: m.started_at.strftime("%d.%m.%Y %H:%M") if m.started_at else "—",
+            "started_at": lambda m, a: _fmt_dt(m.started_at),
         }
         can_create = False
         can_edit = False
@@ -1041,7 +1053,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "created_at": "Дата",
         }
         column_formatters = {
-            "created_at": lambda m, a: m.created_at.strftime("%d.%m.%Y %H:%M") if m.created_at else "—",
+            "created_at": lambda m, a: _fmt_dt(m.created_at),
         }
         can_create = False
         can_edit = False

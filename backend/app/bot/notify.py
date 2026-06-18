@@ -53,13 +53,16 @@ def _order_text(order: Order) -> str:
 
 async def _send_message(chat_id: int, text: str) -> bool:
     """Отправляет Telegram-сообщение. Возвращает True при успехе."""
-    token = get_settings().bot_token.get_secret_value()
+    settings = get_settings()
+    token = settings.bot_token.get_secret_value()
     if not token or token == "0:fake":
         return False
 
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    # Используем Cloudflare Worker прокси если задан (Selectel блокирует api.telegram.org)
+    base = settings.telegram_api_base_url.rstrip("/") if settings.telegram_api_base_url else "https://api.telegram.org"
+    url = f"{base}/bot{token}/sendMessage"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(url, json={
                 "chat_id": chat_id,
                 "text": text,

@@ -34,7 +34,8 @@ async def notify_status_changed(order: Order, new_status: str, user_telegram_id:
     """
     from app.config import get_settings
 
-    token = get_settings().bot_token.get_secret_value()
+    settings = get_settings()
+    token = settings.bot_token.get_secret_value()
     if not token or token == "0:fake":
         return False
 
@@ -44,10 +45,11 @@ async def notify_status_changed(order: Order, new_status: str, user_telegram_id:
 
     text = template.format(number=order.number)
 
+    base = settings.telegram_api_base_url.rstrip("/") if settings.telegram_api_base_url else "https://api.telegram.org"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
-                f"https://api.telegram.org/bot{token}/sendMessage",
+                f"{base}/bot{token}/sendMessage",
                 json={"chat_id": user_telegram_id, "text": text, "parse_mode": "HTML"},
             )
         ok = resp.json().get("ok", False)
