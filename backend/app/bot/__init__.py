@@ -70,8 +70,8 @@ def setup_bot(app: FastAPI) -> None:
         async def process() -> None:
             try:
                 await dp.feed_update(bot=bot, update=update)
-            except Exception:
-                pass
+            except Exception as e:
+                log.error("bot_update_error", error=str(e), update_id=update.update_id)
 
         asyncio.create_task(process())
         return JSONResponse({"ok": True})
