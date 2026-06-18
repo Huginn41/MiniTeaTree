@@ -4,8 +4,17 @@ Backend для Telegram Mini App магазина чая: каталог, кор
 оплата (Telegram Payments / ЮKassa), личный кабинет, админка/CRM (SQLAdmin),
 бот с уведомлениями.
 
-> **Статус:** в разработке. Текущий прогресс — см. [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md).
-> Подробный гайд по деплою появится в `DEPLOY.md` (этап 11).
+> **Статус:** в разработке и деплое. Текущий прогресс — см. [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md).
+
+## Демо
+
+| | |
+|---|---|
+| 🤖 Telegram-бот | [@teatree96_bot](https://t.me/teatree96_bot) |
+| 🛍 Mini App | открывается кнопкой в боте |
+| 🔧 Админ-панель | [чайноедерево.рф/admin](https://чайноедерево.рф/admin) |
+
+Для просмотра Mini App — написать боту `/start` и нажать кнопку «Открыть магазин».
 
 ## Стек
 
