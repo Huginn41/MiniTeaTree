@@ -53,7 +53,8 @@ def setup_bot(app: FastAPI) -> None:
 
     @app.post("/bot/webhook", include_in_schema=False)
     async def bot_webhook(request: Request) -> JSONResponse:
-        """Принимает Update от Telegram и прогоняет через aiogram Dispatcher."""
+        """Принимает Update от Telegram, сразу отвечает 200, обрабатывает в фоне."""
+        import asyncio
         from aiogram.types import Update
 
         try:
@@ -66,10 +67,13 @@ def setup_bot(app: FastAPI) -> None:
         except Exception:
             return JSONResponse(status_code=400, content={"ok": False})
 
-        try:
-            await dp.feed_update(bot=bot, update=update)
-        except Exception:
-            pass  # ошибки обработки не ломают ответ Telegram
+        async def process() -> None:
+            try:
+                await dp.feed_update(bot=bot, update=update)
+            except Exception:
+                pass
+
+        asyncio.create_task(process())
         return JSONResponse({"ok": True})
 
     log.info("bot_webhook_registered", path="/bot/webhook")
