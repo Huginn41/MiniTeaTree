@@ -84,7 +84,8 @@ body { background:#f4f6fb; min-height:100vh; }
     </div>
   </div>
   <div class="ct-logout">
-    <a href="/admin/logout"><i class="fa fa-sign-out me-1"></i>Выйти</a>
+    <span id="dash-user" style="font-size:13px;color:#6c757d;display:flex;align-items:center;gap:6px"></span>
+    <a href="/admin/logout" title="Выйти"><i class="fa-solid fa-right-from-bracket me-1"></i>Выйти</a>
   </div>
 </div>
 
@@ -310,7 +311,16 @@ function load(){
     });
 }
 
-document.addEventListener('DOMContentLoaded', load);
+document.addEventListener('DOMContentLoaded', function(){
+  load();
+  fetch('/admin-api/me', {credentials:'include'})
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!d) return;
+      var el = document.getElementById('dash-user');
+      if(el) el.innerHTML = '<i class="fa-solid fa-circle-user" style="color:#1a6b3c"></i>' + d.username;
+    });
+});
 </script>
 </body>
 </html>"""

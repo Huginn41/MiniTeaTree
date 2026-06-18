@@ -103,6 +103,7 @@ class AdminAuth(AuthenticationBackend):
             settings = get_settings()
             if username == settings.admin_username and password == settings.admin_password.get_secret_value():
                 request.session["admin_token"] = "authenticated"
+                request.session["admin_username"] = username
                 return True
             return False
 
@@ -110,6 +111,7 @@ class AdminAuth(AuthenticationBackend):
             return False
 
         request.session["admin_token"] = "authenticated"
+        request.session["admin_username"] = admin.username
         request.session["admin_readonly"] = not admin.is_superuser
         return True
 
@@ -687,6 +689,15 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             setattr(order, field, value)
             await session.commit()
         return _JSONResponse({"ok": True})
+
+    @app.get("/admin-api/me", include_in_schema=False)
+    async def admin_me(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        return _JSONResponse({
+            "username": request.session.get("admin_username", ""),
+            "readonly": bool(request.session.get("admin_readonly")),
+        })
 
     from app.seed import DEMO_TG_IDS as _DEMO_TG_IDS
 
