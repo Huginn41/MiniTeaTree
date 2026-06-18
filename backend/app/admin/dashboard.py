@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', load);
 
 # ---------- Данные ----------
 
-async def _get_data(period_days: int) -> dict:
+async def _get_data(period_days: int, demo: bool = False) -> dict:
     from sqlalchemy import func, select
     from sqlalchemy.orm import selectinload
 
@@ -330,42 +330,54 @@ async def _get_data(period_days: int) -> dict:
     since = now - timedelta(days=period_days)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
+    def _demo_filter(stmt):
+        return stmt.where(Order.number.like("DEMO-%")) if demo else stmt
+
     async with get_session_factory()() as s:
-        # Заказы без завершённых статусов
         pr = await s.execute(
-            select(Order)
-            .where(Order.status_delivery.notin_(["delivered", "cancelled"]))
-            .options(selectinload(Order.user))
-            .order_by(Order.created_at.asc())
+            _demo_filter(
+                select(Order)
+                .where(Order.status_delivery.notin_(["delivered", "cancelled"]))
+                .options(selectinload(Order.user))
+                .order_by(Order.created_at.asc())
+            )
         )
         pending = pr.scalars().all()
 
         today_r = await s.execute(
-            select(func.count(Order.id)).where(Order.created_at >= today_start)
+            _demo_filter(
+                select(func.count(Order.id)).where(Order.created_at >= today_start)
+            )
         )
         today_count = today_r.scalar() or 0
 
         rev_r = await s.execute(
-            select(func.coalesce(func.sum(Order.total_amount), 0))
-            .where(Order.created_at >= since, Order.status_payment == "paid")
+            _demo_filter(
+                select(func.coalesce(func.sum(Order.total_amount), 0))
+                .where(Order.created_at >= since, Order.status_payment == "paid")
+            )
         )
         period_revenue = float(rev_r.scalar() or 0)
 
         paid_r = await s.execute(
-            select(func.count(Order.id))
-            .where(Order.created_at >= since, Order.status_payment == "paid")
+            _demo_filter(
+                select(func.count(Order.id))
+                .where(Order.created_at >= since, Order.status_payment == "paid")
+            )
         )
         period_paid = paid_r.scalar() or 0
 
         chart_r = await s.execute(
-            select(
-                func.date(Order.created_at).label("day"),
-                func.count(Order.id).label("count"),
-                func.coalesce(func.sum(Order.total_amount), 0).label("revenue"),
+            _demo_filter(
+                select(
+                    func.date(Order.created_at).label("day"),
+                    func.count(Order.id).label("count"),
+                    func.coalesce(func.sum(Order.total_amount), 0).label("revenue"),
+                )
+                .where(Order.created_at >= since)
+                .group_by(func.date(Order.created_at))
+                .order_by(func.date(Order.created_at))
             )
-            .where(Order.created_at >= since)
-            .group_by(func.date(Order.created_at))
-            .order_by(func.date(Order.created_at))
         )
         chart_rows = chart_r.all()
 
@@ -378,7 +390,10 @@ async def _get_data(period_days: int) -> dict:
                 func.coalesce(func.sum(Order.total_amount), 0).label("total_spent"),
             )
             .join(Order, Order.user_id == User.id)
-            .where(Order.status_payment == "paid")
+            .where(
+                Order.status_payment == "paid",
+                *([] if not demo else [Order.number.like("DEMO-%")]),
+            )
             .group_by(User.id, User.first_name, User.last_name, User.username)
             .order_by(func.sum(Order.total_amount).desc())
             .limit(10)
@@ -441,4 +456,5 @@ def setup_dashboard(app: FastAPI) -> None:
         if request.session.get("admin_token") != "authenticated":
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
         period = period if period in (7, 30, 90) else 30
-        return JSONResponse(await _get_data(period))
+        demo = bool(request.session.get("admin_readonly"))
+        return JSONResponse(await _get_data(period, demo=demo))

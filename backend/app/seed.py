@@ -28,6 +28,9 @@ from app.models import (
 )
 from app.models.enums import NotificationRole
 
+# Telegram IDs < 0 используются только для демо — настоящие ID всегда > 0
+DEMO_TG_IDS = [-1, -2, -3, -4, -5]
+
 # ---------------------------------------------------------------------------
 # Данные
 # ---------------------------------------------------------------------------
@@ -392,6 +395,108 @@ async def _seed_notification_targets(factory) -> None:
         await session.commit()
 
 
+async def _seed_demo_data(factory) -> None:
+    """Создаёт фейковых клиентов и заказы для демо-режима (telegram_id < 0)."""
+    from datetime import datetime, timezone, timedelta
+    from app.models.user import User
+    from app.models.order import Order, OrderItem
+    from app.models.delivery import DeliveryInfo
+
+    _DEMO_USERS = [
+        {"telegram_id": -1, "first_name": "Анна",    "last_name": "Смирнова",  "username": "demo_anna",  "phone": "+7 999 111-22-33"},
+        {"telegram_id": -2, "first_name": "Михаил",  "last_name": "Петров",    "username": "demo_misha", "phone": "+7 999 444-55-66"},
+        {"telegram_id": -3, "first_name": "Елена",   "last_name": "Козлова",   "username": "demo_lena",  "phone": "+7 999 777-88-99"},
+        {"telegram_id": -4, "first_name": "Дмитрий", "last_name": "Новиков",   "username": "demo_dima",  "phone": "+7 999 000-11-22"},
+        {"telegram_id": -5, "first_name": "Ольга",   "last_name": "Соколова",  "username": "demo_olga",  "phone": "+7 999 333-44-55"},
+    ]
+
+    _DEMO_ORDERS = [
+        {"user_idx": 0, "number": "DEMO-000001", "total": 875,  "status_p": "paid",    "status_d": "delivered",          "delivery_type": "courier", "address": "ул. Ленина, 10, кв. 5",         "days_ago": 14},
+        {"user_idx": 1, "number": "DEMO-000002", "total": 1250, "status_p": "paid",    "status_d": "delivered",          "delivery_type": "pickup",  "address": None,                            "days_ago": 10},
+        {"user_idx": 2, "number": "DEMO-000003", "total": 500,  "status_p": "pending", "status_d": "awaiting_delivery_payment", "delivery_type": "courier", "address": "пр. Мира, 45, кв. 12", "days_ago": 3},
+        {"user_idx": 0, "number": "DEMO-000004", "total": 625,  "status_p": "paid",    "status_d": "shipping",           "delivery_type": "pvz",     "address": "ПВЗ Боксберри, Садовая 3",      "days_ago": 2},
+        {"user_idx": 3, "number": "DEMO-000005", "total": 375,  "status_p": "pending", "status_d": "new",                "delivery_type": "pickup",  "address": None,                            "days_ago": 1},
+        {"user_idx": 4, "number": "DEMO-000006", "total": 1500, "status_p": "paid",    "status_d": "delivered",          "delivery_type": "courier", "address": "ул. Гагарина, 7, кв. 33",       "days_ago": 7},
+        {"user_idx": 1, "number": "DEMO-000007", "total": 750,  "status_p": "pending", "status_d": "manager_contacted",  "delivery_type": "pvz",     "address": "ПВЗ СДЭК, Пушкина 22",         "days_ago": 0},
+    ]
+
+    async with factory() as session:
+        # Создаём демо-пользователей
+        user_ids = {}
+        for u in _DEMO_USERS:
+            exists = await session.execute(select(User).where(User.telegram_id == u["telegram_id"]))
+            user = exists.scalar_one_or_none()
+            if user is None:
+                user = User(**u)
+                session.add(user)
+                await session.flush()
+            user_ids[u["telegram_id"]] = user.id
+
+        # Получаем первый попавшийся вариант из каждой граммовки для снапшотов
+        from app.models.product import ProductVariant, Product as Prod
+        variants_res = await session.execute(
+            select(ProductVariant, Prod.name)
+            .join(Prod, Prod.id == ProductVariant.product_id)
+            .where(ProductVariant.in_stock.is_(True))
+            .limit(20)
+        )
+        variants_raw = variants_res.all()
+        if not variants_raw:
+            await session.commit()
+            return
+        variants = [(v, name) for v, name in variants_raw]
+
+        now = datetime.now(timezone.utc)
+        vi = 0  # индекс варианта по кругу
+
+        for od in _DEMO_ORDERS:
+            exists = await session.execute(select(Order).where(Order.number == od["number"]))
+            if exists.scalar_one_or_none() is not None:
+                continue
+
+            tg_id = _DEMO_USERS[od["user_idx"]]["telegram_id"]
+            uid = user_ids[tg_id]
+            created = now - timedelta(days=od["days_ago"], hours=od["user_idx"])
+
+            order = Order(
+                user_id=uid,
+                number=od["number"],
+                total_amount=od["total"],
+                status_payment=od["status_p"],
+                status_delivery=od["status_d"],
+                comment=None,
+                created_at=created,
+                paid_at=created + timedelta(hours=1) if od["status_p"] == "paid" else None,
+                delivered_at=created + timedelta(days=3) if od["status_d"] == "delivered" else None,
+            )
+            session.add(order)
+            await session.flush()
+
+            # 1-2 позиции
+            items_count = 1 + (od["user_idx"] % 2)
+            for _ in range(items_count):
+                variant, prod_name = variants[vi % len(variants)]
+                vi += 1
+                session.add(OrderItem(
+                    order_id=order.id,
+                    product_id=variant.product_id,
+                    variant_id=variant.id,
+                    quantity=1,
+                    unit_price=float(variant.price),
+                    snapshot_name=prod_name,
+                    snapshot_weight_g=variant.weight_g,
+                ))
+
+            session.add(DeliveryInfo(
+                order_id=order.id,
+                type=od["delivery_type"],
+                address=od["address"],
+                contact_phone=_DEMO_USERS[od["user_idx"]]["phone"],
+            ))
+
+        await session.commit()
+
+
 async def run_seed() -> None:
     configure_engine()
 
@@ -427,6 +532,10 @@ async def run_seed() -> None:
 
     print("Seeding notification targets...")
     await _seed_notification_targets(factory)
+    print("  → done")
+
+    print("Seeding demo data...")
+    await _seed_demo_data(factory)
     print("  → done")
 
     print("\nSeed completed!")

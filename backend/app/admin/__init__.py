@@ -688,12 +688,21 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             await session.commit()
         return _JSONResponse({"ok": True})
 
+    from app.seed import DEMO_TG_IDS as _DEMO_TG_IDS
+
     class OrderAdmin(ModelView, model=Order):
         name = "Заказы"
         name_plural = "Заказы"
         icon = "fa-solid fa-box"
         category = "Заказы"
         category_icon = "fa-solid fa-box"
+
+        def list_query(self, request):
+            from sqlalchemy import select
+            stmt = select(Order)
+            if request.session.get("admin_readonly"):
+                stmt = stmt.where(Order.number.like("DEMO-%"))
+            return stmt
 
         column_list = [
             "number", "user", "total_amount",
@@ -797,6 +806,14 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         icon = "fa-solid fa-users"
         category = "CRM"
         category_icon = "fa-solid fa-users"
+
+        def list_query(self, request):
+            from sqlalchemy import select
+            from app.models.user import User as _User
+            stmt = select(_User)
+            if request.session.get("admin_readonly"):
+                stmt = stmt.where(_User.telegram_id.in_(_DEMO_TG_IDS))
+            return stmt
 
         column_list = [
             "display_name", "phone",
