@@ -733,10 +733,6 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "status_delivery": _DELIVERY_CHOICES,
             "status_payment": _PAYMENT_CHOICES,
         }
-        form_overrides = {
-            "status_delivery": __import__("wtforms").SelectField,
-            "status_payment": __import__("wtforms").SelectField,
-        }
         page_size = 50
 
     class OrderItemAdmin(ModelView, model=OrderItem):
