@@ -340,19 +340,18 @@ async def _seed_admin(factory) -> None:
         exists = await session.execute(
             select(AdminUser).where(AdminUser.username == settings.admin_username)
         )
-        if exists.scalar_one_or_none() is not None:
-            return
-        session.add(
-            AdminUser(
-                username=settings.admin_username,
-                password_hash=_bcrypt_lib.hashpw(
-                    settings.admin_password.get_secret_value().encode(),
-                    _bcrypt_lib.gensalt(),
-                ).decode(),
-                is_superuser=True,
+        if exists.scalar_one_or_none() is None:
+            session.add(
+                AdminUser(
+                    username=settings.admin_username,
+                    password_hash=_bcrypt_lib.hashpw(
+                        settings.admin_password.get_secret_value().encode(),
+                        _bcrypt_lib.gensalt(),
+                    ).decode(),
+                    is_superuser=True,
+                )
             )
-        )
-        await session.commit()
+            await session.commit()
 
     # Демо-пользователь (read-only)
     async with factory() as session:
