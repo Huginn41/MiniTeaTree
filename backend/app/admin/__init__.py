@@ -25,7 +25,6 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from datetime import timezone as _tz, timedelta as _td
-from functools import partial as _partial
 from sqladmin.fields import SelectField as _AdminSelectField
 
 _MSK = _tz(_td(hours=3))
@@ -733,8 +732,12 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "comment", "paid_at", "delivered_at",
         ]
         form_overrides = {
-            "status_delivery": _partial(_AdminSelectField, choices=_DELIVERY_CHOICES),
-            "status_payment": _partial(_AdminSelectField, choices=_PAYMENT_CHOICES),
+            "status_delivery": _AdminSelectField,
+            "status_payment": _AdminSelectField,
+        }
+        form_args = {
+            "status_delivery": {"choices": _DELIVERY_CHOICES},
+            "status_payment": {"choices": _PAYMENT_CHOICES},
         }
         page_size = 50
 
