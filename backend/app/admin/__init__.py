@@ -71,7 +71,8 @@ def _status_select(order_id: int, field: str, current: str, choices: list) -> Ma
         f"fetch('/admin-api/order/{order_id}/status',"
         f"{{method:'POST',credentials:'include',headers:{{'Content-Type':'application/json'}},"
         f"body:JSON.stringify({{field:'{field}',value:this.value}})}}"
-        f").then(r=>r.ok&&location.reload())"
+        f").then(function(r){{if(r.ok){{location.reload();}}else{{r.text().then(function(t){{alert('Ошибка '+r.status+': '+t);}});}}}}"
+        f").catch(function(e){{alert('Сетевая ошибка: '+e);}})"
     )
     return Markup(f'<select onchange="{js}" style="{_SELECT_STYLE}">{options}</select>')
 

@@ -289,8 +289,11 @@ function renderTop(customers){
 }
 
 function load(){
-  fetch('/admin-api/dashboard/data?period='+period)
-    .then(function(r){ return r.json(); })
+  fetch('/admin-api/dashboard/data?period='+period, {credentials:'include'})
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    })
     .then(function(d){
       document.getElementById('s-pending').textContent  = d.stats.pending_count;
       document.getElementById('s-today').textContent    = d.stats.today_count;
@@ -300,7 +303,11 @@ function load(){
       renderPending(d.pending_orders);
       renderTop(d.top_customers);
     })
-    .catch(function(){ console.error('Dashboard load failed'); });
+    .catch(function(err){
+      console.error('Dashboard load failed', err);
+      document.getElementById('pending-body').innerHTML='<tr><td colspan="8" class="text-center text-danger py-3">Ошибка загрузки: '+err.message+'</td></tr>';
+      document.getElementById('top-body').innerHTML='<tr><td colspan="4" class="text-center text-danger py-3">Ошибка</td></tr>';
+    });
 }
 
 document.addEventListener('DOMContentLoaded', load);
