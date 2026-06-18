@@ -82,7 +82,7 @@ def create_app() -> FastAPI:
     # ---------- Middleware ----------
     # SessionMiddleware нужна для SQLAdmin (хранение состояния аутентификации).
     from starlette.middleware.sessions import SessionMiddleware
-    from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
     from app.admin import _AdminCollapseMiddleware
 
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
