@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     # ---------- Telegram ----------
     bot_token: SecretStr = SecretStr("")
     admin_telegram_ids: str = ""  # "111,222" → парсим в список
+    telegram_api_base_url: str = ""  # прокси для Telegram API (напр. Cloudflare Worker)
 
     # ---------- Авторизация / JWT ----------
     jwt_secret: SecretStr = SecretStr("")

@@ -31,10 +31,24 @@ def setup_bot(app: FastAPI) -> None:
 
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
+    from aiogram.client.session.aiohttp import AiohttpSession
 
     from app.bot.handlers import create_dispatcher
 
-    bot = Bot(token=token, default=DefaultBotProperties(parse_mode="HTML"))
+    session_kwargs = {}
+    if settings.telegram_api_base_url:
+        session_kwargs["api"] = __import__(
+            "aiogram.client.telegram", fromlist=["TelegramAPIServer"]
+        ).TelegramAPIServer(
+            base=settings.telegram_api_base_url + "/bot{token}/{method}",
+            file=settings.telegram_api_base_url + "/file/bot{token}/{path}",
+        )
+
+    bot = Bot(
+        token=token,
+        default=DefaultBotProperties(parse_mode="HTML"),
+        session=AiohttpSession(**session_kwargs) if session_kwargs else None,
+    )
     dp = create_dispatcher()
 
     @app.post("/bot/webhook", include_in_schema=False)
