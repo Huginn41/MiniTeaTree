@@ -95,6 +95,10 @@ node_modules/
 miniapp/dist/
 miniapp/.parcel-cache/
 
+# ---------- Claude / project context ----------
+CLAUDE.md
+PROJECT_CONTEXT.md
+
 # ---------- Misc ----------
 *.log
 *.pid
