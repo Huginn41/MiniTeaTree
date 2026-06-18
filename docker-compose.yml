@@ -51,6 +51,7 @@ services:
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:-}
     volumes:
       # Загруженные фото и статика Mini App
       - media_data:/app/app/static/media
