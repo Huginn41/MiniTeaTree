@@ -96,6 +96,7 @@ class AdminAuth(AuthenticationBackend):
             return False
 
         request.session["admin_token"] = "authenticated"
+        request.session["admin_readonly"] = not admin.is_superuser
         return True
 
     async def logout(self, request: Request) -> bool:
@@ -499,6 +500,19 @@ class _AdminCollapseMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         if request.url.path in ("/admin", "/admin/") and request.session.get("admin_token") == "authenticated":
             return Response(status_code=302, headers={"location": "/admin/dashboard"})
+
+        # Read-only: блокируем создание/редактирование/удаление
+        if (
+            request.session.get("admin_readonly")
+            and request.url.path.startswith("/admin")
+            and request.method in ("POST", "PUT", "DELETE", "PATCH")
+            and not request.url.path.startswith("/admin/login")
+        ):
+            return Response(
+                content="<h2>Доступ только для просмотра</h2><a href='/admin/dashboard'>← Назад</a>",
+                status_code=403,
+                media_type="text/html",
+            )
         response = await call_next(request)
         ct = response.headers.get("content-type", "")
         if request.url.path.startswith("/admin") and "text/html" in ct:

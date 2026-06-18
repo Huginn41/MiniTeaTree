@@ -354,6 +354,21 @@ async def _seed_admin(factory) -> None:
         )
         await session.commit()
 
+    # Демо-пользователь (read-only)
+    async with factory() as session:
+        demo_exists = await session.execute(
+            select(AdminUser).where(AdminUser.username == "demo")
+        )
+        if demo_exists.scalar_one_or_none() is None:
+            session.add(
+                AdminUser(
+                    username="demo",
+                    password_hash=_bcrypt_lib.hashpw(b"demo1234", _bcrypt_lib.gensalt()).decode(),
+                    is_superuser=False,
+                )
+            )
+            await session.commit()
+
 
 async def _seed_notification_targets(factory) -> None:
     """Создаёт дефолтный магазинный чат (telegram_id берётся из ADMIN_TELEGRAM_IDS)."""
