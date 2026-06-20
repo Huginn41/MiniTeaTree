@@ -713,6 +713,8 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             stmt = select(Order)
             if request.session.get("admin_readonly"):
                 stmt = stmt.where(Order.number.like("DEMO-%"))
+            else:
+                stmt = stmt.where(~Order.number.like("DEMO-%"))
             return stmt
 
         column_list = [
@@ -824,6 +826,8 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             stmt = select(_User)
             if request.session.get("admin_readonly"):
                 stmt = stmt.where(_User.telegram_id.in_(_DEMO_TG_IDS))
+            else:
+                stmt = stmt.where(_User.telegram_id.notin_(_DEMO_TG_IDS))
             return stmt
 
         column_list = [
