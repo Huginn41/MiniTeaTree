@@ -699,6 +699,97 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "readonly": bool(request.session.get("admin_readonly")),
         })
 
+    # ===== ИМПОРТ ТОВАРОВ =====
+
+    from fastapi.responses import HTMLResponse as _HTMLResponse, StreamingResponse as _StreamingResponse
+    import asyncio as _asyncio
+    import io as _io
+    from datetime import datetime as _datetime, timezone as _timezone_import
+
+    @app.get("/admin/import", include_in_schema=False)
+    async def admin_import_page(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            from starlette.responses import RedirectResponse
+            return RedirectResponse("/admin/login")
+        from app.admin.import_page import IMPORT_PAGE_HTML
+        return _HTMLResponse(IMPORT_PAGE_HTML)
+
+    @app.get("/admin-api/import/excel/template", include_in_schema=False)
+    async def admin_import_excel_template(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.admin.import_worker import make_excel_template
+        content = make_excel_template()
+        return _StreamingResponse(
+            _io.BytesIO(content),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=import_template.xlsx"},
+        )
+
+    @app.post("/admin-api/import/yml", include_in_schema=False)
+    async def admin_import_yml(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        if request.session.get("admin_readonly"):
+            return _JSONResponse(status_code=403, content={"error": "Readonly"})
+        data = await request.json()
+        url = (data.get("url") or "").strip()
+        if not url:
+            return _JSONResponse(status_code=400, content={"error": "URL обязателен"})
+        from app.db import get_session_factory
+        from app.models.yml_import import YmlImport
+        from app.admin.import_worker import run_yml_import
+        async with get_session_factory()() as session:
+            rec = YmlImport(source=url, status="running",
+                            started_at=_datetime.now(_timezone_import.utc))
+            session.add(rec)
+            await session.commit()
+            await session.refresh(rec)
+            import_id = rec.id
+        _asyncio.create_task(run_yml_import(import_id, url))
+        return _JSONResponse({"import_id": import_id})
+
+    @app.post("/admin-api/import/excel", include_in_schema=False)
+    async def admin_import_excel(request: Request, file: UploadFile = _File(...)):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        if request.session.get("admin_readonly"):
+            return _JSONResponse(status_code=403, content={"error": "Readonly"})
+        content = await file.read()
+        from app.db import get_session_factory
+        from app.models.yml_import import YmlImport
+        from app.admin.import_worker import run_excel_import
+        fname = file.filename or "upload.xlsx"
+        async with get_session_factory()() as session:
+            rec = YmlImport(source=fname, status="running",
+                            started_at=_datetime.now(_timezone_import.utc))
+            session.add(rec)
+            await session.commit()
+            await session.refresh(rec)
+            import_id = rec.id
+        _asyncio.create_task(run_excel_import(import_id, content))
+        return _JSONResponse({"import_id": import_id})
+
+    @app.get("/admin-api/import/{import_id}/status", include_in_schema=False)
+    async def admin_import_status(import_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from app.models.yml_import import YmlImport
+        from sqlalchemy import select
+        async with get_session_factory()() as session:
+            rec = (await session.execute(select(YmlImport).where(YmlImport.id == import_id))).scalar_one_or_none()
+            if not rec:
+                return _JSONResponse(status_code=404, content={"error": "Not found"})
+            return _JSONResponse({
+                "status": rec.status,
+                "products_added": rec.products_added,
+                "products_updated": rec.products_updated,
+                "images_downloaded": rec.images_downloaded,
+                "log": rec.log,
+                "error": rec.error,
+            })
+
     from app.seed import DEMO_TG_IDS as _DEMO_TG_IDS
 
     class OrderAdmin(ModelView, model=Order):

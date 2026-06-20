@@ -169,6 +169,14 @@ body { background: #f4f6fb !important; margin: 0; }
     </a>
   </div>
 
+  <!-- Импорт -->
+  <div class="ct-nav-item">
+    <a class="ct-nav-link {% if request.url.path == '/admin/import' %}active{% endif %}"
+       href="/admin/import">
+      <i class="fa-solid fa-file-import"></i> Импорт
+    </a>
+  </div>
+
   <div class="ct-sep"></div>
 
   <!-- Пункты меню -->

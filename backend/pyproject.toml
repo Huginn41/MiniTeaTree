@@ -9,46 +9,36 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "gunicorn>=22.0.0",
-
     # ASGI-серверная утилита
     "python-multipart>=0.0.9",
-
     # БД (async)
     "sqlalchemy[asyncio]>=2.0.30",
     "asyncpg>=0.29.0",
     "psycopg[binary]>=3.1.0",   # синхронный драйвер для alembic-миграций
     "alembic>=1.13.0",
-
     # Валидация / конфиг
     "pydantic>=2.7.0",
     "pydantic-settings>=2.3.0",
-
     # Безопасность / авторизация
     "passlib[bcrypt]>=1.7.4",
     "pyjwt>=2.8.0",
     "cryptography>=42.0.0",
-
     # Telegram бот
     "aiogram>=3.7.0",
-
     # YML-парсинг
     "lxml>=5.2.0",
-
     # HTTP-клиент (для скачивания фото фида, вызовов ЮKassa)
     "httpx>=0.27.0",
-
     # Обработка изображений (валидация/сжатие)
     "Pillow>=10.3.0",
-
     # Админка
     "sqladmin>=0.18.0",
     "itsdangerous>=2.2.0",
-
     # Rate limiting
     "slowapi>=0.1.9",
-
     # Логирование
     "structlog>=24.1.0",
+    "openpyxl>=3.1.5",
 ]
 
 [project.optional-dependencies]

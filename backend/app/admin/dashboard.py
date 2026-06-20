@@ -49,6 +49,9 @@ body { background:#f4f6fb; min-height:100vh; }
   <div class="ct-nav-item">
     <a class="ct-nav-link active" href="/admin/dashboard"><i class="fa-solid fa-chart-line"></i>Дашборд</a>
   </div>
+  <div class="ct-nav-item">
+    <a class="ct-nav-link" href="/admin/import"><i class="fa-solid fa-file-import"></i>Импорт</a>
+  </div>
   <div class="ct-sep"></div>
   <div class="ct-nav-item ct-dropdown">
     <span class="ct-nav-link"><i class="fa-solid fa-box"></i>Заказы <span class="ct-dropdown-arrow">▾</span></span>
