@@ -495,6 +495,134 @@ _ADMIN_JS = (r"""
   });
   _observer.observe(document.body, {childList:true, subtree:true});
 
+  // ---- 6. Кнопка «Импорт» рядом с «Экспорт» в списке товаров ----
+  function initProductImportBtn(){
+    if(window.location.pathname.indexOf('/admin/product') === -1) return;
+    if(window.location.pathname.indexOf('/list') === -1) return;
+
+    if(!document.getElementById('ct-import-modal')){
+      var m = document.createElement('div');
+      m.id = 'ct-import-modal';
+      m.className = 'modal fade';
+      m.setAttribute('tabindex','-1');
+      m.innerHTML =
+        '<div class="modal-dialog modal-lg">'
+        + '<div class="modal-content" style="border-radius:14px">'
+        + '<div class="modal-header" style="border-bottom:1px solid #f0f2f5">'
+        +   '<h5 class="modal-title" style="font-weight:700"><i class="fa-solid fa-file-import me-2" style="color:#3d5afe"></i>Импорт товаров</h5>'
+        +   '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>'
+        + '</div>'
+        + '<div class="modal-body" style="padding:24px">'
+        +   '<div style="margin-bottom:20px;padding:20px;background:#f8f9fa;border-radius:10px">'
+        +     '<h6 style="font-size:14px;font-weight:700;margin-bottom:4px"><i class="fa-solid fa-rss me-1" style="color:#3d5afe"></i>Импорт из YML-фида</h6>'
+        +     '<p style="font-size:12px;color:#6c757d;margin-bottom:12px">Формат Яндекс.Маркет. Товары группируются по group_id, изображения скачиваются автоматически.</p>'
+        +     '<div style="display:flex;gap:10px">'
+        +       '<input type="text" id="ct-yml-url" class="form-control" placeholder="https://example.com/feed.yml" style="flex:1">'
+        +       '<button type="button" class="btn btn-primary" onclick="ctStartYmlImport()"><i class="fa-solid fa-play me-1"></i>Запустить</button>'
+        +     '</div>'
+        +     '<div id="ct-yml-status" style="display:none;margin-top:10px;font-size:13px"></div>'
+        +     '<pre id="ct-yml-log" style="display:none;margin-top:10px;background:#fff;border:1px solid #e9ecef;border-radius:8px;padding:12px;font-size:11px;max-height:180px;overflow-y:auto;white-space:pre-wrap"></pre>'
+        +   '</div>'
+        +   '<div style="padding:20px;background:#f8f9fa;border-radius:10px">'
+        +     '<h6 style="font-size:14px;font-weight:700;margin-bottom:4px"><i class="fa-solid fa-file-excel me-1" style="color:#1a6b3c"></i>Импорт из Excel</h6>'
+        +     '<p style="font-size:12px;color:#6c757d;margin-bottom:12px">Загрузите файл .xlsx по шаблону. URL фотографий — через запятую в последней колонке.</p>'
+        +     '<div style="margin-bottom:12px">'
+        +       '<a href="/admin-api/import/excel/template" download="import_template.xlsx" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-download me-1"></i>Скачать шаблон</a>'
+        +     '</div>'
+        +     '<div style="display:flex;gap:10px">'
+        +       '<input type="file" id="ct-excel-file" class="form-control" accept=".xlsx" style="flex:1">'
+        +       '<button type="button" class="btn btn-primary" onclick="ctStartExcelImport()"><i class="fa-solid fa-upload me-1"></i>Загрузить</button>'
+        +     '</div>'
+        +     '<div id="ct-excel-status" style="display:none;margin-top:10px;font-size:13px"></div>'
+        +     '<pre id="ct-excel-log" style="display:none;margin-top:10px;background:#fff;border:1px solid #e9ecef;border-radius:8px;padding:12px;font-size:11px;max-height:180px;overflow-y:auto;white-space:pre-wrap"></pre>'
+        +   '</div>'
+        + '</div>'
+        + '</div></div>';
+      document.body.appendChild(m);
+    }
+
+    var exportBtn = null;
+    document.querySelectorAll('a.btn, button.btn').forEach(function(el){
+      var t = el.textContent.trim();
+      if(t === 'Export' || t === 'Экспорт') exportBtn = el;
+    });
+    if(!exportBtn) return;
+
+    var btn = document.createElement('a');
+    btn.href = '#';
+    btn.className = exportBtn.className;
+    btn.innerHTML = '<i class="fa-solid fa-file-import me-1"></i>Импорт';
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      var modalEl = document.getElementById('ct-import-modal');
+      // сбросить статусы
+      ['yml','excel'].forEach(function(p){
+        var s = document.getElementById('ct-'+p+'-status');
+        var l = document.getElementById('ct-'+p+'-log');
+        if(s){ s.style.display='none'; s.innerHTML=''; }
+        if(l){ l.style.display='none'; l.textContent=''; }
+      });
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+    exportBtn.insertAdjacentElement('afterend', btn);
+  }
+
+  window.ctShowImportStatus = function(prefix, status, data){
+    var el = document.getElementById('ct-'+prefix+'-status');
+    var log = document.getElementById('ct-'+prefix+'-log');
+    if(!el) return;
+    el.style.display = 'block';
+    if(status === 'running'){
+      el.innerHTML = '<span style="color:#e65100"><i class="fa-solid fa-spinner fa-spin me-1"></i>Импорт запущен...</span>';
+    } else if(status === 'success'){
+      el.innerHTML = '<span style="color:#2e7d32"><i class="fa-solid fa-check-circle me-1"></i>Готово: +'
+        +(data.products_added||0)+' товаров, ~'+(data.products_updated||0)+' обновлено, '
+        +(data.images_downloaded||0)+' фото</span>';
+    } else {
+      el.innerHTML = '<span style="color:#c62828"><i class="fa-solid fa-times-circle me-1"></i>Ошибка</span>';
+    }
+    if(log && data && (data.log || data.error)){
+      log.style.display = 'block';
+      log.textContent = (data.error ? 'ОШИБКА: '+data.error+'\n\n' : '') + (data.log||'');
+    }
+  };
+
+  window.ctPollStatus = function(prefix, importId){
+    var iv = setInterval(function(){
+      fetch('/admin-api/import/'+importId+'/status',{credentials:'include'})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          if(d.status !== 'running'){ clearInterval(iv); window.ctShowImportStatus(prefix,d.status,d); }
+        });
+    },1500);
+  };
+
+  window.ctStartYmlImport = function(){
+    var url = (document.getElementById('ct-yml-url')||{}).value;
+    if(!url || !url.trim()){ alert('Введите URL фида'); return; }
+    window.ctShowImportStatus('yml','running',{});
+    fetch('/admin-api/import/yml',{
+      method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:url.trim()}),
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if(d.import_id) window.ctPollStatus('yml',d.import_id);
+      else window.ctShowImportStatus('yml','failed',{error:JSON.stringify(d)});
+    }).catch(function(e){ window.ctShowImportStatus('yml','failed',{error:String(e)}); });
+  };
+
+  window.ctStartExcelImport = function(){
+    var inp = document.getElementById('ct-excel-file');
+    if(!inp || !inp.files[0]){ alert('Выберите файл'); return; }
+    window.ctShowImportStatus('excel','running',{});
+    var fd = new FormData(); fd.append('file',inp.files[0]);
+    fetch('/admin-api/import/excel',{method:'POST',credentials:'include',body:fd})
+      .then(function(r){ return r.json(); }).then(function(d){
+        if(d.import_id) window.ctPollStatus('excel',d.import_id);
+        else window.ctShowImportStatus('excel','failed',{error:JSON.stringify(d)});
+      }).catch(function(e){ window.ctShowImportStatus('excel','failed',{error:String(e)}); });
+  };
+
   function init(){
     collapseInactive();
     initProductImages();
@@ -502,6 +630,7 @@ _ADMIN_JS = (r"""
     initPricePreview();
     initFileUploads();
     translateUI();
+    initProductImportBtn();
   }
 
   if(document.readyState==='loading'){
