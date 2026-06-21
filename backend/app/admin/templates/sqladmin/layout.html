@@ -239,6 +239,180 @@ body { background: #f4f6fb !important; margin: 0; }
   </div>
 </div>
 
+<!-- ─── Редактор режима работы ПВЗ ─── -->
+<style>
+.wh-period { background:#f8f9fa; border:1px solid #e9ecef; border-radius:12px; padding:16px; margin-bottom:12px; }
+.wh-day-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.wh-day { width:40px; height:36px; border-radius:8px; border:1.5px solid #dee2e6; background:#fff;
+  font-size:12.5px; font-weight:600; cursor:pointer; transition:all .15s; color:#6c757d; }
+.wh-day.on { background:#3d5afe; border-color:#3d5afe; color:#fff; }
+.wh-time-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.wh-time-row label { font-size:12.5px; color:#6c757d; font-weight:500; }
+.wh-time { border:1.5px solid #dee2e6; border-radius:8px; padding:6px 10px; font-size:13.5px;
+  font-family:inherit; color:#212529; outline:none; transition:border-color .15s; width:110px; }
+.wh-time:focus { border-color:#3d5afe; }
+.wh-preview { font-size:13px; color:#3d5afe; font-weight:600; margin-top:10px; min-height:20px; }
+.wh-add-btn { font-size:12.5px; color:#3d5afe; background:none; border:1.5px dashed #3d5afe;
+  border-radius:8px; padding:7px 14px; cursor:pointer; font-weight:600; transition:all .15s; width:100%; }
+.wh-add-btn:hover { background:#f0f4ff; }
+.wh-period-title { font-size:11.5px; font-weight:700; color:#8c9aad; text-transform:uppercase;
+  letter-spacing:.5px; margin-bottom:10px; }
+</style>
+
+<script>
+(function(){
+  var ALL_DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+  function consecutiveRanges(days) {
+    if (!days.length) return '';
+    var idxs = days.map(function(d){ return ALL_DAYS.indexOf(d); }).sort(function(a,b){return a-b;});
+    var parts = [], start = idxs[0], prev = idxs[0];
+    for (var i = 1; i <= idxs.length; i++) {
+      if (i < idxs.length && idxs[i] === prev + 1) { prev = idxs[i]; continue; }
+      parts.push(start === prev ? ALL_DAYS[start] : ALL_DAYS[start] + (prev - start > 1 ? '–' : ', ') + ALL_DAYS[prev]);
+      if (i < idxs.length) { start = idxs[i]; prev = idxs[i]; }
+    }
+    return parts.join(', ');
+  }
+
+  function buildPeriodUI(container, daysSel, fromVal, toVal) {
+    container.innerHTML = '';
+    var chips = document.createElement('div');
+    chips.className = 'wh-day-chips';
+    ALL_DAYS.forEach(function(d) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'wh-day' + (daysSel.indexOf(d) >= 0 ? ' on' : '');
+      btn.textContent = d;
+      btn.onclick = function() {
+        btn.classList.toggle('on');
+        update();
+      };
+      chips.appendChild(btn);
+    });
+
+    var timeRow = document.createElement('div');
+    timeRow.className = 'wh-time-row';
+    timeRow.innerHTML =
+      '<label>с</label><input class="wh-time" type="time" value="' + (fromVal||'10:00') + '" oninput="update()">' +
+      '<label>до</label><input class="wh-time" type="time" value="' + (toVal||'19:00') + '" oninput="update()">';
+
+    container.appendChild(chips);
+    container.appendChild(timeRow);
+  }
+
+  function getState(container) {
+    var days = [];
+    container.querySelectorAll('.wh-day.on').forEach(function(b){ days.push(b.textContent.trim()); });
+    var times = container.querySelectorAll('.wh-time');
+    return { days: days, from: times[0]?times[0].value:'', to: times[1]?times[1].value:'' };
+  }
+
+  function periodText(state) {
+    if (!state.days.length) return '';
+    var dStr = consecutiveRanges(state.days);
+    var tStr = (state.from && state.to) ? state.from + '–' + state.to : '';
+    return tStr ? dStr + ': ' + tStr : dStr;
+  }
+
+  window.update = function() {
+    var parts = [];
+    document.querySelectorAll('.wh-period-body').forEach(function(c) {
+      var t = periodText(getState(c));
+      if (t) parts.push(t);
+    });
+    var result = parts.join(', ');
+    var inp = document.getElementById('work_hours');
+    if (inp) inp.value = result;
+    var prev = document.getElementById('wh-preview');
+    if (prev) prev.textContent = result || '—';
+  };
+
+  function parsePeriods(val) {
+    if (!val) return [{ days: ['Пн','Вт','Ср','Чт','Пт'], from: '10:00', to: '19:00' }];
+    var periods = [];
+    val.split(',').forEach(function(chunk) {
+      chunk = chunk.trim();
+      var m = chunk.match(/^([^:]+):\s*(\d{1,2}:\d{2})[–\-](\d{1,2}:\d{2})$/);
+      if (!m) return;
+      var daysPart = m[1].trim();
+      var from = m[2], to = m[3];
+      var days = [];
+      daysPart.split(/[,\s]+/).forEach(function(token) {
+        token = token.trim();
+        var rng = token.split('–');
+        if (rng.length === 2) {
+          var s = ALL_DAYS.indexOf(rng[0].trim()), e = ALL_DAYS.indexOf(rng[1].trim());
+          if (s >= 0 && e >= 0) for (var i = s; i <= e; i++) days.push(ALL_DAYS[i]);
+        } else if (ALL_DAYS.indexOf(token) >= 0) { days.push(token); }
+      });
+      if (days.length) periods.push({ days: days, from: from, to: to });
+    });
+    return periods.length ? periods : [{ days: ['Пн','Вт','Ср','Чт','Пт'], from: '10:00', to: '19:00' }];
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    if (!location.pathname.includes('/pickup-point/')) return;
+    var inp = document.getElementById('work_hours');
+    if (!inp) return;
+
+    var wrap = inp.closest('.mb-3') || inp.parentElement;
+    inp.style.display = 'none';
+
+    var periods = parsePeriods(inp.value);
+
+    var ui = document.createElement('div');
+    ui.style.marginTop = '4px';
+
+    var periodsWrap = document.createElement('div');
+    ui.appendChild(periodsWrap);
+
+    var preview = document.createElement('div');
+    preview.id = 'wh-preview';
+    preview.className = 'wh-preview';
+    preview.textContent = inp.value || '—';
+    ui.appendChild(preview);
+
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'wh-add-btn mt-2';
+    addBtn.textContent = '+ Добавить ещё один период';
+    addBtn.onclick = function() {
+      addPeriod({ days: ['Сб','Вс'], from: '10:00', to: '16:00' });
+      update();
+    };
+    ui.appendChild(addBtn);
+
+    wrap.appendChild(ui);
+
+    function addPeriod(p) {
+      var periodDiv = document.createElement('div');
+      periodDiv.className = 'wh-period';
+      var title = document.createElement('div');
+      title.className = 'wh-period-title';
+      title.textContent = periodsWrap.children.length === 0 ? 'Основное расписание' : 'Дополнительный период';
+      var body = document.createElement('div');
+      body.className = 'wh-period-body';
+      buildPeriodUI(body, p.days, p.from, p.to);
+      periodDiv.appendChild(title);
+      periodDiv.appendChild(body);
+      if (periodsWrap.children.length > 0) {
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.style = 'font-size:11px;color:#dc3545;background:none;border:none;padding:6px 0 0;cursor:pointer;font-weight:600;';
+        del.textContent = '✕ Удалить период';
+        del.onclick = function() { periodDiv.remove(); update(); };
+        periodDiv.appendChild(del);
+      }
+      periodsWrap.appendChild(periodDiv);
+    }
+
+    periods.forEach(addPeriod);
+    update();
+  });
+})();
+</script>
+
 <!-- ─── Контент страницы ─── -->
 <div class="page-wrapper">
   <div class="container-fluid">
