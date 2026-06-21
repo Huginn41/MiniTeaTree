@@ -665,180 +665,234 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
 {BASE_CSS}
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <style>
-.ql-toolbar.ql-snow { border-radius:8px 8px 0 0 !important; border-color:#dee2e6 !important; background:#f8f9fa; }
-.ql-container.ql-snow { border-radius:0 0 8px 8px !important; border-color:#dee2e6 !important; font-size:14px; min-height:120px; }
-.ql-editor { min-height:100px; }
-.about-section { background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); padding:24px; margin-bottom:20px; }
-.about-section-title { font-size:13px; font-weight:700; color:#8c9aad; text-transform:uppercase; letter-spacing:.5px; margin-bottom:16px; }
-.banner-wrap { position:relative; width:100%; height:180px; border-radius:12px; overflow:hidden; cursor:pointer;
-  background:linear-gradient(135deg,#1a6b3c 0%,#2d9e5f 100%); display:flex; align-items:center; justify-content:center; }
-.banner-wrap img { width:100%; height:100%; object-fit:cover; }
-.banner-overlay { position:absolute; inset:0; background:rgba(0,0,0,.35); display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:8px; opacity:0; transition:opacity .2s; }
-.banner-wrap:hover .banner-overlay { opacity:1; }
-.banner-placeholder { font-size:48px; }
-.faq-item-row { border:1px solid #e9ecef; border-radius:10px; margin-bottom:10px; overflow:hidden; }
-.faq-item-header { display:flex; align-items:center; gap:10px; padding:12px 14px; background:#f8f9fa; cursor:pointer; }
-.faq-item-header:hover { background:#f0f4ff; }
-.faq-question-text { flex:1; font-size:14px; font-weight:600; color:#212529; }
-.faq-item-body { padding:14px; display:none; border-top:1px solid #e9ecef; }
-.faq-item-body.open { display:block; }
-.drag-handle { color:#ced4da; cursor:grab; font-size:16px; }
+.ql-toolbar.ql-snow{border-radius:8px 8px 0 0!important;border-color:#dee2e6!important;background:#f8f9fa}
+.ql-container.ql-snow{border-radius:0 0 8px 8px!important;border-color:#dee2e6!important;font-size:14px}
+.ql-editor{min-height:120px}
+.ab-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:24px;margin-bottom:20px}
+.ab-label{font-size:12px;font-weight:700;color:#8c9aad;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+/* баннер */
+.banner-drop{position:relative;width:100%;height:200px;border-radius:12px;overflow:hidden;cursor:pointer;
+  background:linear-gradient(135deg,#1a6b3c,#2d9e5f);display:flex;align-items:center;justify-content:center;border:2px dashed #2d9e5f}
+.banner-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.banner-drop-hint{position:absolute;inset:0;background:rgba(0,0,0,.42);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;opacity:0;transition:opacity .2s}
+.banner-drop:hover .banner-drop-hint{opacity:1}
+.banner-drop-hint span{color:#fff;font-size:13px;font-weight:600}
+/* FAQ */
+.faq-row{border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px;overflow:hidden}
+.faq-head{display:flex;align-items:center;gap:10px;padding:13px 14px;background:#f8f9fa;cursor:pointer;user-select:none}
+.faq-head:hover{background:#eef2ff}
+.faq-head-text{flex:1;font-size:14px;font-weight:600;color:#212529}
+.faq-body{display:none;padding:16px;border-top:1px solid #e9ecef}
+.faq-body.open{display:block}
+/* ПВЗ drag */
+.pp-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#f8f9fa;border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px;cursor:default}
+.pp-row.sortable-ghost{opacity:.4}
+.pp-drag{cursor:grab;color:#adb5bd;font-size:18px;flex-shrink:0}
+.pp-name-lbl{flex:1;font-size:14px;font-weight:600;color:#212529}
+.pp-addr-lbl{font-size:12px;color:#6c757d}
 </style>
 </head>
 <body>
 {TOPNAV}
-<div class="container-fluid px-4 py-4" style="max-width:900px">
+<div class="container-fluid px-4 py-4" style="max-width:860px">
 
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h5 class="section-title mb-0">✏️ Редактор страницы «О нас»</h5>
-    <button class="btn btn-sm btn-primary" onclick="saveAll()">
+    <button id="save-all-btn" class="btn btn-sm btn-primary" onclick="saveAll()">
       <i class="fa-solid fa-floppy-disk me-1"></i>Сохранить
     </button>
   </div>
 
-  <!-- Баннер -->
-  <div class="about-section">
-    <div class="about-section-title">Баннер</div>
-    <div class="banner-wrap" id="banner-wrap" onclick="document.getElementById('banner-file').click()">
-      <div class="banner-placeholder" id="banner-placeholder">🍵</div>
-      <img id="banner-img" style="display:none">
-      <div class="banner-overlay">
-        <i class="fa-solid fa-camera fa-2x text-white"></i>
-        <span style="color:#fff;font-size:13px;font-weight:600">Нажмите чтобы изменить фото</span>
+  <!-- 1. Баннер -->
+  <div class="ab-card">
+    <div class="ab-label">Обложка страницы</div>
+    <label style="display:block;cursor:pointer">
+      <div class="banner-drop" id="banner-drop">
+        <div style="text-align:center;position:relative;z-index:1">
+          <div style="font-size:44px" id="banner-emoji">🍵</div>
+          <div style="color:rgba(255,255,255,.85);font-size:13px;margin-top:6px">Нажмите чтобы выбрать фото</div>
+        </div>
+        <img id="banner-img" style="display:none">
+        <div class="banner-drop-hint">
+          <i class="fa-solid fa-camera fa-2x text-white"></i>
+          <span>Заменить фото</span>
+        </div>
       </div>
-    </div>
-    <input type="file" id="banner-file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
-    <div id="banner-path" style="display:none"></div>
-    <button class="btn btn-sm btn-outline-danger mt-2" onclick="removeBanner()" id="remove-banner-btn" style="display:none">
+      <input type="file" id="banner-file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
+    </label>
+    <button class="btn btn-sm btn-outline-danger mt-2" id="remove-banner-btn" onclick="removeBanner()" style="display:none">
       <i class="fa-solid fa-trash me-1"></i>Убрать фото
     </button>
+    <div id="banner-status" style="font-size:12px;color:#6c757d;margin-top:6px"></div>
   </div>
 
-  <!-- Заголовок и описание -->
-  <div class="about-section">
-    <div class="about-section-title">Заголовок и описание</div>
-    <label class="form-label">Заголовок</label>
+  <!-- 2. Заголовок и описание -->
+  <div class="ab-card">
+    <div class="ab-label">Заголовок и текст</div>
+    <label class="form-label">Заголовок магазина</label>
     <input type="text" id="about-title" class="form-control mb-3" placeholder="Чайное Дерево">
     <label class="form-label">Описание</label>
     <div id="desc-editor"></div>
   </div>
 
-  <!-- FAQ -->
-  <div class="about-section">
+  <!-- 3. FAQ -->
+  <div class="ab-card">
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <div class="about-section-title mb-0">Часто задаваемые вопросы</div>
-      <button class="btn btn-sm btn-outline-primary" onclick="addFaqItem()">
+      <div class="ab-label mb-0">Часто задаваемые вопросы</div>
+      <button class="btn btn-sm btn-outline-primary" onclick="addFaq()">
         <i class="fa-solid fa-plus me-1"></i>Добавить вопрос
       </button>
     </div>
-    <div id="faq-list"></div>
+    <div id="faq-list"><p class="text-muted" style="font-size:13px">Загрузка…</p></div>
   </div>
 
-  <!-- Пункты самовывоза -->
-  <div class="about-section">
+  <!-- 4. Порядок ПВЗ -->
+  <div class="ab-card">
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <div class="about-section-title mb-0">Пункты самовывоза</div>
-      <button class="btn btn-sm btn-outline-primary" onclick="addPickupPoint()">
-        <i class="fa-solid fa-plus me-1"></i>Добавить
-      </button>
+      <div class="ab-label mb-0">Пункты самовывоза</div>
+      <a href="/admin/pickup-point/list" class="btn btn-sm btn-outline-secondary">
+        <i class="fa-solid fa-pen me-1"></i>Редактировать
+      </a>
     </div>
-    <div id="pickup-list"></div>
+    <p style="font-size:13px;color:#6c757d;margin-bottom:12px">Перетащите чтобы изменить порядок. Сохраните кнопкой ниже.</p>
+    <div id="pp-list"><p class="text-muted" style="font-size:13px">Загрузка…</p></div>
+    <button class="btn btn-sm btn-outline-primary mt-2" id="pp-order-btn" onclick="savePpOrder()" style="display:none">
+      <i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок
+    </button>
   </div>
 
 </div>
 <script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
-var descEditor, faqEditors = {}, faqData = [], bannerPath = null;
+var bannerPath = null;
+var descEditor = null;
+var faqEditors = {};   // id -> Quill instance
+var TOOLBAR = [['bold','italic','underline'],[{list:'bullet'}],['link'],['clean']];
 
-var TOOLBAR = [['bold','italic','underline'],[{'list':'bullet'}],['link'],['clean']];
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function initDescEditor(html) {
-  descEditor = new Quill('#desc-editor', { theme:'snow', modules:{toolbar:TOOLBAR} });
-  if (html) descEditor.root.innerHTML = html;
+// ── Баннер ────────────────────────────────────────────────
+async function uploadBanner(input) {
+  if (!input.files || !input.files[0]) return;
+  var status = document.getElementById('banner-status');
+  status.textContent = 'Загружаем…';
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  try {
+    var r = await fetch('/admin-api/upload-image', {method:'POST', credentials:'include', body:fd});
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
+    bannerPath = d.path;
+    var img = document.getElementById('banner-img');
+    img.src = d.path; img.style.display = 'block';
+    document.getElementById('banner-emoji').style.display = 'none';
+    document.getElementById('remove-banner-btn').style.display = 'inline-flex';
+    status.textContent = 'Фото загружено. Нажмите «Сохранить» чтобы применить.';
+  } catch(e) {
+    status.style.color = '#dc3545';
+    status.textContent = 'Ошибка: ' + e.message;
+  }
 }
 
-function makeQuill(id, html) {
-  var q = new Quill('#'+id, { theme:'snow', modules:{toolbar:TOOLBAR} });
-  if (html) q.root.innerHTML = html;
-  faqEditors[id] = q;
-  return q;
+function removeBanner() {
+  bannerPath = null;
+  document.getElementById('banner-img').style.display = 'none';
+  document.getElementById('banner-emoji').style.display = 'block';
+  document.getElementById('remove-banner-btn').style.display = 'none';
+  document.getElementById('banner-status').textContent = '';
 }
 
+// ── FAQ ───────────────────────────────────────────────────
 function renderFaq(items) {
-  faqData = items.slice();
   var list = document.getElementById('faq-list');
   list.innerHTML = '';
   if (!items.length) {
     list.innerHTML = '<p class="text-muted" style="font-size:13px">Нет вопросов. Нажмите «Добавить вопрос».</p>';
     return;
   }
-  items.forEach(function(item, idx) {
-    var edId = 'faq-ed-' + (item.id || 'new' + idx);
-    var div = document.createElement('div');
-    div.className = 'faq-item-row';
-    div.dataset.id = item.id || '';
-    div.innerHTML =
-      '<div class="faq-item-header" onclick="toggleFaq(this)">' +
-        '<span class="drag-handle">⠿</span>' +
-        '<span class="faq-question-text">' + (item.question || 'Новый вопрос') + '</span>' +
-        '<button class="btn btn-sm btn-outline-danger ms-auto" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();deleteFaq(' + (item.id||0) + ',this.closest(\'.faq-item-row\'))">Удалить</button>' +
-      '</div>' +
-      '<div class="faq-item-body">' +
-        '<label class="form-label">Вопрос</label>' +
-        '<input type="text" class="form-control mb-3 faq-q-input" value="' + (item.question||'').replace(/"/g,'&quot;') + '" oninput="this.closest(\'.faq-item-row\').querySelector(\'.faq-question-text\').textContent=this.value||\'Новый вопрос\'">' +
-        '<label class="form-label">Ответ</label>' +
-        '<div id="' + edId + '"></div>' +
-        '<div class="d-flex gap-2 mt-3">' +
-          '<button class="btn btn-sm btn-primary" onclick="saveFaq(this.closest(\'.faq-item-row\'))">Сохранить</button>' +
-          '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaq(this.closest(\'.faq-item-row\').querySelector(\'.faq-item-header\'))">Отмена</button>' +
-        '</div>' +
-      '</div>';
-    list.appendChild(div);
-    setTimeout(function() { makeQuill(edId, item.answer || ''); }, 0);
+  items.forEach(function(item) {
+    list.appendChild(makeFaqRow(item));
   });
 }
 
-function toggleFaq(header) {
-  var body = header.nextElementSibling;
-  var isOpen = body.classList.contains('open');
-  document.querySelectorAll('.faq-item-body.open').forEach(function(b){ b.classList.remove('open'); });
-  if (!isOpen) body.classList.add('open');
+function makeFaqRow(item) {
+  var row = document.createElement('div');
+  row.className = 'faq-row';
+  row.dataset.id = item.id || '';
+  var edId = 'faq-ed-' + (item.id || 'n' + Date.now());
+  row.innerHTML =
+    '<div class="faq-head" onclick="toggleFaqRow(this)">' +
+      '<span style="color:#adb5bd;font-size:18px">☰</span>' +
+      '<span class="faq-head-text">' + esc(item.question || 'Новый вопрос') + '</span>' +
+      '<button class="btn btn-sm btn-outline-danger ms-2" style="padding:2px 8px;font-size:11px;flex-shrink:0" ' +
+        'onclick="event.stopPropagation();deleteFaq(this.closest(\'.faq-row\'))">Удалить</button>' +
+    '</div>' +
+    '<div class="faq-body">' +
+      '<label class="form-label">Вопрос</label>' +
+      '<input class="form-control mb-3 faq-q" value="' + esc(item.question||'') + '" ' +
+        'oninput="this.closest(\'.faq-row\').querySelector(\'.faq-head-text\').textContent=this.value||\'Новый вопрос\'">' +
+      '<label class="form-label">Ответ</label>' +
+      '<div id="' + edId + '" data-answer="' + esc(item.answer||'') + '"></div>' +
+      '<div class="d-flex gap-2 mt-3">' +
+        '<button class="btn btn-sm btn-primary faq-save-btn" onclick="saveFaq(this.closest(\'.faq-row\'))">Сохранить</button>' +
+        '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaqRow(this.closest(\'.faq-row\').querySelector(\'.faq-head\'))">Закрыть</button>' +
+      '</div>' +
+    '</div>';
+  row.dataset.edid = edId;
+  return row;
 }
 
-function addFaqItem() {
-  var tempId = 'temp_' + Date.now();
-  faqData.push({ id: null, question: '', answer: '', _temp: tempId });
-  renderFaq(faqData);
-  // Открываем последний
-  var rows = document.querySelectorAll('.faq-item-row');
-  if (rows.length) {
-    var last = rows[rows.length-1];
-    last.querySelector('.faq-item-body').classList.add('open');
-    last.querySelector('.faq-q-input').focus();
+function toggleFaqRow(head) {
+  var body = head.nextElementSibling;
+  var opening = !body.classList.contains('open');
+  // закрыть все
+  document.querySelectorAll('.faq-body.open').forEach(function(b){ b.classList.remove('open'); });
+  if (opening) {
+    body.classList.add('open');
+    // ленивая инициализация Quill — только когда элемент виден
+    var edId = head.parentElement.dataset.edid;
+    if (edId && !faqEditors[edId]) {
+      var el = document.getElementById(edId);
+      var q = new Quill('#' + edId, {theme:'snow', modules:{toolbar:TOOLBAR}});
+      var saved = el.dataset.answer || '';
+      if (saved) q.root.innerHTML = saved;
+      faqEditors[edId] = q;
+    }
   }
+}
+
+function addFaq() {
+  var list = document.getElementById('faq-list');
+  var empty = list.querySelector('p');
+  if (empty) empty.remove();
+  var row = makeFaqRow({id:null, question:'', answer:''});
+  list.appendChild(row);
+  // открываем сразу
+  toggleFaqRow(row.querySelector('.faq-head'));
+  row.querySelector('.faq-q').focus();
 }
 
 async function saveFaq(row) {
   var id = row.dataset.id;
-  var q = row.querySelector('.faq-q-input').value.trim();
+  var q = row.querySelector('.faq-q').value.trim();
   if (!q) { alert('Введите вопрос'); return; }
-  var edId = row.querySelector('[id^="faq-ed-"]').id;
-  var answer = faqEditors[edId] ? faqEditors[edId].root.innerHTML : '';
-  var btn = row.querySelector('.btn-primary');
+  var edId = row.dataset.edid;
+  var answer = faqEditors[edId] ? faqEditors[edId].root.innerHTML : (document.getElementById(edId)||{dataset:{}}).dataset.answer || '';
+  var btn = row.querySelector('.faq-save-btn');
   btn.disabled = true; btn.textContent = 'Сохраняем…';
   try {
-    var resp, data;
-    if (id) {
-      resp = await fetch('/admin-api/faq/'+id, {method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q, answer:answer})});
-    } else {
-      resp = await fetch('/admin-api/faq', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q, answer:answer})});
-    }
-    if (!resp.ok) throw new Error('Ошибка сервера');
-    data = await resp.json();
-    row.dataset.id = data.id;
-    row.querySelector('.faq-question-text').textContent = q;
-    row.querySelector('.faq-item-body').classList.remove('open');
+    var url = id ? '/admin-api/faq/'+id : '/admin-api/faq';
+    var method = id ? 'PATCH' : 'POST';
+    var r = await fetch(url, {method:method, credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q, answer:answer})});
+    if (!r.ok) throw new Error((await r.json()).detail || 'Ошибка сервера');
+    var d = await r.json();
+    row.dataset.id = d.id;
+    row.querySelector('.faq-head-text').textContent = q;
+    row.querySelector('.faq-body').classList.remove('open');
     btn.disabled = false; btn.textContent = 'Сохранить';
   } catch(e) {
     btn.disabled = false; btn.textContent = 'Сохранить';
@@ -846,184 +900,114 @@ async function saveFaq(row) {
   }
 }
 
-async function deleteFaq(id, row) {
+async function deleteFaq(row) {
   if (!confirm('Удалить вопрос?')) return;
+  var id = row.dataset.id;
   if (id) {
     var r = await fetch('/admin-api/faq/'+id, {method:'DELETE', credentials:'include'});
     if (!r.ok) { alert('Ошибка удаления'); return; }
   }
   row.remove();
+  if (!document.querySelectorAll('.faq-row').length)
+    document.getElementById('faq-list').innerHTML = '<p class="text-muted" style="font-size:13px">Нет вопросов. Нажмите «Добавить вопрос».</p>';
 }
 
-async function uploadBanner(input) {
-  if (!input.files[0]) return;
-  var fd = new FormData(); fd.append('file', input.files[0]);
-  var r = await fetch('/admin-api/upload-image', {method:'POST', credentials:'include', body:fd});
-  if (!r.ok) { alert('Ошибка загрузки'); return; }
-  var d = await r.json();
-  bannerPath = d.path;
-  document.getElementById('banner-placeholder').style.display = 'none';
-  var img = document.getElementById('banner-img');
-  img.src = d.path; img.style.display = 'block';
-  document.getElementById('remove-banner-btn').style.display = 'inline-flex';
+// ── ПВЗ drag-and-drop ─────────────────────────────────────
+function renderPp(items) {
+  var list = document.getElementById('pp-list');
+  list.innerHTML = '';
+  if (!items.length) {
+    list.innerHTML = '<p class="text-muted" style="font-size:13px">Нет пунктов самовывоза. <a href="/admin/pickup-point/list">Добавить →</a></p>';
+    return;
+  }
+  items.forEach(function(p) {
+    var addr = [p.city, p.street, p.building ? 'д.'+p.building : ''].filter(Boolean).join(', ') || p.address || '';
+    var row = document.createElement('div');
+    row.className = 'pp-row';
+    row.dataset.id = p.id;
+    row.innerHTML = '<span class="pp-drag">⠿</span>' +
+      '<div style="flex:1;min-width:0"><div class="pp-name-lbl">' + esc(p.name) + '</div>' +
+      (addr ? '<div class="pp-addr-lbl">' + esc(addr) + '</div>' : '') + '</div>' +
+      (p.is_active ? '' : '<span class="badge bg-secondary">скрыт</span>');
+    list.appendChild(row);
+  });
+  document.getElementById('pp-order-btn').style.display = 'inline-flex';
+  Sortable.create(list, {
+    handle: '.pp-drag',
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+  });
 }
 
-function removeBanner() {
-  bannerPath = null;
-  document.getElementById('banner-placeholder').style.display = 'block';
-  document.getElementById('banner-img').style.display = 'none';
-  document.getElementById('remove-banner-btn').style.display = 'none';
-}
-
-async function saveAll() {
-  var btn = document.querySelector('[onclick="saveAll()"]');
+async function savePpOrder() {
+  var rows = document.querySelectorAll('#pp-list .pp-row');
+  var order = Array.from(rows).map(function(r,i){ return {id: parseInt(r.dataset.id), sort_order: i}; });
+  var btn = document.getElementById('pp-order-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Сохраняем…';
   try {
-    var r = await fetch('/admin-api/about', {
-      method:'POST', credentials:'include',
+    var r = await fetch('/admin-api/pickup-points/reorder', {method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(order)});
+    if (!r.ok) throw new Error('Ошибка сервера');
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок';
+    btn.style.background='#1b873f';btn.style.borderColor='#1b873f';btn.style.color='#fff';
+    setTimeout(function(){ btn.style.background='';btn.style.borderColor='';btn.style.color=''; }, 1500);
+  } catch(e) {
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок';
+    alert('Ошибка: ' + e.message);
+  }
+}
+
+// ── Сохранить заголовок + описание + баннер ───────────────
+async function saveAll() {
+  var btn = document.getElementById('save-all-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Сохраняем…';
+  try {
+    var r = await fetch('/admin-api/about', {method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        title: document.getElementById('about-title').value || 'Чайное Дерево',
+        title: document.getElementById('about-title').value.trim() || 'Чайное Дерево',
         description_html: descEditor ? descEditor.root.innerHTML : '',
         banner_image_path: bannerPath,
-      })
-    });
-    if (!r.ok) throw new Error('Ошибка сервера');
+      })});
+    if (!r.ok) throw new Error((await r.json()).detail || 'Ошибка сервера');
     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить';
-    btn.style.background = '#1b873f'; btn.style.borderColor = '#1b873f';
-    setTimeout(function(){ btn.style.background = ''; btn.style.borderColor = ''; }, 1500);
+    btn.style.background='#1b873f';btn.style.borderColor='#1b873f';
+    setTimeout(function(){ btn.style.background='';btn.style.borderColor=''; }, 1500);
   } catch(e) {
     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить';
     alert('Ошибка: ' + e.message);
   }
 }
 
-// ---- Пункты самовывоза ----
-function renderPickupPoints(items) {
-  var list = document.getElementById('pickup-list');
-  list.innerHTML = '';
-  if (!items.length) {
-    list.innerHTML = '<p class="text-muted" style="font-size:13px">Нет пунктов. Нажмите «Добавить».</p>';
-    return;
-  }
-  items.forEach(function(p) {
-    var div = document.createElement('div');
-    div.className = 'faq-item-row';
-    div.dataset.id = p.id;
-    var addr = [p.city, p.street, p.building ? 'д. '+p.building : ''].filter(Boolean).join(', ') || p.address || '—';
-    div.innerHTML =
-      '<div class="faq-item-header" onclick="toggleFaq(this)">' +
-        '<span class="drag-handle">⠿</span>' +
-        '<span class="faq-question-text">' + esc(p.name) + ' — ' + esc(addr) + '</span>' +
-        '<button class="btn btn-sm btn-outline-danger ms-auto" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();deletePickup(' + p.id + ',this.closest(\'.faq-item-row\'))">Удалить</button>' +
-      '</div>' +
-      '<div class="faq-item-body">' + pickupForm(p) + '</div>';
-    list.appendChild(div);
-  });
-}
-
-function pickupForm(p) {
-  p = p || {};
-  return '<div class="row g-2">' +
-    '<div class="col-md-4"><label class="form-label">Название</label><input class="form-control pp-name" value="' + esc(p.name||'') + '"></div>' +
-    '<div class="col-md-4"><label class="form-label">Город</label><input class="form-control pp-city" value="' + esc(p.city||'') + '"></div>' +
-    '<div class="col-md-4"><label class="form-label">Улица</label><input class="form-control pp-street" value="' + esc(p.street||'') + '"></div>' +
-    '<div class="col-md-3"><label class="form-label">Дом</label><input class="form-control pp-building" value="' + esc(p.building||'') + '"></div>' +
-    '<div class="col-md-3"><label class="form-label">Телефон</label><input class="form-control pp-phone" value="' + esc(p.phone||'') + '"></div>' +
-    '<div class="col-md-6"><label class="form-label">Режим работы</label><input class="form-control pp-hours" value="' + esc(p.work_hours||'') + '" placeholder="Пн-Пт 10:00–20:00"></div>' +
-    '<div class="col-12"><label class="form-label">Комментарий / как найти</label><input class="form-control pp-comment" value="' + esc(p.comment||'') + '"></div>' +
-    '<div class="col-12"><label class="form-label">Ссылка на Яндекс-карту (src из виджета)</label><input class="form-control pp-map" value="' + esc(p.map_embed_src||'') + '" placeholder="https://yandex.ru/map-widget/v1/?..."></div>' +
-    '</div>' +
-    '<div class="d-flex gap-2 mt-3">' +
-      '<button class="btn btn-sm btn-primary" onclick="savePickup(this.closest(\'.faq-item-row\'))">Сохранить</button>' +
-      '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaq(this.closest(\'.faq-item-row\').querySelector(\'.faq-item-header\'))">Отмена</button>' +
-    '</div>';
-}
-
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-function addPickupPoint() {
-  var list = document.getElementById('pickup-list');
-  var empty = list.querySelector('.text-muted');
-  if (empty) empty.remove();
-  var div = document.createElement('div');
-  div.className = 'faq-item-row';
-  div.dataset.id = '';
-  div.innerHTML =
-    '<div class="faq-item-header" onclick="toggleFaq(this)">' +
-      '<span class="faq-question-text">Новый пункт самовывоза</span>' +
-    '</div>' +
-    '<div class="faq-item-body open">' + pickupForm({}) + '</div>';
-  list.appendChild(div);
-  div.querySelector('.pp-name').focus();
-}
-
-async function savePickup(row) {
-  var id = row.dataset.id;
-  var data = {
-    name: row.querySelector('.pp-name').value.trim(),
-    city: row.querySelector('.pp-city').value.trim(),
-    street: row.querySelector('.pp-street').value.trim(),
-    building: row.querySelector('.pp-building').value.trim(),
-    phone: row.querySelector('.pp-phone').value.trim(),
-    work_hours: row.querySelector('.pp-hours').value.trim(),
-    comment: row.querySelector('.pp-comment').value.trim(),
-    map_embed_src: row.querySelector('.pp-map').value.trim(),
-  };
-  if (!data.name) { alert('Введите название'); return; }
-  var btn = row.querySelector('.btn-primary');
-  btn.disabled = true; btn.textContent = 'Сохраняем…';
-  try {
-    var resp;
-    if (id) {
-      resp = await fetch('/admin-api/pickup-points/'+id, {method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-    } else {
-      resp = await fetch('/admin-api/pickup-points', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-    }
-    if (!resp.ok) throw new Error('Ошибка сервера');
-    var d = await resp.json();
-    row.dataset.id = d.id;
-    var addr = [d.city, d.street, d.building ? 'д.'+d.building : ''].filter(Boolean).join(', ') || '—';
-    row.querySelector('.faq-question-text').textContent = d.name + ' — ' + addr;
-    row.querySelector('.faq-item-body').classList.remove('open');
-    btn.disabled = false; btn.textContent = 'Сохранить';
-  } catch(e) { btn.disabled = false; btn.textContent = 'Сохранить'; alert('Ошибка: ' + e.message); }
-}
-
-async function deletePickup(id, row) {
-  if (!confirm('Удалить пункт самовывоза?')) return;
-  if (id) {
-    var r = await fetch('/admin-api/pickup-points/'+id, {method:'DELETE', credentials:'include'});
-    if (!r.ok) { alert('Ошибка удаления'); return; }
-  }
-  row.remove();
-}
-
+// ── Инициализация ──────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
+  // Quill описания — сразу, пока элемент виден
+  descEditor = new Quill('#desc-editor', {theme:'snow', modules:{toolbar:TOOLBAR}});
+
   fetch('/admin-api/about', {credentials:'include'})
     .then(function(r){ return r.json(); })
     .then(function(d) {
       document.getElementById('about-title').value = d.title || 'Чайное Дерево';
-      initDescEditor(d.description_html || '');
+      if (d.description_html) descEditor.root.innerHTML = d.description_html;
       if (d.banner_image_path) {
         bannerPath = d.banner_image_path;
-        document.getElementById('banner-placeholder').style.display = 'none';
         var img = document.getElementById('banner-img');
         img.src = d.banner_image_path; img.style.display = 'block';
+        document.getElementById('banner-emoji').style.display = 'none';
         document.getElementById('remove-banner-btn').style.display = 'inline-flex';
       }
     })
-    .catch(function(e){ console.error('about load error:', e); initDescEditor(''); });
+    .catch(function(e){ console.error('about:', e); });
 
   fetch('/admin-api/faq', {credentials:'include'})
     .then(function(r){ return r.json(); })
-    .then(function(d){ renderFaq(d); })
-    .catch(function(e){ console.error('faq load error:', e); renderFaq([]); });
+    .then(renderFaq)
+    .catch(function(e){ console.error('faq:', e); renderFaq([]); });
 
   fetch('/admin-api/pickup-points', {credentials:'include'})
     .then(function(r){ return r.json(); })
-    .then(function(d){ renderPickupPoints(d); })
-    .catch(function(e){ console.error('pickup load error:', e); renderPickupPoints([]); });
+    .then(renderPp)
+    .catch(function(e){ console.error('pp:', e); renderPp([]); });
 });
 </script>
 </body>
@@ -1278,6 +1262,23 @@ def setup_dashboard(app: FastAPI) -> None:
             p.address = ", ".join(parts) if parts else p.address
             await s.commit()
             return JSONResponse(_pp_dict(p))
+
+    @app.post("/admin-api/pickup-points/reorder", include_in_schema=False)
+    async def pp_reorder(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from sqlalchemy import select
+        from app.db import get_session_factory
+        from app.models.content import PickupPoint
+        body = await request.json()  # [{id, sort_order}, ...]
+        async with get_session_factory()() as s:
+            for item in body:
+                r = await s.execute(select(PickupPoint).where(PickupPoint.id == item["id"]))
+                p = r.scalar_one_or_none()
+                if p:
+                    p.sort_order = item["sort_order"]
+            await s.commit()
+        return JSONResponse({"ok": True})
 
     @app.delete("/admin-api/pickup-points/{pp_id}", include_in_schema=False)
     async def pp_delete(pp_id: int, request: Request):
