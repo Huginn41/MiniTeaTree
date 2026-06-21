@@ -952,7 +952,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
 
     # ===== CRM ЗАКАЗА =====
 
-    @app.get("/admin/crm/order/{order_id}", include_in_schema=False)
+    @app.get("/crm/order/{order_id}", include_in_schema=False)
     async def admin_crm_order(order_id: int, request: Request):
         if request.session.get("admin_token") != "authenticated":
             from starlette.responses import RedirectResponse
@@ -1248,7 +1248,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         }
 
         column_formatters = {
-            "number": lambda m, a: Markup(f'<a href="/admin/crm/order/{m.id}" style="font-weight:600;color:var(--bs-primary)">{m.number}</a>'),
+            "number": lambda m, a: Markup(f'<a href="/crm/order/{m.id}" style="font-weight:600;color:var(--bs-primary)">{m.number}</a>'),
             "user": lambda m, a: m.user.display_name if m.user else "—",
             "total_amount": lambda m, a: Markup(f"<b>{float(m.total_amount):.0f} ₽</b>"),
             "status": lambda m, a: _status_select(m.id, "status", m.status, _STATUS_CHOICES),

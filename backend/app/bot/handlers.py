@@ -46,31 +46,36 @@ async def cb_payment_link(callback: CallbackQuery, state: FSMContext) -> None:
     order_id = int(callback.data.split(":")[1])
 
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
     from app.db import get_session_factory
     from app.models.order import Order
+    from app.models.user import User
 
+    customer_tg_id = None
+    order_number = None
     async with get_session_factory()() as session:
         result = await session.execute(
-            select(Order).where(Order.id == order_id)
+            select(Order).options(selectinload(Order.user)).where(Order.id == order_id)
         )
         order = result.scalar_one_or_none()
+        if order:
+            order_number = order.number
+            customer_tg_id = order.user.telegram_id if order.user else None
 
     if not order:
         await callback.answer("Заказ не найден", show_alert=True)
         return
 
-    customer_tg_id = order.user.telegram_id if order.user else None
-
     await state.set_state(AdminStates.waiting_payment_link)
     await state.update_data(
         order_id=order_id,
-        order_number=order.number,
+        order_number=order_number,
         customer_tg_id=customer_tg_id,
     )
 
     await callback.answer()
     await callback.message.answer(
-        f"Введите ссылку на оплату для заказа <b>{order.number}</b>:\n\n"
+        f"Введите ссылку на оплату для заказа <b>{order_number}</b>:\n\n"
         f"(Или напишите /cancel для отмены)",
         parse_mode="HTML",
     )
