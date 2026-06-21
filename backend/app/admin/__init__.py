@@ -39,22 +39,15 @@ def _fmt_dt(dt):
 
 # ---------- Варианты статусов ----------
 
-_DELIVERY_CHOICES = [
+_STATUS_CHOICES = [
     ("new", "🆕 Новый"),
-    ("manager_contacted", "📞 Связались"),
-    ("awaiting_delivery_payment", "💳 Ждёт оплаты"),
-    ("delivery_paid", "✅ Доставка OK"),
-    ("shipping", "🚚 В пути"),
-    ("delivered", "📦 Доставлен"),
+    ("assembling", "📦 Собираем"),
+    ("ready", "✅ Готов"),
+    ("awaiting_payment", "💳 Ожидает оплаты"),
+    ("in_delivery", "🚚 Передан в доставку"),
+    ("at_pvz", "🏪 В ПВЗ"),
+    ("delivered", "🎉 Доставлен"),
     ("cancelled", "❌ Отменён"),
-]
-
-_PAYMENT_CHOICES = [
-    ("pending", "⏳ Ожидает"),
-    ("paid", "✅ Оплачен"),
-    ("refunded", "↩️ Возврат"),
-    ("failed", "❌ Ошибка"),
-    ("cancelled", "🚫 Отменён"),
 ]
 
 _SELECT_STYLE = (
@@ -917,16 +910,18 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         data = await request.json()
         field = data.get("field")
         value = data.get("value")
-        allowed_fields = {"status_delivery", "status_payment"}
-        if field not in allowed_fields:
+        if field != "status":
             return _JSONResponse(status_code=400, content={"error": "Invalid field"})
+        from app.models.enums import ORDER_STATUS_VALUES
+        if value not in ORDER_STATUS_VALUES:
+            return _JSONResponse(status_code=400, content={"error": "Invalid status value"})
         from app.db import get_session_factory
         async with get_session_factory()() as session:
             result = await session.execute(select(Order).where(Order.id == order_id))
             order = result.scalar_one_or_none()
             if not order:
                 return _JSONResponse(status_code=404, content={"error": "Not found"})
-            setattr(order, field, value)
+            order.status = value
             await session.commit()
         return _JSONResponse({"ok": True})
 
@@ -1084,7 +1079,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
 
         column_list = [
             "number", "user", "total_amount",
-            "status_payment", "status_delivery", "created_at",
+            "status", "created_at",
         ]
         column_searchable_list = ["number"]
         column_sortable_list = ["id", "total_amount", "created_at"]
@@ -1095,8 +1090,9 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "user": "Клиент",
             "total_amount": "Сумма",
             "delivery_cost": "Стоимость доставки",
-            "status_payment": "Оплата",
-            "status_delivery": "Статус доставки",
+            "status": "Статус",
+            "payment_link": "Ссылка на оплату",
+            "tracking_link": "Трек / ссылка доставки",
             "comment": "Комментарий",
             "paid_at": "Дата оплаты",
             "delivered_at": "Дата доставки",
@@ -1109,22 +1105,19 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "number": lambda m, a: Markup(f'<a href="/admin/order/edit/{m.id}" style="font-weight:600;color:var(--bs-primary)">{m.number}</a>'),
             "user": lambda m, a: m.user.display_name if m.user else "—",
             "total_amount": lambda m, a: Markup(f"<b>{float(m.total_amount):.0f} ₽</b>"),
-            "status_delivery": lambda m, a: _status_select(m.id, "status_delivery", m.status_delivery, _DELIVERY_CHOICES),
-            "status_payment": lambda m, a: _status_select(m.id, "status_payment", m.status_payment, _PAYMENT_CHOICES),
+            "status": lambda m, a: _status_select(m.id, "status", m.status, _STATUS_CHOICES),
             "created_at": lambda m, a: _fmt_dt(m.created_at),
         }
 
         form_columns = [
-            "status_payment", "status_delivery", "delivery_cost",
-            "comment", "paid_at", "delivered_at",
+            "status", "payment_link", "tracking_link",
+            "delivery_cost", "comment", "paid_at", "delivered_at",
         ]
         form_overrides = {
-            "status_delivery": _AdminSelectField,
-            "status_payment": _AdminSelectField,
+            "status": _AdminSelectField,
         }
         form_args = {
-            "status_delivery": {"choices": _DELIVERY_CHOICES},
-            "status_payment": {"choices": _PAYMENT_CHOICES},
+            "status": {"choices": _STATUS_CHOICES},
         }
         page_size = 50
 

@@ -189,8 +189,7 @@ class OrderBrief(BaseModel):
     id: int
     number: str
     total_amount: float
-    status_payment: str
-    status_delivery: str
+    status: str
     created_at: datetime
     items_count: int = 0
 
@@ -204,8 +203,9 @@ class OrderDetail(BaseModel):
     number: str
     total_amount: float
     delivery_cost: float
-    status_payment: str
-    status_delivery: str
+    status: str
+    payment_link: str | None = None
+    tracking_link: str | None = None
     comment: str | None = None
     paid_at: datetime | None = None
     delivered_at: datetime | None = None
@@ -226,9 +226,9 @@ class OrderCreate(BaseModel):
 
 
 class OrderStatusUpdate(BaseModel):
-    """Обновление статуса доставки менеджером."""
+    """Обновление статуса заказа менеджером."""
 
-    status_delivery: str
+    status: str
 
 
 # ===================== Профиль =====================

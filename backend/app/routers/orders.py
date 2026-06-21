@@ -12,7 +12,7 @@ from app.db import get_db
 from app.deps import CurrentUser, get_current_user
 from app.models.cart import Cart, CartItem
 from app.models.delivery import DeliveryInfo
-from app.models.enums import DELIVERY_STATUS_VALUES, DELIVERY_TYPE_VALUES
+from app.models.enums import DELIVERY_TYPE_VALUES, ORDER_STATUS_VALUES
 from app.models.order import Order, OrderItem
 from app.models.product import Product, ProductVariant
 from app.schemas import (
@@ -79,8 +79,7 @@ async def list_orders(
                 id=o.id,
                 number=o.number,
                 total_amount=float(o.total_amount),
-                status_payment=o.status_payment,
-                status_delivery=o.status_delivery,
+                status=o.status,
                 created_at=o.created_at,
                 items_count=items_count,
             )
@@ -110,8 +109,9 @@ async def get_order(
         number=order.number,
         total_amount=float(order.total_amount),
         delivery_cost=float(order.delivery_cost),
-        status_payment=order.status_payment,
-        status_delivery=order.status_delivery,
+        status=order.status,
+        payment_link=order.payment_link,
+        tracking_link=order.tracking_link,
         comment=order.comment,
         paid_at=order.paid_at,
         delivered_at=order.delivered_at,
@@ -187,8 +187,7 @@ async def create_order(
         user_id=user.user.id,
         number=number,
         total_amount=total,
-        status_payment="pending",
-        status_delivery="new",
+        status="new",
         comment=body.comment,
     )
     session.add(order)
@@ -235,8 +234,9 @@ async def create_order(
         number=order.number,
         total_amount=float(order.total_amount),
         delivery_cost=float(order.delivery_cost),
-        status_payment=order.status_payment,
-        status_delivery=order.status_delivery,
+        status=order.status,
+        payment_link=order.payment_link,
+        tracking_link=order.tracking_link,
         comment=order.comment,
         paid_at=order.paid_at,
         delivered_at=order.delivered_at,
@@ -271,8 +271,8 @@ async def update_order_status(
     if not user.user.is_admin:
         raise HTTPException(status_code=403, detail="Admin only")
 
-    if body.status_delivery not in DELIVERY_STATUS_VALUES:
-        raise HTTPException(status_code=400, detail="Invalid status_delivery")
+    if body.status not in ORDER_STATUS_VALUES:
+        raise HTTPException(status_code=400, detail="Invalid status")
 
     stmt = select(Order).where(Order.number == order_number)
     result = await session.execute(stmt)
@@ -280,20 +280,20 @@ async def update_order_status(
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    old_status = order.status_delivery
-    order.status_delivery = body.status_delivery
+    old_status = order.status
+    order.status = body.status
 
-    if body.status_delivery == "delivered":
+    if body.status == "delivered":
         order.delivered_at = datetime.now(UTC)
 
     await session.commit()
     await session.refresh(order, ["items", "delivery_info", "user"])
 
     # Уведомляем клиента если статус изменился
-    if old_status != body.status_delivery and order.user:
+    if old_status != body.status and order.user:
         try:
             from app.bot.status_notify import notify_status_changed
-            await notify_status_changed(order, body.status_delivery, order.user.telegram_id)
+            await notify_status_changed(order, body.status, order.user.telegram_id)
         except Exception:
             pass
 
@@ -303,8 +303,9 @@ async def update_order_status(
         number=order.number,
         total_amount=float(order.total_amount),
         delivery_cost=float(order.delivery_cost),
-        status_payment=order.status_payment,
-        status_delivery=order.status_delivery,
+        status=order.status,
+        payment_link=order.payment_link,
+        tracking_link=order.tracking_link,
         comment=order.comment,
         paid_at=order.paid_at,
         delivered_at=order.delivered_at,

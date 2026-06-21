@@ -14,30 +14,46 @@ from __future__ import annotations
 from enum import Enum, IntEnum, StrEnum
 
 
-class OrderPaymentStatus(StrEnum):
-    """Статус оплаты заказа (товары, через Telegram Payments / ЮKassa)."""
+class OrderStatus(StrEnum):
+    """Единый статус заказа (управляется менеджером в CRM).
 
-    PENDING = "pending"  # создан, ждёт оплаты
-    PAID = "paid"  # оплачен
-    REFUNDED = "refunded"  # возврат
-    FAILED = "failed"  # платёж не прошёл
-    CANCELLED = "cancelled"  # отменён до оплаты
-
-
-class OrderDeliveryStatus(StrEnum):
-    """Статус доставки (управляется менеджером вручную в CRM).
-
-    Особенность процесса: доставка НЕ входит в платёж товаров — менеджер
-    отдельно присылает клиенту ссылку на оплату доставки.
+    Самовывоз:  new → assembling → ready → delivered
+    Доставка:   new → awaiting_payment → in_delivery → at_pvz → delivered
     """
 
-    NEW = "new"  # новый заказ, ждёт менеджера
-    MANAGER_CONTACTED = "manager_contacted"  # менеджер вышел на связь
-    AWAITING_DELIVERY_PAYMENT = "awaiting_delivery_payment"  # ждём оплату доставки
-    DELIVERY_PAID = "delivery_paid"  # доставка оплачена
-    SHIPPING = "shipping"  # в пути
-    DELIVERED = "delivered"  # доставлено/выдано
-    CANCELLED = "cancelled"  # отменён
+    NEW = "new"                          # новый заказ
+    ASSEMBLING = "assembling"            # собираем (самовывоз)
+    READY = "ready"                      # готов к выдаче (самовывоз)
+    AWAITING_PAYMENT = "awaiting_payment"  # ожидает оплаты (доставка)
+    IN_DELIVERY = "in_delivery"          # передан в доставку
+    AT_PVZ = "at_pvz"                    # в пункте выдачи
+    DELIVERED = "delivered"              # доставлен / выдан
+    CANCELLED = "cancelled"              # отменён
+
+
+# Лейблы для клиентского интерфейса
+ORDER_STATUS_CLIENT_LABELS: dict[str, str] = {
+    "new": "В обработке",
+    "assembling": "Собираем",
+    "ready": "Готов к выдаче",
+    "awaiting_payment": "Ожидает оплату",
+    "in_delivery": "В пути",
+    "at_pvz": "В пункте выдачи",
+    "delivered": "Получен",
+    "cancelled": "Отменён",
+}
+
+# Лейблы для администратора
+ORDER_STATUS_ADMIN_LABELS: dict[str, str] = {
+    "new": "Новый",
+    "assembling": "Собираем",
+    "ready": "Готов",
+    "awaiting_payment": "Ожидает оплаты",
+    "in_delivery": "Передан в доставку",
+    "at_pvz": "В ПВЗ",
+    "delivered": "Доставлен",
+    "cancelled": "Отменён",
+}
 
 
 class DeliveryType(StrEnum):
@@ -79,8 +95,7 @@ _ = Enum
 
 
 # Списки значений для CHECK-констрейнтов (через запятую для SQL IN).
-PAYMENT_STATUS_VALUES = tuple(s.value for s in OrderPaymentStatus)
-DELIVERY_STATUS_VALUES = tuple(s.value for s in OrderDeliveryStatus)
+ORDER_STATUS_VALUES = tuple(s.value for s in OrderStatus)
 DELIVERY_TYPE_VALUES = tuple(s.value for s in DeliveryType)
 PROVIDER_VALUES = tuple(s.value for s in PaymentProvider)
 NOTIF_ROLE_VALUES = tuple(s.value for s in NotificationRole)

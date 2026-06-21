@@ -1,11 +1,9 @@
 """Заказ и позиции заказа.
 
-Ключевая особенность процесса: у заказа ДВА независимых статуса:
-  - status_payment  — оплата ТОВАРОВ (через Telegram Payments / ЮKassa)
-  - status_delivery — доставка (управляется менеджером вручную)
-
-Доставка НЕ входит в счёт товаров: менеджер отдельно присылает клиенту
-ссылку на оплату доставки (см. DeliveryInfo.ym_payment_link).
+Единый статус `status` управляется менеджером в CRM.
+Флоу зависит от типа доставки:
+  - Самовывоз:  new → assembling → ready → delivered
+  - Доставка:   new → awaiting_payment → in_delivery → at_pvz → delivered
 
 OrderItem хранит снапшот цены и названия на момент заказа — чтобы история
 не «поплыла» при изменении цен/переименовании товаров позже.
@@ -29,7 +27,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 from app.models.base import PKType, TimestampMixin
-from app.models.enums import DELIVERY_STATUS_VALUES, PAYMENT_STATUS_VALUES
+from app.models.enums import ORDER_STATUS_VALUES
 
 
 class Order(TimestampMixin, Base):
@@ -38,12 +36,8 @@ class Order(TimestampMixin, Base):
     __tablename__ = "orders"
     __table_args__ = (
         CheckConstraint(
-            f"status_payment IN ({','.join(repr(v) for v in PAYMENT_STATUS_VALUES)})",
-            name="status_payment_valid",
-        ),
-        CheckConstraint(
-            f"status_delivery IN ({','.join(repr(v) for v in DELIVERY_STATUS_VALUES)})",
-            name="status_delivery_valid",
+            f"status IN ({','.join(repr(v) for v in ORDER_STATUS_VALUES)})",
+            name="status_valid",
         ),
         CheckConstraint("total_amount >= 0", name="total_nonnegative"),
     )
@@ -61,12 +55,15 @@ class Order(TimestampMixin, Base):
         Numeric(10, 2), server_default=text("0"), nullable=False, default=0
     )
 
-    status_payment: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
-    status_delivery: Mapped[str] = mapped_column(String(32), nullable=False, default="new")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")
+    # Ссылка на оплату (заполняется менеджером, отправляется клиенту ботом).
+    payment_link: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # Трек-номер или ссылка для отслеживания доставки.
+    tracking_link: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     # Комментарий клиента к заказу.
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Когда оплачен (товары).
+    # Когда оплачен.
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Когда доставлен/выдан.
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -87,7 +84,7 @@ class Order(TimestampMixin, Base):
     )
 
     def __repr__(self) -> str:
-        return f"<Order id={self.id} number={self.number!r} pay={self.status_payment}>"
+        return f"<Order id={self.id} number={self.number!r} status={self.status!r}>"
 
 
 class OrderItem(TimestampMixin, Base):

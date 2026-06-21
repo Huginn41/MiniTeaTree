@@ -197,12 +197,11 @@ body { background:#f4f6fb; min-height:100vh; }
 <script>
 var chart = null, period = 30;
 
-var DL = {
-  'new':'🆕 Новый','manager_contacted':'📞 Связались',
-  'awaiting_delivery_payment':'💳 Ждёт оплаты','delivery_paid':'✅ Доставка OK',
-  'shipping':'🚚 В пути','delivered':'📦 Доставлен','cancelled':'❌ Отменён'
+var SL = {
+  'new':'🆕 Новый','assembling':'📦 Собираем','ready':'✅ Готов',
+  'awaiting_payment':'💳 Ожидает оплаты','in_delivery':'🚚 Передан в доставку',
+  'at_pvz':'🏪 В ПВЗ','delivered':'🎉 Доставлен','cancelled':'❌ Отменён'
 };
-var PL = {'pending':'⏳ Ожидает','paid':'✅ Оплачен','refunded':'↩️ Возврат','failed':'❌ Ошибка','cancelled':'🚫 Отменён'};
 
 function fmt(n){ return new Intl.NumberFormat('ru-RU').format(Math.round(n||0)); }
 function fmtDt(s){
@@ -263,8 +262,7 @@ function renderPending(orders){
       +'<td><a class="order-num" href="/admin/order/edit/'+o.id+'">'+o.number+'</a></td>'
       +'<td>'+o.client+'</td>'
       +'<td><b>'+fmt(o.total)+' ₽</b></td>'
-      +'<td><small>'+(DL[o.status_delivery]||o.status_delivery)+'</small></td>'
-      +'<td><small>'+(PL[o.status_payment]||o.status_payment)+'</small></td>'
+      +'<td><small>'+(SL[o.status]||o.status)+'</small></td>'
       +'<td>'+ap+'</td>'
       +'<td><small class="text-muted">'+fmtDt(o.created_at)+'</small></td>'
       +'<td><a href="/admin/order/edit/'+o.id+'" class="btn btn-xs btn-outline-primary" style="font-size:12px;padding:2px 10px">→</a></td>'
@@ -347,7 +345,7 @@ async def _get_data(period_days: int, demo: bool = False) -> dict:
         pr = await s.execute(
             _demo_filter(
                 select(Order)
-                .where(Order.status_delivery.notin_(["delivered", "cancelled"]))
+                .where(Order.status.notin_(["delivered", "cancelled"]))
                 .options(selectinload(Order.user))
                 .order_by(Order.created_at.asc())
             )
@@ -364,7 +362,7 @@ async def _get_data(period_days: int, demo: bool = False) -> dict:
         rev_r = await s.execute(
             _demo_filter(
                 select(func.coalesce(func.sum(Order.total_amount), 0))
-                .where(Order.created_at >= since, Order.status_payment == "paid")
+                .where(Order.created_at >= since, Order.status == "delivered")
             )
         )
         period_revenue = float(rev_r.scalar() or 0)
@@ -372,7 +370,7 @@ async def _get_data(period_days: int, demo: bool = False) -> dict:
         paid_r = await s.execute(
             _demo_filter(
                 select(func.count(Order.id))
-                .where(Order.created_at >= since, Order.status_payment == "paid")
+                .where(Order.created_at >= since, Order.status == "delivered")
             )
         )
         period_paid = paid_r.scalar() or 0
@@ -401,7 +399,7 @@ async def _get_data(period_days: int, demo: bool = False) -> dict:
             )
             .join(Order, Order.user_id == User.id)
             .where(
-                Order.status_payment == "paid",
+                Order.status == "delivered",
                 *([] if not demo else [Order.number.like("DEMO-%")]),
             )
             .group_by(User.id, User.first_name, User.last_name, User.username)
@@ -431,8 +429,7 @@ async def _get_data(period_days: int, demo: bool = False) -> dict:
                 "number": o.number,
                 "client": o.user.display_name if o.user else "—",
                 "total": float(o.total_amount),
-                "status_delivery": o.status_delivery,
-                "status_payment": o.status_payment,
+                "status": o.status,
                 "created_at": o.created_at.isoformat(),
                 "age_hours": (
                     now - o.created_at.replace(tzinfo=timezone.utc)

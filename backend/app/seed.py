@@ -411,13 +411,13 @@ async def _seed_demo_data(factory) -> None:
     ]
 
     _DEMO_ORDERS = [
-        {"user_idx": 0, "number": "DEMO-000001", "total": 875,  "status_p": "paid",    "status_d": "delivered",          "delivery_type": "courier", "address": "ул. Ленина, 10, кв. 5",         "days_ago": 14},
-        {"user_idx": 1, "number": "DEMO-000002", "total": 1250, "status_p": "paid",    "status_d": "delivered",          "delivery_type": "pickup",  "address": None,                            "days_ago": 10},
-        {"user_idx": 2, "number": "DEMO-000003", "total": 500,  "status_p": "pending", "status_d": "awaiting_delivery_payment", "delivery_type": "courier", "address": "пр. Мира, 45, кв. 12", "days_ago": 3},
-        {"user_idx": 0, "number": "DEMO-000004", "total": 625,  "status_p": "paid",    "status_d": "shipping",           "delivery_type": "pvz",     "address": "ПВЗ Боксберри, Садовая 3",      "days_ago": 2},
-        {"user_idx": 3, "number": "DEMO-000005", "total": 375,  "status_p": "pending", "status_d": "new",                "delivery_type": "pickup",  "address": None,                            "days_ago": 1},
-        {"user_idx": 4, "number": "DEMO-000006", "total": 1500, "status_p": "paid",    "status_d": "delivered",          "delivery_type": "courier", "address": "ул. Гагарина, 7, кв. 33",       "days_ago": 7},
-        {"user_idx": 1, "number": "DEMO-000007", "total": 750,  "status_p": "pending", "status_d": "manager_contacted",  "delivery_type": "pvz",     "address": "ПВЗ СДЭК, Пушкина 22",         "days_ago": 0},
+        {"user_idx": 0, "number": "DEMO-000001", "total": 875,  "status": "delivered",        "delivery_type": "courier", "address": "ул. Ленина, 10, кв. 5",         "days_ago": 14},
+        {"user_idx": 1, "number": "DEMO-000002", "total": 1250, "status": "delivered",        "delivery_type": "pickup",  "address": None,                            "days_ago": 10},
+        {"user_idx": 2, "number": "DEMO-000003", "total": 500,  "status": "awaiting_payment", "delivery_type": "courier", "address": "пр. Мира, 45, кв. 12",          "days_ago": 3},
+        {"user_idx": 0, "number": "DEMO-000004", "total": 625,  "status": "in_delivery",      "delivery_type": "pvz",     "address": "ПВЗ Боксберри, Садовая 3",      "days_ago": 2},
+        {"user_idx": 3, "number": "DEMO-000005", "total": 375,  "status": "new",              "delivery_type": "pickup",  "address": None,                            "days_ago": 1},
+        {"user_idx": 4, "number": "DEMO-000006", "total": 1500, "status": "delivered",        "delivery_type": "courier", "address": "ул. Гагарина, 7, кв. 33",       "days_ago": 7},
+        {"user_idx": 1, "number": "DEMO-000007", "total": 750,  "status": "awaiting_payment", "delivery_type": "pvz",     "address": "ПВЗ СДЭК, Пушкина 22",         "days_ago": 0},
     ]
 
     async with factory() as session:
@@ -462,12 +462,11 @@ async def _seed_demo_data(factory) -> None:
                 user_id=uid,
                 number=od["number"],
                 total_amount=od["total"],
-                status_payment=od["status_p"],
-                status_delivery=od["status_d"],
+                status=od["status"],
                 comment=None,
                 created_at=created,
-                paid_at=created + timedelta(hours=1) if od["status_p"] == "paid" else None,
-                delivered_at=created + timedelta(days=3) if od["status_d"] == "delivered" else None,
+                paid_at=created + timedelta(hours=1) if od["status"] == "delivered" else None,
+                delivered_at=created + timedelta(days=3) if od["status"] == "delivered" else None,
             )
             session.add(order)
             await session.flush()
