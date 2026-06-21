@@ -189,36 +189,38 @@ async def run_yml_import(import_id: int, url: str) -> None:
                             updated += 1
                             log.append(f"[~] {product_name}")
 
-                        # ── Варианты ──
+                        # ── base_price: считаем руб/г из любого оффера ──
                         best_price_per_gram = 0.0
                         for offer in offers:
                             weight_text = next(
                                 (p.text or "" for p in offer.findall("param") if p.get("name") == "Вес"), ""
                             )
                             weight_g = _parse_weight(weight_text)
-                            if weight_g is None:
+                            if not weight_g:
                                 continue
                             try:
                                 price = float(offer.findtext("price") or "0")
                             except ValueError:
                                 price = 0.0
-
-                            if weight_g > 0:
+                            if price > 0:
                                 best_price_per_gram = max(best_price_per_gram, price / weight_g)
 
+                        product.base_price = best_price_per_gram
+
+                        # ── Ровно 4 фиксированных варианта: 25/50/75/100 г ──
+                        for weight in (25, 50, 75, 100):
+                            variant_price = round(best_price_per_gram * weight, 2)
                             variant = (await session.execute(
                                 select(ProductVariant).where(
                                     ProductVariant.product_id == product.id,
-                                    ProductVariant.weight_g == weight_g,
+                                    ProductVariant.weight_g == weight,
                                 )
                             )).scalar_one_or_none()
                             if variant is None:
-                                session.add(ProductVariant(product_id=product.id, weight_g=weight_g,
-                                                           price=price, sku=sku, in_stock=True))
+                                session.add(ProductVariant(product_id=product.id, weight_g=weight,
+                                                           price=variant_price, sku=sku, in_stock=True))
                             else:
-                                variant.price = price
-
-                        product.base_price = best_price_per_gram
+                                variant.price = variant_price
                         await session.flush()
 
                         # ── Изображения (только для новых товаров) ──
@@ -319,21 +321,22 @@ async def run_excel_import(import_id: int, file_content: bytes) -> None:
                         cats_by_name[cat_key] = new_cat
                     db_cat = cats_by_name[cat_key]
 
-                    # Цены
-                    prices: dict[int, float] = {}
+                    # Цена за 50г (приоритет) или любая доступная → base_price руб/г
+                    raw_prices: dict[int, float] = {}
                     for w, ci in ((25, COL_P25), (50, COL_P50), (75, COL_P75), (100, COL_P100)):
                         v = _get(row, ci)
                         if v:
                             try:
-                                prices[w] = float(v.replace(",", "."))
+                                raw_prices[w] = float(v.replace(",", "."))
                             except ValueError:
                                 pass
 
-                    if not prices:
+                    if not raw_prices:
                         log.append(f"[SKIP] {product_name}: нет цен")
                         continue
 
-                    base_price = prices.get(100) or next(iter(p * 100 / w for w, p in prices.items()))
+                    # base_price = руб/г; берём лучшую оценку из доступных цен
+                    base_price = max(p / w for w, p in raw_prices.items())
 
                     slug = _slugify(product_name)
                     product = (await session.execute(select(Product).where(Product.slug == slug))).scalar_one_or_none()
@@ -358,7 +361,8 @@ async def run_excel_import(import_id: int, file_content: bytes) -> None:
                         log.append(f"[~] {product_name}")
 
                     sku = _get(row, COL_SKU)
-                    for w, price in prices.items():
+                    for w in (25, 50, 75, 100):
+                        variant_price = round(base_price * w, 2)
                         variant = (await session.execute(
                             select(ProductVariant).where(
                                 ProductVariant.product_id == product.id,
@@ -367,9 +371,9 @@ async def run_excel_import(import_id: int, file_content: bytes) -> None:
                         )).scalar_one_or_none()
                         if variant is None:
                             session.add(ProductVariant(product_id=product.id, weight_g=w,
-                                                       price=price, sku=sku, in_stock=True))
+                                                       price=variant_price, sku=sku, in_stock=True))
                         else:
-                            variant.price = price
+                            variant.price = variant_price
                     await session.flush()
 
                     if is_new and (photos_str := _get(row, COL_PHOTOS)):
