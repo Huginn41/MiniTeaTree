@@ -663,39 +663,42 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>О нас — редактор</title>
 {BASE_CSS}
-<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
 <style>
 .ql-toolbar.ql-snow{border-radius:8px 8px 0 0!important;border-color:#dee2e6!important;background:#f8f9fa}
 .ql-container.ql-snow{border-radius:0 0 8px 8px!important;border-color:#dee2e6!important;font-size:14px}
 .ql-editor{min-height:120px}
 .ab-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:24px;margin-bottom:20px}
 .ab-label{font-size:12px;font-weight:700;color:#8c9aad;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
-/* баннер */
-.banner-drop{position:relative;width:100%;height:200px;border-radius:12px;overflow:hidden;cursor:pointer;
-  background:linear-gradient(135deg,#1a6b3c,#2d9e5f);display:flex;align-items:center;justify-content:center;border:2px dashed #2d9e5f}
-.banner-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.banner-drop-hint{position:absolute;inset:0;background:rgba(0,0,0,.42);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:8px;opacity:0;transition:opacity .2s}
-.banner-drop:hover .banner-drop-hint{opacity:1}
-.banner-drop-hint span{color:#fff;font-size:13px;font-weight:600}
-/* FAQ */
-.faq-row{border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px;overflow:hidden}
-.faq-head{display:flex;align-items:center;gap:10px;padding:13px 14px;background:#f8f9fa;cursor:pointer;user-select:none}
+.banner-zone{width:100%;height:200px;border-radius:12px;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,#1a6b3c,#2d9e5f);cursor:pointer;border:2px dashed #2d9e5f;
+  display:flex;align-items:center;justify-content:center;text-align:center}
+.banner-zone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.banner-zone-text{position:relative;z-index:1;color:rgba(255,255,255,.9);font-size:13px}
+.banner-zone-emoji{font-size:40px;margin-bottom:6px}
+.banner-hover{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;opacity:0;transition:.2s;z-index:2}
+.banner-zone:hover .banner-hover{opacity:1}
+.banner-hover span{color:#fff;font-size:13px;font-weight:600}
+.faq-row{border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px;overflow:visible}
+.faq-head{display:flex;align-items:center;gap:10px;padding:13px 14px;background:#f8f9fa;border-radius:10px;cursor:pointer;user-select:none}
+.faq-body-open .faq-head{border-radius:10px 10px 0 0}
 .faq-head:hover{background:#eef2ff}
-.faq-head-text{flex:1;font-size:14px;font-weight:600;color:#212529}
 .faq-body{display:none;padding:16px;border-top:1px solid #e9ecef}
 .faq-body.open{display:block}
-/* ПВЗ drag */
-.pp-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#f8f9fa;border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px;cursor:default}
-.pp-row.sortable-ghost{opacity:.4}
-.pp-drag{cursor:grab;color:#adb5bd;font-size:18px;flex-shrink:0}
-.pp-name-lbl{flex:1;font-size:14px;font-weight:600;color:#212529}
-.pp-addr-lbl{font-size:12px;color:#6c757d}
+.pp-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#f8f9fa;
+  border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px}
+.pp-row.sortable-ghost{opacity:.3;background:#e8f0fe}
+.pp-drag{cursor:grab;color:#adb5bd;font-size:20px;flex-shrink:0;line-height:1}
+#err-box{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px 16px;
+  margin-bottom:16px;font-size:13px;display:none}
 </style>
 </head>
 <body>
 {TOPNAV}
 <div class="container-fluid px-4 py-4" style="max-width:860px">
+
+  <div id="err-box"></div>
 
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h5 class="section-title mb-0">✏️ Редактор страницы «О нас»</h5>
@@ -707,33 +710,38 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
   <!-- 1. Баннер -->
   <div class="ab-card">
     <div class="ab-label">Обложка страницы</div>
-    <label style="display:block;cursor:pointer">
-      <div class="banner-drop" id="banner-drop">
-        <div style="text-align:center;position:relative;z-index:1">
-          <div style="font-size:44px" id="banner-emoji">🍵</div>
-          <div style="color:rgba(255,255,255,.85);font-size:13px;margin-top:6px">Нажмите чтобы выбрать фото</div>
-        </div>
-        <img id="banner-img" style="display:none">
-        <div class="banner-drop-hint">
-          <i class="fa-solid fa-camera fa-2x text-white"></i>
-          <span>Заменить фото</span>
-        </div>
+    <div class="banner-zone" id="banner-zone" onclick="document.getElementById('bfile').click()">
+      <div class="banner-zone-text" id="banner-text">
+        <div class="banner-zone-emoji">🍵</div>
+        <div>Нажмите чтобы загрузить фото</div>
+        <div style="font-size:11px;opacity:.7;margin-top:4px">JPG, PNG, WEBP — до 10 МБ</div>
       </div>
-      <input type="file" id="banner-file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
-    </label>
-    <button class="btn btn-sm btn-outline-danger mt-2" id="remove-banner-btn" onclick="removeBanner()" style="display:none">
-      <i class="fa-solid fa-trash me-1"></i>Убрать фото
-    </button>
-    <div id="banner-status" style="font-size:12px;color:#6c757d;margin-top:6px"></div>
+      <img id="banner-img" style="display:none" alt="">
+      <div class="banner-hover">
+        <i class="fa-solid fa-camera fa-2x text-white"></i>
+        <span>Изменить фото</span>
+      </div>
+    </div>
+    <input type="file" id="bfile" accept="image/*" style="display:none">
+    <div class="d-flex align-items-center gap-3 mt-2">
+      <button class="btn btn-sm btn-outline-danger" id="rm-banner" onclick="removeBanner()" style="display:none">
+        <i class="fa-solid fa-trash me-1"></i>Убрать
+      </button>
+      <span id="banner-status" style="font-size:12px;color:#6c757d"></span>
+    </div>
   </div>
 
   <!-- 2. Заголовок и описание -->
   <div class="ab-card">
-    <div class="ab-label">Заголовок и текст</div>
-    <label class="form-label">Заголовок магазина</label>
+    <div class="ab-label">Заголовок и описание</div>
+    <label class="form-label">Заголовок</label>
     <input type="text" id="about-title" class="form-control mb-3" placeholder="Чайное Дерево">
     <label class="form-label">Описание</label>
-    <div id="desc-editor"></div>
+    <div id="desc-editor" style="min-height:140px"></div>
+    <div id="desc-fallback" style="display:none">
+      <textarea id="desc-textarea" class="form-control" rows="6" placeholder="Описание магазина"></textarea>
+      <small class="text-muted">Rich-text редактор недоступен, используется обычный текст.</small>
+    </div>
   </div>
 
   <!-- 3. FAQ -->
@@ -752,10 +760,10 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="ab-label mb-0">Пункты самовывоза</div>
       <a href="/admin/pickup-point/list" class="btn btn-sm btn-outline-secondary">
-        <i class="fa-solid fa-pen me-1"></i>Редактировать
+        <i class="fa-solid fa-pen me-1"></i>Добавить / редактировать
       </a>
     </div>
-    <p style="font-size:13px;color:#6c757d;margin-bottom:12px">Перетащите чтобы изменить порядок. Сохраните кнопкой ниже.</p>
+    <p style="font-size:13px;color:#6c757d;margin-bottom:10px">Перетащите чтобы изменить порядок, затем нажмите «Сохранить порядок».</p>
     <div id="pp-list"><p class="text-muted" style="font-size:13px">Загрузка…</p></div>
     <button class="btn btn-sm btn-outline-primary mt-2" id="pp-order-btn" onclick="savePpOrder()" style="display:none">
       <i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок
@@ -763,48 +771,88 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
   </div>
 
 </div>
-<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
+/* globals Quill, Sortable */
 var bannerPath = null;
 var descEditor = null;
-var faqEditors = {};   // id -> Quill instance
-var TOOLBAR = [['bold','italic','underline'],[{list:'bullet'}],['link'],['clean']];
+var faqEditors = {};
+var TOOLBAR = [['bold','italic','underline'],[{'list':'bullet'}],['link'],['clean']];
 
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showErr(msg) {
+  var b = document.getElementById('err-box');
+  b.textContent = '⚠️ ' + msg;
+  b.style.display = 'block';
+}
 
-// ── Баннер ────────────────────────────────────────────────
-async function uploadBanner(input) {
-  if (!input.files || !input.files[0]) return;
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Баннер ──────────────────────────────────────────────────────────
+document.getElementById('bfile').addEventListener('change', function() {
+  if (!this.files || !this.files[0]) return;
+  uploadBanner(this.files[0]);
+});
+
+async function uploadBanner(file) {
   var status = document.getElementById('banner-status');
+  status.style.color = '#6c757d';
   status.textContent = 'Загружаем…';
   var fd = new FormData();
-  fd.append('file', input.files[0]);
+  fd.append('file', file);
   try {
     var r = await fetch('/admin-api/upload-image', {method:'POST', credentials:'include', body:fd});
-    var d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
+    var text = await r.text();
+    if (!r.ok) {
+      throw new Error('HTTP ' + r.status + ': ' + text.substring(0,120));
+    }
+    var d = JSON.parse(text);
     bannerPath = d.path;
     var img = document.getElementById('banner-img');
-    img.src = d.path; img.style.display = 'block';
-    document.getElementById('banner-emoji').style.display = 'none';
-    document.getElementById('remove-banner-btn').style.display = 'inline-flex';
-    status.textContent = 'Фото загружено. Нажмите «Сохранить» чтобы применить.';
+    img.src = d.path;
+    img.style.display = 'block';
+    document.getElementById('banner-text').style.display = 'none';
+    document.getElementById('rm-banner').style.display = 'inline-flex';
+    status.style.color = '#1b873f';
+    status.textContent = '✓ Фото загружено. Нажмите «Сохранить».';
   } catch(e) {
     status.style.color = '#dc3545';
-    status.textContent = 'Ошибка: ' + e.message;
+    status.textContent = 'Ошибка загрузки: ' + e.message;
   }
 }
 
 function removeBanner() {
   bannerPath = null;
   document.getElementById('banner-img').style.display = 'none';
-  document.getElementById('banner-emoji').style.display = 'block';
-  document.getElementById('remove-banner-btn').style.display = 'none';
+  document.getElementById('banner-text').style.display = 'block';
+  document.getElementById('rm-banner').style.display = 'none';
   document.getElementById('banner-status').textContent = '';
 }
 
-// ── FAQ ───────────────────────────────────────────────────
+// ── Quill (с fallback на textarea) ──────────────────────────────────
+function initDescQuill(html) {
+  try {
+    if (typeof Quill === 'undefined') throw new Error('Quill not loaded');
+    descEditor = new Quill('#desc-editor', {theme:'snow', modules:{toolbar:TOOLBAR}});
+    if (html) descEditor.root.innerHTML = html;
+    document.getElementById('desc-editor').style.display = 'block';
+  } catch(e) {
+    document.getElementById('desc-editor').style.display = 'none';
+    document.getElementById('desc-fallback').style.display = 'block';
+    if (html) document.getElementById('desc-textarea').value = html;
+    console.warn('Quill init failed, using textarea:', e);
+  }
+}
+
+function getDescHtml() {
+  if (descEditor) return descEditor.root.innerHTML;
+  return document.getElementById('desc-textarea').value;
+}
+
+// ── FAQ ─────────────────────────────────────────────────────────────
 function renderFaq(items) {
   var list = document.getElementById('faq-list');
   list.innerHTML = '';
@@ -812,86 +860,109 @@ function renderFaq(items) {
     list.innerHTML = '<p class="text-muted" style="font-size:13px">Нет вопросов. Нажмите «Добавить вопрос».</p>';
     return;
   }
-  items.forEach(function(item) {
-    list.appendChild(makeFaqRow(item));
-  });
+  items.forEach(function(item) { list.appendChild(makeFaqRow(item)); });
 }
 
 function makeFaqRow(item) {
   var row = document.createElement('div');
   row.className = 'faq-row';
   row.dataset.id = item.id || '';
-  var edId = 'faq-ed-' + (item.id || 'n' + Date.now());
+  var uid = 'fe' + Date.now() + Math.random().toString(36).slice(2);
+  row.dataset.uid = uid;
   row.innerHTML =
-    '<div class="faq-head" onclick="toggleFaqRow(this)">' +
-      '<span style="color:#adb5bd;font-size:18px">☰</span>' +
-      '<span class="faq-head-text">' + esc(item.question || 'Новый вопрос') + '</span>' +
-      '<button class="btn btn-sm btn-outline-danger ms-2" style="padding:2px 8px;font-size:11px;flex-shrink:0" ' +
-        'onclick="event.stopPropagation();deleteFaq(this.closest(\'.faq-row\'))">Удалить</button>' +
+    '<div class="faq-head" onclick="toggleFaq(this)">' +
+      '<span style="color:#adb5bd;font-size:18px;flex-shrink:0">☰</span>' +
+      '<span style="flex:1;font-size:14px;font-weight:600;color:#212529">' + esc(item.question||'Новый вопрос') + '</span>' +
+      '<button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:11px;flex-shrink:0" ' +
+        'onclick="event.stopPropagation();delFaq(this.closest('.faq-row'))">✕ Удалить</button>' +
     '</div>' +
-    '<div class="faq-body">' +
-      '<label class="form-label">Вопрос</label>' +
-      '<input class="form-control mb-3 faq-q" value="' + esc(item.question||'') + '" ' +
-        'oninput="this.closest(\'.faq-row\').querySelector(\'.faq-head-text\').textContent=this.value||\'Новый вопрос\'">' +
+    '<div class="faq-body" id="fb-' + uid + '">' +
+      '<label class="form-label mt-1">Вопрос</label>' +
+      '<input class="form-control mb-3 fq" value="' + esc(item.question||'') + '" ' +
+        'oninput="syncHead(this)">' +
       '<label class="form-label">Ответ</label>' +
-      '<div id="' + edId + '" data-answer="' + esc(item.answer||'') + '"></div>' +
+      '<div id="qe-' + uid + '" style="min-height:100px"></div>' +
+      '<div id="qf-' + uid + '" style="display:none">' +
+        '<textarea class="form-control" rows="4" id="qt-' + uid + '"></textarea>' +
+      '</div>' +
+      '<div data-saved="' + esc(item.answer||'') + '" style="display:none" id="ans-' + uid + '"></div>' +
       '<div class="d-flex gap-2 mt-3">' +
-        '<button class="btn btn-sm btn-primary faq-save-btn" onclick="saveFaq(this.closest(\'.faq-row\'))">Сохранить</button>' +
-        '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaqRow(this.closest(\'.faq-row\').querySelector(\'.faq-head\'))">Закрыть</button>' +
+        '<button class="btn btn-sm btn-primary fsb" onclick="saveFaqRow(this.closest('.faq-row'))">Сохранить</button>' +
+        '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaq(this.closest('.faq-row').querySelector('.faq-head'))">Закрыть</button>' +
       '</div>' +
     '</div>';
-  row.dataset.edid = edId;
   return row;
 }
 
-function toggleFaqRow(head) {
-  var body = head.nextElementSibling;
+function syncHead(input) {
+  var head = input.closest('.faq-row').querySelector('.faq-head span:nth-child(2)');
+  if (head) head.textContent = input.value || 'Новый вопрос';
+}
+
+function toggleFaq(head) {
+  var row = head.closest('.faq-row');
+  var uid = row.dataset.uid;
+  var body = document.getElementById('fb-' + uid);
   var opening = !body.classList.contains('open');
-  // закрыть все
   document.querySelectorAll('.faq-body.open').forEach(function(b){ b.classList.remove('open'); });
-  if (opening) {
-    body.classList.add('open');
-    // ленивая инициализация Quill — только когда элемент виден
-    var edId = head.parentElement.dataset.edid;
-    if (edId && !faqEditors[edId]) {
-      var el = document.getElementById(edId);
-      var q = new Quill('#' + edId, {theme:'snow', modules:{toolbar:TOOLBAR}});
-      var saved = el.dataset.answer || '';
+  if (!opening) return;
+  body.classList.add('open');
+  // Ленивый Quill
+  if (!faqEditors[uid]) {
+    var saved = document.getElementById('ans-' + uid).dataset.saved || '';
+    try {
+      if (typeof Quill === 'undefined') throw new Error('no Quill');
+      var q = new Quill('#qe-' + uid, {theme:'snow', modules:{toolbar:TOOLBAR}});
       if (saved) q.root.innerHTML = saved;
-      faqEditors[edId] = q;
+      faqEditors[uid] = q;
+    } catch(e) {
+      document.getElementById('qe-' + uid).style.display = 'none';
+      var tf = document.getElementById('qf-' + uid);
+      tf.style.display = 'block';
+      document.getElementById('qt-' + uid).value = saved;
+      faqEditors[uid] = {_textarea: true, uid: uid};
     }
   }
 }
 
-function addFaq() {
-  var list = document.getElementById('faq-list');
-  var empty = list.querySelector('p');
-  if (empty) empty.remove();
-  var row = makeFaqRow({id:null, question:'', answer:''});
-  list.appendChild(row);
-  // открываем сразу
-  toggleFaqRow(row.querySelector('.faq-head'));
-  row.querySelector('.faq-q').focus();
+function getFaqAnswer(uid) {
+  var ed = faqEditors[uid];
+  if (!ed) return document.getElementById('ans-' + uid).dataset.saved || '';
+  if (ed._textarea) return document.getElementById('qt-' + uid).value;
+  return ed.root.innerHTML;
 }
 
-async function saveFaq(row) {
+function addFaq() {
+  var list = document.getElementById('faq-list');
+  var p = list.querySelector('p');
+  if (p) p.remove();
+  var row = makeFaqRow({id:null, question:'', answer:''});
+  list.appendChild(row);
+  toggleFaq(row.querySelector('.faq-head'));
+  setTimeout(function(){ row.querySelector('.fq').focus(); }, 50);
+}
+
+async function saveFaqRow(row) {
   var id = row.dataset.id;
-  var q = row.querySelector('.faq-q').value.trim();
+  var uid = row.dataset.uid;
+  var q = row.querySelector('.fq').value.trim();
   if (!q) { alert('Введите вопрос'); return; }
-  var edId = row.dataset.edid;
-  var answer = faqEditors[edId] ? faqEditors[edId].root.innerHTML : (document.getElementById(edId)||{dataset:{}}).dataset.answer || '';
-  var btn = row.querySelector('.faq-save-btn');
+  var answer = getFaqAnswer(uid);
+  var btn = row.querySelector('.fsb');
   btn.disabled = true; btn.textContent = 'Сохраняем…';
   try {
     var url = id ? '/admin-api/faq/'+id : '/admin-api/faq';
-    var method = id ? 'PATCH' : 'POST';
-    var r = await fetch(url, {method:method, credentials:'include',
+    var r = await fetch(url, {
+      method: id ? 'PATCH' : 'POST',
+      credentials:'include',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({question:q, answer:answer})});
-    if (!r.ok) throw new Error((await r.json()).detail || 'Ошибка сервера');
-    var d = await r.json();
+      body:JSON.stringify({question:q, answer:answer})
+    });
+    var text = await r.text();
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + text.substring(0,100));
+    var d = JSON.parse(text);
     row.dataset.id = d.id;
-    row.querySelector('.faq-head-text').textContent = q;
+    syncHead(row.querySelector('.fq'));
     row.querySelector('.faq-body').classList.remove('open');
     btn.disabled = false; btn.textContent = 'Сохранить';
   } catch(e) {
@@ -900,7 +971,7 @@ async function saveFaq(row) {
   }
 }
 
-async function deleteFaq(row) {
+async function delFaq(row) {
   if (!confirm('Удалить вопрос?')) return;
   var id = row.dataset.id;
   if (id) {
@@ -909,15 +980,15 @@ async function deleteFaq(row) {
   }
   row.remove();
   if (!document.querySelectorAll('.faq-row').length)
-    document.getElementById('faq-list').innerHTML = '<p class="text-muted" style="font-size:13px">Нет вопросов. Нажмите «Добавить вопрос».</p>';
+    document.getElementById('faq-list').innerHTML = '<p class="text-muted" style="font-size:13px">Нет вопросов.</p>';
 }
 
-// ── ПВЗ drag-and-drop ─────────────────────────────────────
+// ── ПВЗ drag-and-drop ───────────────────────────────────────────────
 function renderPp(items) {
   var list = document.getElementById('pp-list');
   list.innerHTML = '';
   if (!items.length) {
-    list.innerHTML = '<p class="text-muted" style="font-size:13px">Нет пунктов самовывоза. <a href="/admin/pickup-point/list">Добавить →</a></p>';
+    list.innerHTML = '<p class="text-muted" style="font-size:13px">Нет пунктов. <a href="/admin/pickup-point/list">Добавить →</a></p>';
     return;
   }
   items.forEach(function(p) {
@@ -925,89 +996,114 @@ function renderPp(items) {
     var row = document.createElement('div');
     row.className = 'pp-row';
     row.dataset.id = p.id;
-    row.innerHTML = '<span class="pp-drag">⠿</span>' +
-      '<div style="flex:1;min-width:0"><div class="pp-name-lbl">' + esc(p.name) + '</div>' +
-      (addr ? '<div class="pp-addr-lbl">' + esc(addr) + '</div>' : '') + '</div>' +
-      (p.is_active ? '' : '<span class="badge bg-secondary">скрыт</span>');
+    row.innerHTML = '<span class="pp-drag" title="Перетащить">⠿</span>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:14px;font-weight:600;color:#212529">' + esc(p.name) + '</div>' +
+        (addr ? '<div style="font-size:12px;color:#6c757d">' + esc(addr) + '</div>' : '') +
+      '</div>' +
+      (!p.is_active ? '<span class="badge bg-secondary">скрыт</span>' : '');
     list.appendChild(row);
   });
   document.getElementById('pp-order-btn').style.display = 'inline-flex';
-  Sortable.create(list, {
-    handle: '.pp-drag',
-    animation: 150,
-    ghostClass: 'sortable-ghost',
-  });
+  if (typeof Sortable !== 'undefined') {
+    Sortable.create(list, {handle:'.pp-drag', animation:150, ghostClass:'sortable-ghost'});
+  }
 }
 
 async function savePpOrder() {
   var rows = document.querySelectorAll('#pp-list .pp-row');
-  var order = Array.from(rows).map(function(r,i){ return {id: parseInt(r.dataset.id), sort_order: i}; });
+  var order = Array.from(rows).map(function(r,i){ return {id:parseInt(r.dataset.id), sort_order:i}; });
   var btn = document.getElementById('pp-order-btn');
-  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Сохраняем…';
+  btn.disabled = true; btn.textContent = 'Сохраняем…';
   try {
-    var r = await fetch('/admin-api/pickup-points/reorder', {method:'POST', credentials:'include',
-      headers:{'Content-Type':'application/json'}, body:JSON.stringify(order)});
-    if (!r.ok) throw new Error('Ошибка сервера');
-    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок';
-    btn.style.background='#1b873f';btn.style.borderColor='#1b873f';btn.style.color='#fff';
-    setTimeout(function(){ btn.style.background='';btn.style.borderColor='';btn.style.color=''; }, 1500);
+    var r = await fetch('/admin-api/pickup-points/reorder', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(order)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    btn.disabled = false;
+    btn.style.cssText = 'background:#1b873f;border-color:#1b873f;color:#fff;display:inline-flex';
+    btn.textContent = '✓ Порядок сохранён';
+    setTimeout(function(){
+      btn.style.cssText = 'display:inline-flex';
+      btn.innerHTML = '<i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок';
+    }, 2000);
   } catch(e) {
-    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок';
     alert('Ошибка: ' + e.message);
   }
 }
 
-// ── Сохранить заголовок + описание + баннер ───────────────
+// ── Сохранить заголовок + описание + баннер ─────────────────────────
 async function saveAll() {
   var btn = document.getElementById('save-all-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Сохраняем…';
   try {
-    var r = await fetch('/admin-api/about', {method:'POST', credentials:'include',
+    var r = await fetch('/admin-api/about', {
+      method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         title: document.getElementById('about-title').value.trim() || 'Чайное Дерево',
-        description_html: descEditor ? descEditor.root.innerHTML : '',
+        description_html: getDescHtml(),
         banner_image_path: bannerPath,
-      })});
-    if (!r.ok) throw new Error((await r.json()).detail || 'Ошибка сервера');
-    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить';
-    btn.style.background='#1b873f';btn.style.borderColor='#1b873f';
-    setTimeout(function(){ btn.style.background='';btn.style.borderColor=''; }, 1500);
+      })
+    });
+    var text = await r.text();
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + text.substring(0,100));
+    btn.disabled = false;
+    btn.style.cssText = 'background:#1b873f;border-color:#1b873f';
+    btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Сохранено';
+    setTimeout(function(){ btn.style.cssText=''; btn.innerHTML='<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить'; }, 2000);
   } catch(e) {
     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить';
-    alert('Ошибка: ' + e.message);
+    alert('Ошибка сохранения: ' + e.message);
   }
 }
 
-// ── Инициализация ──────────────────────────────────────────
+// ── Инициализация ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  // Quill описания — сразу, пока элемент виден
-  descEditor = new Quill('#desc-editor', {theme:'snow', modules:{toolbar:TOOLBAR}});
+  // Проверяем что скрипты загрузились
+  if (typeof Quill === 'undefined') {
+    showErr('Не удалось загрузить редактор Quill. Функция форматирования недоступна, используйте обычный текст.');
+  }
+  if (typeof Sortable === 'undefined') {
+    console.warn('SortableJS not loaded, drag-and-drop unavailable');
+  }
 
+  // Инициализируем редактор описания (с fallback)
+  initDescQuill('');
+
+  // Загружаем данные
   fetch('/admin-api/about', {credentials:'include'})
     .then(function(r){ return r.json(); })
     .then(function(d) {
       document.getElementById('about-title').value = d.title || 'Чайное Дерево';
-      if (d.description_html) descEditor.root.innerHTML = d.description_html;
+      if (d.description_html) {
+        if (descEditor) descEditor.root.innerHTML = d.description_html;
+        else document.getElementById('desc-textarea').value = d.description_html;
+      }
       if (d.banner_image_path) {
         bannerPath = d.banner_image_path;
-        var img = document.getElementById('banner-img');
-        img.src = d.banner_image_path; img.style.display = 'block';
-        document.getElementById('banner-emoji').style.display = 'none';
-        document.getElementById('remove-banner-btn').style.display = 'inline-flex';
+        document.getElementById('banner-img').src = d.banner_image_path;
+        document.getElementById('banner-img').style.display = 'block';
+        document.getElementById('banner-text').style.display = 'none';
+        document.getElementById('rm-banner').style.display = 'inline-flex';
       }
     })
-    .catch(function(e){ console.error('about:', e); });
+    .catch(function(e){
+      showErr('Не удалось загрузить данные О нас: ' + e.message);
+    });
 
   fetch('/admin-api/faq', {credentials:'include'})
     .then(function(r){ return r.json(); })
     .then(renderFaq)
-    .catch(function(e){ console.error('faq:', e); renderFaq([]); });
+    .catch(function(e){ showErr('Не удалось загрузить FAQ: ' + e.message); renderFaq([]); });
 
   fetch('/admin-api/pickup-points', {credentials:'include'})
     .then(function(r){ return r.json(); })
     .then(renderPp)
-    .catch(function(e){ console.error('pp:', e); renderPp([]); });
+    .catch(function(e){ renderPp([]); console.error('pp:', e); });
 });
 </script>
 </body>
