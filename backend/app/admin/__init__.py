@@ -636,6 +636,99 @@ _ADMIN_JS = (r"""
       }).catch(function(e){ window.ctShowImportStatus('excel','failed',{error:String(e)}); });
   };
 
+  // ---- 7. Drag-and-drop сортировка категорий ----
+  function initCategoryDnD(){
+    if(!/^\/admin\/category\/list/.test(window.location.pathname)) return;
+
+    var tbody = document.querySelector('table tbody');
+    if(!tbody) return;
+
+    // Добавить drag-handle в первую ячейку каждой строки
+    Array.from(tbody.querySelectorAll('tr')).forEach(function(tr){
+      tr.setAttribute('draggable','true');
+      var firstTd = tr.querySelector('td');
+      if(firstTd){
+        var handle = document.createElement('span');
+        handle.innerHTML = '⠿';
+        handle.title = 'Перетащить';
+        handle.style.cssText = 'cursor:grab;font-size:18px;color:#aaa;margin-right:8px;user-select:none;display:inline-block';
+        firstTd.insertBefore(handle, firstTd.firstChild);
+      }
+    });
+
+    var dragging = null;
+
+    tbody.addEventListener('dragstart', function(e){
+      dragging = e.target.closest('tr');
+      if(!dragging) return;
+      dragging.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    tbody.addEventListener('dragend', function(){
+      if(dragging) dragging.style.opacity = '';
+      tbody.querySelectorAll('tr').forEach(function(tr){ tr.style.borderTop = ''; });
+      dragging = null;
+    });
+
+    tbody.addEventListener('dragover', function(e){
+      e.preventDefault();
+      var target = e.target.closest('tr');
+      if(!target || target === dragging) return;
+      tbody.querySelectorAll('tr').forEach(function(tr){ tr.style.borderTop = ''; });
+      target.style.borderTop = '2px solid #3d5afe';
+    });
+
+    tbody.addEventListener('drop', function(e){
+      e.preventDefault();
+      var target = e.target.closest('tr');
+      if(!target || target === dragging || !dragging) return;
+      tbody.querySelectorAll('tr').forEach(function(tr){ tr.style.borderTop = ''; });
+      tbody.insertBefore(dragging, target);
+      dragging.style.opacity = '';
+
+      // Собрать ID в новом порядке
+      var ids = Array.from(tbody.querySelectorAll('tr')).map(function(tr){
+        var cb = tr.querySelector('input[type="hidden"]');
+        return cb ? parseInt(cb.value) : null;
+      }).filter(Boolean);
+
+      // Сохранить порядок
+      var btn = document.getElementById('ct-cat-save-order');
+      if(btn){ btn.style.display = 'inline-flex'; btn.dataset.ids = JSON.stringify(ids); }
+    });
+
+    // Кнопка «Сохранить порядок»
+    var header = document.querySelector('.card-header');
+    if(header){
+      var saveBtn = document.createElement('button');
+      saveBtn.id = 'ct-cat-save-order';
+      saveBtn.type = 'button';
+      saveBtn.className = 'btn btn-success btn-sm ms-2';
+      saveBtn.style.cssText = 'display:none;align-items:center;gap:6px';
+      saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Сохранить порядок';
+      saveBtn.addEventListener('click', function(){
+        var ids = JSON.parse(saveBtn.dataset.ids || '[]');
+        if(!ids.length) return;
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Сохраняю...';
+        fetch('/admin-api/categories/reorder',{
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ids: ids}),
+        }).then(function(r){ return r.json(); }).then(function(d){
+          if(d.ok){
+            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Сохранено!';
+            setTimeout(function(){ saveBtn.style.display='none'; saveBtn.disabled=false; saveBtn.innerHTML='<i class="fa-solid fa-check"></i> Сохранить порядок'; }, 1500);
+          } else {
+            saveBtn.innerHTML = '❌ Ошибка'; saveBtn.disabled = false;
+          }
+        });
+      });
+      header.querySelector('.ms-auto').prepend(saveBtn);
+    }
+  }
+
   function init(){
     collapseInactive();
     initProductImages();
@@ -644,6 +737,7 @@ _ADMIN_JS = (r"""
     initFileUploads();
     translateUI();
     initProductImportBtn();
+    initCategoryDnD();
   }
 
   if(document.readyState==='loading'){
@@ -858,6 +952,28 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             file.unlink(missing_ok=True)
         except Exception:
             pass
+
+    @app.post("/admin-api/categories/reorder", include_in_schema=False)
+    async def admin_categories_reorder(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        if request.session.get("admin_readonly"):
+            return _JSONResponse(status_code=403, content={"error": "Readonly"})
+        data = await request.json()
+        ids = data.get("ids", [])
+        if not ids:
+            return _JSONResponse(status_code=400, content={"error": "ids required"})
+        from app.db import get_session_factory
+        from app.models.category import Category
+        from sqlalchemy import select
+        async with get_session_factory()() as session:
+            for order, cat_id in enumerate(ids):
+                res = await session.execute(select(Category).where(Category.id == cat_id))
+                cat = res.scalar_one_or_none()
+                if cat:
+                    cat.sort_order = order
+            await session.commit()
+        return _JSONResponse({"ok": True})
 
     from fastapi.responses import HTMLResponse as _HTMLResponse, StreamingResponse as _StreamingResponse
     import asyncio as _asyncio
