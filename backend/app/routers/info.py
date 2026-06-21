@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models.banner import Banner
-from app.models.content import FaqItem, PickupPoint
-from app.schemas import BannerOut, FaqItemOut, PickupPointOut
+from app.models.content import FaqItem, PickupPoint, SiteAbout
+from app.schemas import BannerOut, FaqItemOut, PickupPointOut, SiteAboutOut
 
 router = APIRouter(prefix="/info", tags=["info"])
 
@@ -40,6 +40,16 @@ async def list_faq(
     )
     result = await session.execute(stmt)
     return [FaqItemOut.model_validate(f) for f in result.scalars().all()]
+
+
+@router.get("/about", response_model=SiteAboutOut)
+async def get_about(session: AsyncSession = Depends(get_db)) -> SiteAboutOut:
+    """Содержимое страницы О нас."""
+    result = await session.execute(select(SiteAbout).where(SiteAbout.id == 1))
+    about = result.scalar_one_or_none()
+    if not about:
+        return SiteAboutOut()
+    return SiteAboutOut.model_validate(about)
 
 
 @router.get("/pickup-points", response_model=list[PickupPointOut])

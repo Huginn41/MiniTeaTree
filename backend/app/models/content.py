@@ -43,6 +43,22 @@ class PickupPoint(TimestampMixin, Base):
         return f"<PickupPoint id={self.id} name={self.name!r}>"
 
 
+class SiteAbout(TimestampMixin, Base):
+    """Содержимое страницы «О нас» (синглтон, id=1)."""
+
+    __tablename__ = "site_about"
+
+    id: Mapped[int] = mapped_column(PKType, primary_key=True, autoincrement=True)
+    banner_image_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    title: Mapped[str] = mapped_column(
+        String(128), nullable=False, default="Чайное Дерево", server_default=text("'Чайное Дерево'")
+    )
+    description_html: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<SiteAbout id={self.id}>"
+
+
 class FaqItem(TimestampMixin, Base):
     """Вопрос-ответ для раздела FAQ."""
 

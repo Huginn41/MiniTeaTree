@@ -1971,9 +1971,10 @@
       this.setHeader('О нас');
       c.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:40px 0"><div style="width:32px;height:32px;border:3px solid var(--md-primary);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></div></div>`;
 
-      let points = [], faq = [];
+      let points = [], faq = [], about = {};
+      try { about  = await api('/info/about'); } catch(_) {}
       try { points = await api('/info/pickup-points'); } catch(_) {}
-      try { faq = await api('/info/faq'); } catch(_) {}
+      try { faq    = await api('/info/faq'); } catch(_) {}
 
       const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
@@ -2031,26 +2032,47 @@
           </div>` : ''}
         </div>`;
 
+      const bannerStyle = about.banner_image_path
+        ? `background:url('${about.banner_image_path}') center/cover no-repeat;`
+        : `background:linear-gradient(135deg,#1a6b3c 0%,#2d9e5f 100%);`;
+
+      const title = about.title || 'Чайное Дерево';
+
       c.innerHTML = `
+        <style>
+          .about-rich p { font-size:14px; color:var(--md-on-surface); line-height:1.7; margin:0 0 8px; }
+          .about-rich strong { font-weight:700; }
+          .about-rich em { font-style:italic; }
+          .about-rich u { text-decoration:underline; }
+          .about-rich ul { padding-left:20px; margin:4px 0 8px; }
+          .about-rich li { font-size:14px; color:var(--md-on-surface); line-height:1.6; margin-bottom:4px; }
+          .about-rich a { color:var(--md-primary); }
+          .faq-rich p { font-size:13.5px; color:var(--md-on-surface-variant); line-height:1.65; margin:0 0 6px; }
+          .faq-rich strong { font-weight:700; }
+          .faq-rich em { font-style:italic; }
+          .faq-rich u { text-decoration:underline; }
+          .faq-rich ul { padding-left:18px; margin:4px 0; }
+          .faq-rich li { font-size:13.5px; color:var(--md-on-surface-variant); line-height:1.6; margin-bottom:3px; }
+          .faq-rich a { color:var(--md-primary); }
+        </style>
         <div style="padding:0 0 24px">
 
-          <!-- Шапка магазина -->
-          <div style="background:linear-gradient(135deg,#1a6b3c 0%,#2d9e5f 100%);border-radius:20px;padding:28px 20px;margin-bottom:20px;text-align:center;position:relative;overflow:hidden">
-            <div style="font-size:48px;margin-bottom:8px">🍵</div>
-            <h2 style="font-size:22px;font-weight:800;color:#fff;margin:0 0 6px;letter-spacing:-.3px">Чайное Дерево</h2>
-            <p style="font-size:13px;color:rgba(255,255,255,.8);margin:0;line-height:1.5">Магазин качественного чая<br>и чайных аксессуаров</p>
+          <!-- Баннер / шапка -->
+          <div style="${bannerStyle}border-radius:20px;padding:28px 20px;margin-bottom:20px;text-align:center;position:relative;overflow:hidden">
+            ${about.banner_image_path ? '<div style="position:absolute;inset:0;background:rgba(0,0,0,.35);border-radius:20px"></div>' : ''}
+            <div style="position:relative;z-index:1">
+              ${about.banner_image_path ? '' : '<div style="font-size:48px;margin-bottom:8px">🍵</div>'}
+              <h2 style="font-size:22px;font-weight:800;color:#fff;margin:0;letter-spacing:-.3px;text-shadow:0 1px 4px rgba(0,0,0,.3)">${esc(title)}</h2>
+            </div>
           </div>
 
-          <!-- О магазине -->
+          <!-- Описание из редактора -->
+          ${about.description_html && about.description_html.replace(/<[^>]+>/g,'').trim() ? `
           <div style="background:var(--md-surface-container-low);border-radius:16px;padding:18px 16px;margin-bottom:20px">
             <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 10px">О магазине</p>
-            <p style="font-size:14px;color:var(--md-on-surface);line-height:1.7;margin:0">
-              Мы собрали лучшие сорта чая со всего мира — от классических китайских пуэров и улунов до редких горных сборов. Каждый чай проходит ручную проверку качества.
-            </p>
-            <p style="font-size:14px;color:var(--md-on-surface);line-height:1.7;margin:12px 0 0">
-              Доставляем по всей России. Возможен самовывоз из наших пунктов выдачи.
-            </p>
+            <div class="about-rich">${about.description_html}</div>
           </div>
+          ` : ''}
 
           <!-- Пункты самовывоза -->
           ${points.length ? `
@@ -2060,13 +2082,13 @@
           ${points.map(pointCard).join('')}
           ` : ''}
 
-          <!-- FAQ (высота первого пункта устанавливается после рендера) -->
+          <!-- FAQ — все закрыты по умолчанию -->
           ${faq.length ? `
           <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">
             Часто задаваемые вопросы
           </p>
           <div id="faq-list">
-            ${faq.map((f, i) => `
+            ${faq.map(f => `
             <div class="faq-item" style="background:var(--md-surface-container-low);border-radius:14px;margin-bottom:8px;overflow:hidden">
               <button onclick="(function(btn){
                 var item=btn.closest('.faq-item');
@@ -2087,11 +2109,11 @@
               })(this)"
                 style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:15px 16px;background:none;border:none;cursor:pointer;text-align:left;gap:12px">
                 <span style="font-size:14px;font-weight:600;color:var(--md-on-surface);line-height:1.4">${esc(f.question)}</span>
-                <span class="faq-arrow" style="flex-shrink:0;font-size:18px;color:var(--md-primary);transition:transform .3s;${i===0?'transform:rotate(180deg)':''}">⌄</span>
+                <span class="faq-arrow" style="flex-shrink:0;font-size:18px;color:var(--md-primary);transition:transform .3s">⌄</span>
               </button>
-              <div class="faq-body" style="overflow:hidden;transition:height .3s ease;height:${i===0?'auto':'0'}">
+              <div class="faq-body" style="overflow:hidden;transition:height .3s ease;height:0">
                 <div class="faq-inner" style="padding:0 16px 15px">
-                  <p style="font-size:13.5px;color:var(--md-on-surface-variant);line-height:1.65;margin:0">${esc(f.answer)}</p>
+                  <div class="faq-rich">${f.answer}</div>
                 </div>
               </div>
             </div>`).join('')}
@@ -2099,13 +2121,6 @@
           ` : ''}
 
         </div>`;
-
-      // Фиксируем высоту первого открытого FAQ-пункта
-      const firstBody = c.querySelector('.faq-item .faq-body');
-      if (firstBody) {
-        const inner = firstBody.querySelector('.faq-inner');
-        firstBody.style.height = inner.offsetHeight + 'px';
-      }
     },
 
     checkout() { this.navigate('checkout'); },

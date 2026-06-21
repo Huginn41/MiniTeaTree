@@ -47,6 +47,7 @@ def _topnav(active: str = "") -> str:
       <a class="ct-dropdown-item" href="/admin/product/list">Товары</a>
       <a class="ct-dropdown-item" href="/admin/category/list">Категории</a>
       <a class="ct-dropdown-item" href="/admin/banner/list">Баннеры</a>
+      <a class="{_item_cls('about')}" href="/crm/about">О нас</a>
       <a class="ct-dropdown-item" href="/admin/faq-item/list">FAQ</a>
       <a class="ct-dropdown-item" href="/admin/pickup-point/list">Самовывоз</a>
     </div>
@@ -653,6 +654,312 @@ async def _get_history(period_days: int) -> dict:
     }
 
 
+# ---------- РЕДАКТОР «О НАС» ----------
+
+ABOUT_EDITOR_HTML = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>О нас — редактор</title>
+{BASE_CSS}
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<style>
+.ql-toolbar.ql-snow { border-radius:8px 8px 0 0 !important; border-color:#dee2e6 !important; background:#f8f9fa; }
+.ql-container.ql-snow { border-radius:0 0 8px 8px !important; border-color:#dee2e6 !important; font-size:14px; min-height:120px; }
+.ql-editor { min-height:100px; }
+.about-section { background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); padding:24px; margin-bottom:20px; }
+.about-section-title { font-size:13px; font-weight:700; color:#8c9aad; text-transform:uppercase; letter-spacing:.5px; margin-bottom:16px; }
+.banner-wrap { position:relative; width:100%; height:180px; border-radius:12px; overflow:hidden; cursor:pointer;
+  background:linear-gradient(135deg,#1a6b3c 0%,#2d9e5f 100%); display:flex; align-items:center; justify-content:center; }
+.banner-wrap img { width:100%; height:100%; object-fit:cover; }
+.banner-overlay { position:absolute; inset:0; background:rgba(0,0,0,.35); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:8px; opacity:0; transition:opacity .2s; }
+.banner-wrap:hover .banner-overlay { opacity:1; }
+.banner-placeholder { font-size:48px; }
+.faq-item-row { border:1px solid #e9ecef; border-radius:10px; margin-bottom:10px; overflow:hidden; }
+.faq-item-header { display:flex; align-items:center; gap:10px; padding:12px 14px; background:#f8f9fa; cursor:pointer; }
+.faq-item-header:hover { background:#f0f4ff; }
+.faq-question-text { flex:1; font-size:14px; font-weight:600; color:#212529; }
+.faq-item-body { padding:14px; display:none; border-top:1px solid #e9ecef; }
+.faq-item-body.open { display:block; }
+.drag-handle { color:#ced4da; cursor:grab; font-size:16px; }
+</style>
+</head>
+<body>
+{TOPNAV}
+<div class="container-fluid px-4 py-4" style="max-width:900px">
+
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h5 class="section-title mb-0">✏️ Редактор страницы «О нас»</h5>
+    <button class="btn btn-sm btn-primary" onclick="saveAll()">
+      <i class="fa-solid fa-floppy-disk me-1"></i>Сохранить
+    </button>
+  </div>
+
+  <!-- Баннер -->
+  <div class="about-section">
+    <div class="about-section-title">Баннер</div>
+    <div class="banner-wrap" id="banner-wrap" onclick="document.getElementById('banner-file').click()">
+      <div class="banner-placeholder" id="banner-placeholder">🍵</div>
+      <img id="banner-img" style="display:none">
+      <div class="banner-overlay">
+        <i class="fa-solid fa-camera fa-2x text-white"></i>
+        <span style="color:#fff;font-size:13px;font-weight:600">Нажмите чтобы изменить фото</span>
+      </div>
+    </div>
+    <input type="file" id="banner-file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
+    <div id="banner-path" style="display:none"></div>
+    <button class="btn btn-sm btn-outline-danger mt-2" onclick="removeBanner()" id="remove-banner-btn" style="display:none">
+      <i class="fa-solid fa-trash me-1"></i>Убрать фото
+    </button>
+  </div>
+
+  <!-- Заголовок и описание -->
+  <div class="about-section">
+    <div class="about-section-title">Заголовок и описание</div>
+    <label class="form-label">Заголовок</label>
+    <input type="text" id="about-title" class="form-control mb-3" placeholder="Чайное Дерево">
+    <label class="form-label">Описание</label>
+    <div id="desc-editor"></div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="about-section">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="about-section-title mb-0">Часто задаваемые вопросы</div>
+      <button class="btn btn-sm btn-outline-primary" onclick="addFaqItem()">
+        <i class="fa-solid fa-plus me-1"></i>Добавить вопрос
+      </button>
+    </div>
+    <div id="faq-list"></div>
+  </div>
+
+  <!-- Пункты самовывоза -->
+  <div class="about-section">
+    <div class="about-section-title">Пункты самовывоза</div>
+    <p style="font-size:13px;color:#6c757d;margin-bottom:12px">Пункты самовывоза редактируются в отдельном разделе:</p>
+    <a href="/admin/pickup-point/list" class="btn btn-outline-secondary btn-sm">
+      <i class="fa-solid fa-location-dot me-1"></i>Управление пунктами самовывоза →
+    </a>
+  </div>
+
+</div>
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+<script>
+var descEditor, faqEditors = {}, faqData = [], bannerPath = null;
+
+var TOOLBAR = [['bold','italic','underline'],[{'list':'bullet'}],['link'],['clean']];
+
+function initDescEditor(html) {
+  descEditor = new Quill('#desc-editor', { theme:'snow', modules:{toolbar:TOOLBAR} });
+  if (html) descEditor.root.innerHTML = html;
+}
+
+function makeQuill(id, html) {
+  var q = new Quill('#'+id, { theme:'snow', modules:{toolbar:TOOLBAR} });
+  if (html) q.root.innerHTML = html;
+  faqEditors[id] = q;
+  return q;
+}
+
+function renderFaq(items) {
+  faqData = items.slice();
+  var list = document.getElementById('faq-list');
+  list.innerHTML = '';
+  if (!items.length) {
+    list.innerHTML = '<p class="text-muted" style="font-size:13px">Нет вопросов. Нажмите «Добавить вопрос».</p>';
+    return;
+  }
+  items.forEach(function(item, idx) {
+    var edId = 'faq-ed-' + (item.id || 'new' + idx);
+    var div = document.createElement('div');
+    div.className = 'faq-item-row';
+    div.dataset.id = item.id || '';
+    div.innerHTML =
+      '<div class="faq-item-header" onclick="toggleFaq(this)">' +
+        '<span class="drag-handle">⠿</span>' +
+        '<span class="faq-question-text">' + (item.question || 'Новый вопрос') + '</span>' +
+        '<button class="btn btn-sm btn-outline-danger ms-auto" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();deleteFaq(' + (item.id||0) + ',this.closest(\'.faq-item-row\'))">Удалить</button>' +
+      '</div>' +
+      '<div class="faq-item-body">' +
+        '<label class="form-label">Вопрос</label>' +
+        '<input type="text" class="form-control mb-3 faq-q-input" value="' + (item.question||'').replace(/"/g,'&quot;') + '" oninput="this.closest(\'.faq-item-row\').querySelector(\'.faq-question-text\').textContent=this.value||\'Новый вопрос\'">' +
+        '<label class="form-label">Ответ</label>' +
+        '<div id="' + edId + '"></div>' +
+        '<div class="d-flex gap-2 mt-3">' +
+          '<button class="btn btn-sm btn-primary" onclick="saveFaq(this.closest(\'.faq-item-row\'))">Сохранить</button>' +
+          '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaq(this.closest(\'.faq-item-row\').querySelector(\'.faq-item-header\'))">Отмена</button>' +
+        '</div>' +
+      '</div>';
+    list.appendChild(div);
+    setTimeout(function() { makeQuill(edId, item.answer || ''); }, 0);
+  });
+}
+
+function toggleFaq(header) {
+  var body = header.nextElementSibling;
+  var isOpen = body.classList.contains('open');
+  document.querySelectorAll('.faq-item-body.open').forEach(function(b){ b.classList.remove('open'); });
+  if (!isOpen) body.classList.add('open');
+}
+
+function addFaqItem() {
+  var tempId = 'temp_' + Date.now();
+  faqData.push({ id: null, question: '', answer: '', _temp: tempId });
+  renderFaq(faqData);
+  // Открываем последний
+  var rows = document.querySelectorAll('.faq-item-row');
+  if (rows.length) {
+    var last = rows[rows.length-1];
+    last.querySelector('.faq-item-body').classList.add('open');
+    last.querySelector('.faq-q-input').focus();
+  }
+}
+
+async function saveFaq(row) {
+  var id = row.dataset.id;
+  var q = row.querySelector('.faq-q-input').value.trim();
+  if (!q) { alert('Введите вопрос'); return; }
+  var edId = row.querySelector('[id^="faq-ed-"]').id;
+  var answer = faqEditors[edId] ? faqEditors[edId].root.innerHTML : '';
+  var btn = row.querySelector('.btn-primary');
+  btn.disabled = true; btn.textContent = 'Сохраняем…';
+  try {
+    var resp, data;
+    if (id) {
+      resp = await fetch('/admin-api/faq/'+id, {method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q, answer:answer})});
+    } else {
+      resp = await fetch('/admin-api/faq', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q, answer:answer})});
+    }
+    if (!resp.ok) throw new Error('Ошибка сервера');
+    data = await resp.json();
+    row.dataset.id = data.id;
+    row.querySelector('.faq-question-text').textContent = q;
+    row.querySelector('.faq-item-body').classList.remove('open');
+    btn.disabled = false; btn.textContent = 'Сохранить';
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Сохранить';
+    alert('Ошибка: ' + e.message);
+  }
+}
+
+async function deleteFaq(id, row) {
+  if (!confirm('Удалить вопрос?')) return;
+  if (id) {
+    var r = await fetch('/admin-api/faq/'+id, {method:'DELETE', credentials:'include'});
+    if (!r.ok) { alert('Ошибка удаления'); return; }
+  }
+  row.remove();
+}
+
+async function uploadBanner(input) {
+  if (!input.files[0]) return;
+  var fd = new FormData(); fd.append('file', input.files[0]);
+  var r = await fetch('/admin-api/upload-image', {method:'POST', credentials:'include', body:fd});
+  if (!r.ok) { alert('Ошибка загрузки'); return; }
+  var d = await r.json();
+  bannerPath = d.path;
+  document.getElementById('banner-placeholder').style.display = 'none';
+  var img = document.getElementById('banner-img');
+  img.src = d.path; img.style.display = 'block';
+  document.getElementById('remove-banner-btn').style.display = 'inline-flex';
+}
+
+function removeBanner() {
+  bannerPath = null;
+  document.getElementById('banner-placeholder').style.display = 'block';
+  document.getElementById('banner-img').style.display = 'none';
+  document.getElementById('remove-banner-btn').style.display = 'none';
+}
+
+async function saveAll() {
+  var btn = document.querySelector('[onclick="saveAll()"]');
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Сохраняем…';
+  try {
+    var r = await fetch('/admin-api/about', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        title: document.getElementById('about-title').value || 'Чайное Дерево',
+        description_html: descEditor ? descEditor.root.innerHTML : '',
+        banner_image_path: bannerPath,
+      })
+    });
+    if (!r.ok) throw new Error('Ошибка сервера');
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить';
+    btn.style.background = '#1b873f'; btn.style.borderColor = '#1b873f';
+    setTimeout(function(){ btn.style.background = ''; btn.style.borderColor = ''; }, 1500);
+  } catch(e) {
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить';
+    alert('Ошибка: ' + e.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/admin-api/about', {credentials:'include'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      document.getElementById('about-title').value = d.title || 'Чайное Дерево';
+      initDescEditor(d.description_html || '');
+      if (d.banner_image_path) {
+        bannerPath = d.banner_image_path;
+        document.getElementById('banner-placeholder').style.display = 'none';
+        var img = document.getElementById('banner-img');
+        img.src = d.banner_image_path; img.style.display = 'block';
+        document.getElementById('remove-banner-btn').style.display = 'inline-flex';
+      } else {
+        initDescEditor('');
+      }
+    });
+  fetch('/admin-api/faq', {credentials:'include'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){ renderFaq(d); });
+});
+</script>
+</body>
+</html>"""
+
+
+# ---------- Данные для «О нас» и FAQ ----------
+
+async def _about_get() -> dict:
+    from sqlalchemy import select
+    from app.db import get_session_factory
+    from app.models.content import SiteAbout
+    async with get_session_factory()() as s:
+        r = await s.execute(select(SiteAbout).where(SiteAbout.id == 1))
+        a = r.scalar_one_or_none()
+        if not a:
+            return {"title": "Чайное Дерево", "description_html": "", "banner_image_path": None}
+        return {"title": a.title, "description_html": a.description_html or "", "banner_image_path": a.banner_image_path}
+
+
+async def _about_save(title: str, description_html: str, banner_image_path: str | None) -> None:
+    from sqlalchemy import select
+    from app.db import get_session_factory
+    from app.models.content import SiteAbout
+    async with get_session_factory()() as s:
+        r = await s.execute(select(SiteAbout).where(SiteAbout.id == 1))
+        a = r.scalar_one_or_none()
+        if a:
+            a.title = title
+            a.description_html = description_html
+            a.banner_image_path = banner_image_path
+        else:
+            s.add(SiteAbout(id=1, title=title, description_html=description_html, banner_image_path=banner_image_path))
+        await s.commit()
+
+
+async def _faq_list() -> list[dict]:
+    from sqlalchemy import select
+    from app.db import get_session_factory
+    from app.models.content import FaqItem
+    async with get_session_factory()() as s:
+        r = await s.execute(select(FaqItem).order_by(FaqItem.sort, FaqItem.id))
+        return [{"id": f.id, "question": f.question, "answer": f.answer} for f in r.scalars().all()]
+
+
 # ---------- Регистрация маршрутов ----------
 
 def setup_dashboard(app: FastAPI) -> None:
@@ -694,3 +1001,101 @@ def setup_dashboard(app: FastAPI) -> None:
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
         period = period if period in (7, 30, 90, 365) else 30
         return JSONResponse(await _get_history(period))
+
+    # ---- «О нас» редактор ----
+
+    @app.get("/crm/about", response_class=HTMLResponse, include_in_schema=False)
+    async def about_editor_page(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return RedirectResponse("/admin/login")
+        return HTMLResponse(_render(ABOUT_EDITOR_HTML, "about"))
+
+    @app.get("/admin-api/about", include_in_schema=False)
+    async def about_get(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        return JSONResponse(await _about_get())
+
+    @app.post("/admin-api/about", include_in_schema=False)
+    async def about_save(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        body = await request.json()
+        await _about_save(
+            title=body.get("title", "Чайное Дерево"),
+            description_html=body.get("description_html", ""),
+            banner_image_path=body.get("banner_image_path"),
+        )
+        return JSONResponse({"ok": True})
+
+    @app.post("/admin-api/upload-image", include_in_schema=False)
+    async def upload_image(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        import shutil, uuid
+        from pathlib import Path
+        from fastapi import UploadFile
+        form = await request.form()
+        file: UploadFile = form.get("file")
+        if not file:
+            return JSONResponse(status_code=400, content={"error": "no file"})
+        ext = Path(file.filename).suffix.lower() or ".jpg"
+        media_dir = Path("/app/app/static/media")
+        media_dir.mkdir(parents=True, exist_ok=True)
+        fname = f"{uuid.uuid4().hex}{ext}"
+        dest = media_dir / fname
+        with dest.open("wb") as out:
+            shutil.copyfileobj(file.file, out)
+        return JSONResponse({"path": f"/static/media/{fname}"})
+
+    @app.get("/admin-api/faq", include_in_schema=False)
+    async def faq_list_api(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        return JSONResponse(await _faq_list())
+
+    @app.post("/admin-api/faq", include_in_schema=False)
+    async def faq_create(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from app.models.content import FaqItem
+        body = await request.json()
+        async with get_session_factory()() as s:
+            item = FaqItem(question=body.get("question", ""), answer=body.get("answer", ""), sort=0, is_active=True)
+            s.add(item)
+            await s.commit()
+            await s.refresh(item)
+            return JSONResponse({"id": item.id, "question": item.question, "answer": item.answer})
+
+    @app.patch("/admin-api/faq/{faq_id}", include_in_schema=False)
+    async def faq_update(faq_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from sqlalchemy import select
+        from app.db import get_session_factory
+        from app.models.content import FaqItem
+        body = await request.json()
+        async with get_session_factory()() as s:
+            r = await s.execute(select(FaqItem).where(FaqItem.id == faq_id))
+            item = r.scalar_one_or_none()
+            if not item:
+                return JSONResponse(status_code=404, content={"error": "not found"})
+            if "question" in body:
+                item.question = body["question"]
+            if "answer" in body:
+                item.answer = body["answer"]
+            await s.commit()
+            return JSONResponse({"id": item.id, "question": item.question, "answer": item.answer})
+
+    @app.delete("/admin-api/faq/{faq_id}", include_in_schema=False)
+    async def faq_delete(faq_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from sqlalchemy import select, delete
+        from app.db import get_session_factory
+        from app.models.content import FaqItem
+        async with get_session_factory()() as s:
+            await s.execute(delete(FaqItem).where(FaqItem.id == faq_id))
+            await s.commit()
+        return JSONResponse({"ok": True})

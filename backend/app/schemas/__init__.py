@@ -101,7 +101,17 @@ class FaqItemOut(BaseModel):
 
     id: int
     question: str
-    answer: str
+    answer: str  # может содержать HTML от Quill
+
+    model_config = {"from_attributes": True}
+
+
+class SiteAboutOut(BaseModel):
+    """Содержимое страницы О нас."""
+
+    title: str = "Чайное Дерево"
+    description_html: str | None = None
+    banner_image_path: str | None = None
 
     model_config = {"from_attributes": True}
 
