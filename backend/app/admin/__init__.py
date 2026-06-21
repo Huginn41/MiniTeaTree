@@ -1320,7 +1320,6 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             ) if m.image_path else "—",
         }
         form_columns = ["name", "slug", "image_path", "icon", "description", "sort_order", "is_active"]
-        form_excluded_columns = ["products", "created_at", "updated_at"]
         page_size = 50
 
     class ProductAdmin(ModelView, model=Product):
