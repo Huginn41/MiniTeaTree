@@ -2060,7 +2060,7 @@
           ${points.map(pointCard).join('')}
           ` : ''}
 
-          <!-- FAQ -->
+          <!-- FAQ (высота первого пункта устанавливается после рендера) -->
           ${faq.length ? `
           <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">
             Часто задаваемые вопросы
@@ -2069,25 +2069,43 @@
             ${faq.map((f, i) => `
             <div class="faq-item" style="background:var(--md-surface-container-low);border-radius:14px;margin-bottom:8px;overflow:hidden">
               <button onclick="(function(btn){
-                var body=btn.closest('.faq-item').querySelector('.faq-body');
+                var item=btn.closest('.faq-item');
+                var body=item.querySelector('.faq-body');
+                var inner=item.querySelector('.faq-inner');
                 var arrow=btn.querySelector('.faq-arrow');
-                var open=body.style.display!=='none';
-                document.querySelectorAll('.faq-body').forEach(function(b){b.style.display='none';});
-                document.querySelectorAll('.faq-arrow').forEach(function(a){a.style.transform='';});
-                if(!open){body.style.display='block';arrow.style.transform='rotate(180deg)';}
+                var isOpen=item.classList.contains('open');
+                document.querySelectorAll('.faq-item.open').forEach(function(el){
+                  el.classList.remove('open');
+                  el.querySelector('.faq-body').style.height='0';
+                  el.querySelector('.faq-arrow').style.transform='';
+                });
+                if(!isOpen){
+                  item.classList.add('open');
+                  body.style.height=inner.offsetHeight+'px';
+                  arrow.style.transform='rotate(180deg)';
+                }
               })(this)"
                 style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:15px 16px;background:none;border:none;cursor:pointer;text-align:left;gap:12px">
                 <span style="font-size:14px;font-weight:600;color:var(--md-on-surface);line-height:1.4">${esc(f.question)}</span>
-                <span class="faq-arrow" style="flex-shrink:0;font-size:18px;color:var(--md-primary);transition:transform .25s;${i===0?'transform:rotate(180deg)':''}">⌄</span>
+                <span class="faq-arrow" style="flex-shrink:0;font-size:18px;color:var(--md-primary);transition:transform .3s;${i===0?'transform:rotate(180deg)':''}">⌄</span>
               </button>
-              <div class="faq-body" style="padding:0 16px 15px;display:${i===0?'block':'none'}">
-                <p style="font-size:13.5px;color:var(--md-on-surface-variant);line-height:1.65;margin:0">${esc(f.answer)}</p>
+              <div class="faq-body" style="overflow:hidden;transition:height .3s ease;height:${i===0?'auto':'0'}">
+                <div class="faq-inner" style="padding:0 16px 15px">
+                  <p style="font-size:13.5px;color:var(--md-on-surface-variant);line-height:1.65;margin:0">${esc(f.answer)}</p>
+                </div>
               </div>
             </div>`).join('')}
           </div>
           ` : ''}
 
         </div>`;
+
+      // Фиксируем высоту первого открытого FAQ-пункта
+      const firstBody = c.querySelector('.faq-item .faq-body');
+      if (firstBody) {
+        const inner = firstBody.querySelector('.faq-inner');
+        firstBody.style.height = inner.offsetHeight + 'px';
+      }
     },
 
     checkout() { this.navigate('checkout'); },
