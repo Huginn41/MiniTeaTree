@@ -438,7 +438,16 @@
       line-height: 1.25;
       text-shadow: 0 1px 3px rgba(0,0,0,0.55);
     }
-    .cats-collapsed .cat-extra { display: none; }
+    .cat-extra-grid {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+    .cat-extra-grid.open { max-height: 800px; }
     .cat-show-more {
       grid-column: 1 / -1;
       background: none;
@@ -1201,21 +1210,22 @@
         <h2>Категории</h2>
         <a onclick="App.navigate('catalog')">Все →</a>
       </div>`;
-      const catTile = (cat, extra) => `
-        <button class="category-tile${extra ? ' cat-extra' : ''}" onclick="App.navigate('catalog', '${cat.slug}')">
+      const catTile = cat => `
+        <button class="category-tile" onclick="App.navigate('catalog', '${cat.slug}')">
           ${cat.image_path
             ? `<img class="cat-bg" src="${cat.image_path}" alt="${esc(cat.name)}" loading="lazy"/>`
             : `<div class="cat-emoji">${cat.icon || '🍃'}</div>`}
           <span>${esc(cat.name)}</span>
         </button>`;
-      html += `<div class="category-grid cats-collapsed">
-        ${cats.map((cat, i) => catTile(cat, i >= 3)).join('')}
+      html += `<div class="category-grid">
+        ${cats.slice(0, 3).map(catTile).join('')}
         ${cats.length > 3 ? `
+          <div class="cat-extra-grid">${cats.slice(3).map(catTile).join('')}</div>
           <button class="cat-show-more" onclick="
-            const grid = this.closest('.category-grid');
-            const collapsed = grid.classList.toggle('cats-collapsed');
-            this.querySelector('.cat-more-text').textContent = collapsed ? 'Показать ещё' : 'Скрыть';
-            this.querySelector('.cat-more-arrow').classList.toggle('up', !collapsed);
+            const extra = this.closest('.category-grid').querySelector('.cat-extra-grid');
+            const isOpen = extra.classList.toggle('open');
+            this.querySelector('.cat-more-text').textContent = isOpen ? 'Скрыть' : 'Показать ещё';
+            this.querySelector('.cat-more-arrow').classList.toggle('up', isOpen);
           "><span class="cat-more-text">Показать ещё</span><span class="cat-more-arrow">›</span></button>
         ` : ''}
       </div>`;
