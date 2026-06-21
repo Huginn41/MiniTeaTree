@@ -788,6 +788,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             res = await session.execute(select(ProductImage).where(ProductImage.id == image_id))
             img = res.scalar_one_or_none()
             if img:
+                _delete_upload_file(img.path)
                 await session.delete(img)
                 await session.commit()
         return _JSONResponse({"ok": True})
@@ -842,6 +843,18 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         })
 
     # ===== ИМПОРТ ТОВАРОВ =====
+
+    def _delete_upload_file(path: str | None) -> None:
+        """Удаляет файл из static/uploads/ если он там лежит."""
+        if not path:
+            return
+        if not path.startswith("/static/uploads/"):
+            return
+        file = Path(__file__).parent.parent.parent / path.lstrip("/")
+        try:
+            file.unlink(missing_ok=True)
+        except Exception:
+            pass
 
     from fastapi.responses import HTMLResponse as _HTMLResponse, StreamingResponse as _StreamingResponse
     import asyncio as _asyncio
@@ -931,6 +944,29 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
                 "log": rec.log,
                 "error": rec.error,
             })
+
+    @app.post("/admin-api/uploads/cleanup", include_in_schema=False)
+    async def admin_uploads_cleanup(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from app.models.product import ProductImage
+        from sqlalchemy import select
+        async with get_session_factory()() as session:
+            rows = (await session.execute(select(ProductImage.path))).scalars().all()
+        referenced = {r for r in rows if r}
+        uploads_dir = Path(__file__).parent.parent.parent / "static" / "uploads"
+        deleted, freed = 0, 0
+        if uploads_dir.exists():
+            for f in uploads_dir.iterdir():
+                if not f.is_file():
+                    continue
+                rel = f"/static/uploads/{f.name}"
+                if rel not in referenced:
+                    freed += f.stat().st_size
+                    f.unlink(missing_ok=True)
+                    deleted += 1
+        return _JSONResponse({"deleted": deleted, "freed_mb": round(freed / 1024 / 1024, 2)})
 
     from app.seed import DEMO_TG_IDS as _DEMO_TG_IDS
 
@@ -1239,6 +1275,17 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
                             in_stock=True,
                         ))
                 await session.commit()
+
+        async def after_model_delete(self, model, request):
+            from app.db import get_session_factory
+            from app.models.product import ProductImage
+            from sqlalchemy import select
+            async with get_session_factory()() as session:
+                imgs = (await session.execute(
+                    select(ProductImage).where(ProductImage.product_id == model.id)
+                )).scalars().all()
+                for img in imgs:
+                    _delete_upload_file(img.path)
 
     class BannerAdmin(ModelView, model=Banner):
         name = "↳ Баннеры"
