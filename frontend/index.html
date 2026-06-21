@@ -438,17 +438,33 @@
       line-height: 1.25;
       text-shadow: 0 1px 3px rgba(0,0,0,0.55);
     }
+    .cat-hidden { display: none; }
     .cat-show-more {
       grid-column: 1 / -1;
-      background: var(--md-surface-container);
-      border: none;
-      border-radius: var(--radius-md);
-      padding: 11px;
+      background: none;
+      border: 1.5px solid rgba(0,0,0,0.1);
+      border-radius: 20px;
+      padding: 8px 16px;
       font-size: 13px;
-      font-weight: 600;
-      color: var(--md-primary);
+      font-weight: 500;
+      color: var(--md-on-surface-variant, #555);
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
       -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s;
+    }
+    .cat-show-more:active { opacity: 0.6; }
+    .cat-more-arrow {
+      font-size: 16px;
+      display: inline-block;
+      animation: arrow-bounce 1.2s ease-in-out infinite;
+    }
+    @keyframes arrow-bounce {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(3px); }
     }
 
     /* ===== Product Cards ===== */
@@ -1187,25 +1203,20 @@
         <h2>Категории</h2>
         <a onclick="App.navigate('catalog')">Все →</a>
       </div>`;
-      const catTile = cat => `
-        <button class="category-tile" onclick="App.navigate('catalog', '${cat.slug}')">
+      const catTile = (cat, hidden) => `
+        <button class="category-tile${hidden ? ' cat-hidden' : ''}" onclick="App.navigate('catalog', '${cat.slug}')">
           ${cat.image_path
             ? `<img class="cat-bg" src="${cat.image_path}" alt="${esc(cat.name)}" loading="lazy"/>`
             : `<div class="cat-emoji">${cat.icon || '🍃'}</div>`}
           <span>${esc(cat.name)}</span>
         </button>`;
-      const catsVisible = cats.slice(0, 3);
-      const catsHidden  = cats.slice(3);
       html += `<div class="category-grid">
-        ${catsVisible.map(catTile).join('')}
-        ${catsHidden.length ? `
-          <div id="cats-hidden" style="display:contents">
-            ${catsHidden.map(catTile).join('')}
-          </div>
+        ${cats.map((cat, i) => catTile(cat, i >= 3)).join('')}
+        ${cats.length > 3 ? `
           <button class="cat-show-more" id="cats-more-btn" onclick="
-            document.getElementById('cats-hidden').style.display='contents';
+            document.querySelectorAll('.cat-hidden').forEach(el => el.classList.remove('cat-hidden'));
             this.remove();
-          ">Показать ещё (${catsHidden.length})</button>
+          ">Показать ещё <span class="cat-more-arrow">›</span></button>
         ` : ''}
       </div>`;
 
