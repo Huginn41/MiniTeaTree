@@ -1771,6 +1771,17 @@
       const delivLabel = { pickup: 'Самовывоз', courier: 'Курьер', pvz: 'Пункт выдачи' };
       const isPickup = o.delivery_info?.type === 'pickup';
 
+      // Подгружаем ПВЗ для карты — либо уже выбранный, либо с сервера
+      if (isPickup && !this._pickupPoint) {
+        try {
+          const pts = await api('/info/pickup-points');
+          if (pts.length) {
+            // Пробуем найти совпадение по адресу, иначе берём первый
+            this._pickupPoint = pts.find(p => o.delivery_info?.address && this._pickupAddr(p) === o.delivery_info.address) || pts[0];
+          }
+        } catch(_) {}
+      }
+
       // Шаги для самовывоза и доставки
       const stepsDelivery = [
         { key: 'new',              label: 'Заказ принят' },
