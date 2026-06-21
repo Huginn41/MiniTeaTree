@@ -497,8 +497,7 @@ _ADMIN_JS = (r"""
 
   // ---- 6. Кнопка «Импорт» рядом с «Экспорт» в списке товаров ----
   function initProductImportBtn(){
-    if(window.location.pathname.indexOf('/admin/product') === -1) return;
-    if(window.location.pathname.indexOf('/list') === -1) return;
+    if(!/^\/admin\/product\/list/.test(window.location.pathname)) return;
 
     if(!document.getElementById('ct-import-modal')){
       var m = document.createElement('div');
@@ -541,30 +540,44 @@ _ADMIN_JS = (r"""
       document.body.appendChild(m);
     }
 
-    var exportBtn = null;
-    document.querySelectorAll('a.btn, button.btn').forEach(function(el){
-      var t = el.textContent.trim();
-      if(t === 'Export' || t === 'Экспорт') exportBtn = el;
-    });
-    if(!exportBtn) return;
+    // Найти кнопку Export/Экспорт — ищем по href с "export" или по тексту
+    var exportBtn = document.querySelector('a[href*="export"]');
+    if(!exportBtn){
+      document.querySelectorAll('a.btn, button.btn').forEach(function(el){
+        var t = el.textContent.replace(/\s+/g,'');
+        if(t === 'Export' || t === 'Экспорт') exportBtn = el;
+      });
+    }
 
-    var btn = document.createElement('a');
-    btn.href = '#';
-    btn.className = exportBtn.className;
+    // Найти обёртку (div.ms-3) чтобы вставить рядом, а не внутрь
+    var exportWrap = exportBtn ? (exportBtn.closest('.ms-3') || exportBtn) : null;
+
+    // Кнопка «Импорт» — открывает модал через data-атрибуты Bootstrap
+    var wrap = document.createElement('div');
+    wrap.className = 'ms-3 d-inline-block';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-outline-primary';
+    btn.setAttribute('data-bs-toggle', 'modal');
+    btn.setAttribute('data-bs-target', '#ct-import-modal');
     btn.innerHTML = '<i class="fa-solid fa-file-import me-1"></i>Импорт';
-    btn.addEventListener('click', function(e){
-      e.preventDefault();
-      var modalEl = document.getElementById('ct-import-modal');
-      // сбросить статусы
+    btn.addEventListener('click', function(){
       ['yml','excel'].forEach(function(p){
         var s = document.getElementById('ct-'+p+'-status');
         var l = document.getElementById('ct-'+p+'-log');
         if(s){ s.style.display='none'; s.innerHTML=''; }
         if(l){ l.style.display='none'; l.textContent=''; }
       });
-      bootstrap.Modal.getOrCreateInstance(modalEl).show();
     });
-    exportBtn.insertAdjacentElement('afterend', btn);
+    wrap.appendChild(btn);
+
+    if(exportWrap){
+      exportWrap.insertAdjacentElement('afterend', wrap);
+    } else {
+      // fallback: добавить в .ms-auto заголовка карточки
+      var bar = document.querySelector('.card-header .ms-auto');
+      if(bar) bar.insertBefore(wrap, bar.firstChild);
+    }
   }
 
   window.ctShowImportStatus = function(prefix, status, data){
