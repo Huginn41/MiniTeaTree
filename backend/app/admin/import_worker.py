@@ -11,7 +11,7 @@ import re
 import uuid
 from pathlib import Path
 
-_UPLOADS_DIR = Path(__file__).parent.parent.parent / "static" / "uploads"
+_UPLOADS_DIR = Path(__file__).parent.parent / "static" / "media" / "uploads"
 
 # Только эти категории тянем из YML (остальные — наборы, акции, корп и т.д.)
 _ALLOWED_CATEGORY_IDS: set[str] = {
@@ -78,7 +78,7 @@ async def _download_image(url: str, client) -> str | None:
         name = f"{uuid.uuid4().hex}.{ext}"
         _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
         (_UPLOADS_DIR / name).write_bytes(r.content)
-        return f"/static/uploads/{name}"
+        return f"/static/media/uploads/{name}"
     except Exception:
         return None
 

@@ -722,7 +722,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     # Endpoint для смены статуса прямо из списка
     from fastapi.responses import JSONResponse as _JSONResponse
 
-    _UPLOADS_DIR = Path(__file__).parent.parent.parent / "static" / "uploads"
+    _UPLOADS_DIR = Path(__file__).parent.parent / "static" / "media" / "uploads"
 
     @app.post("/admin-api/upload")
     async def admin_upload(request: Request, file: UploadFile = _File(...)):
@@ -735,7 +735,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         name = f"{_uuid.uuid4().hex}{ext}"
         with open(_UPLOADS_DIR / name, "wb") as f:
             shutil.copyfileobj(file.file, f)
-        return _JSONResponse({"path": f"/static/uploads/{name}"})
+        return _JSONResponse({"path": f"/static/media/uploads/{name}"})
 
     @app.get("/admin-api/product/{product_id}/images")
     async def admin_product_images(product_id: int, request: Request):
@@ -762,7 +762,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         name = f"{_uuid.uuid4().hex}{ext}"
         with open(_UPLOADS_DIR / name, "wb") as f:
             shutil.copyfileobj(file.file, f)
-        path = f"/static/uploads/{name}"
+        path = f"/static/media/uploads/{name}"
         from app.db import get_session_factory
         from app.models.product import ProductImage
         from sqlalchemy import select, func
@@ -848,7 +848,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         """Удаляет файл из static/uploads/ если он там лежит."""
         if not path:
             return
-        if not path.startswith("/static/uploads/"):
+        if not path.startswith("/static/media/uploads/"):
             return
         file = Path(__file__).parent.parent.parent / path.lstrip("/")
         try:
