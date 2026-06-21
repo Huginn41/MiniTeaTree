@@ -1423,14 +1423,31 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         name_plural = "Пункты самовывоза"
         category = "Настройки магазина"
 
-        column_list = ["name", "address", "work_hours", "is_active"]
+        column_list = ["name", "city", "street", "building", "work_hours", "is_active"]
         column_labels = {
             "name": "Название",
-            "address": "Адрес",
-            "work_hours": "Часы работы",
+            "city": "Город",
+            "street": "Улица",
+            "building": "Дом",
+            "address": "Адрес (устар.)",
+            "work_hours": "Режим работы",
+            "comment": "Комментарий",
+            "phone": "Телефон",
             "is_active": "Активен",
+            "sort_order": "Порядок",
         }
-        form_excluded_columns = ["created_at", "updated_at"]
+        form_columns = [
+            "name", "city", "street", "building",
+            "work_hours", "comment", "phone",
+            "sort_order", "is_active",
+        ]
+        form_widget_args = {
+            "work_hours": {"placeholder": "Пн–Пт: 10:00–19:00, Сб: 11:00–18:00, Вс: выходной"},
+            "comment": {"placeholder": "Как найти: ориентир, этаж, вход…", "rows": 3},
+            "city": {"placeholder": "Москва"},
+            "street": {"placeholder": "ул. Ленина"},
+            "building": {"placeholder": "12А"},
+        }
         page_size = 50
 
     # ===== КАТАЛОГ =====

@@ -111,8 +111,12 @@ class PickupPointOut(BaseModel):
 
     id: int
     name: str
+    city: str | None = None
+    street: str | None = None
+    building: str | None = None
     address: str
     work_hours: str | None = None
+    comment: str | None = None
     phone: str | None = None
 
     model_config = {"from_attributes": True}

@@ -1024,6 +1024,17 @@
         </div>
         <span class="nav-label">Профиль</span>
       </button>
+
+      <button class="nav-item" data-view="about" onclick="App.navigate('about')">
+        <div class="nav-icon-wrap">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="8" stroke-linecap="round" stroke-width="2.5"/>
+            <line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="nav-label">О нас</span>
+      </button>
     </div>
   </nav>
 
@@ -1168,6 +1179,7 @@
           case 'checkout':     await this.renderCheckout(wrapper); break;
           case 'order-detail': await this.renderOrderDetail(wrapper, data); break;
           case 'profile':      await this.renderProfile(wrapper); break;
+          case 'about':        await this.renderAbout(wrapper); break;
           default:
             wrapper.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>Страница не найдена</h3></div>`;
         }
@@ -1845,6 +1857,92 @@
       this.cartCount = Math.max(0, this.cartCount - 1);
       this.updateCartBadge();
       this.render('cart');
+    },
+
+    async renderAbout(c) {
+      this.setHeader('О нас');
+      c.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:40px 0"><div style="width:32px;height:32px;border:3px solid var(--md-primary);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></div></div>`;
+
+      let points = [];
+      try { points = await api('/info/pickup-points'); } catch(_) {}
+
+      const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      const fullAddr = p => {
+        const parts = [];
+        if (p.city)     parts.push(p.city);
+        if (p.street)   parts.push(p.street);
+        if (p.building) parts.push('д. ' + p.building);
+        return parts.length ? parts.join(', ') : (p.address || '');
+      };
+
+      const pointCard = p => `
+        <div style="background:var(--md-surface-container-low);border-radius:16px;padding:18px 16px;margin-bottom:12px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="width:40px;height:40px;border-radius:12px;background:var(--md-primary-container);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="20" height="20" fill="none" stroke="var(--md-primary)" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <div style="flex:1;min-width:0">
+              <p style="font-size:15px;font-weight:700;color:var(--md-on-surface);margin:0 0 4px">${esc(p.name)}</p>
+              <p style="font-size:13px;color:var(--md-on-surface-variant);margin:0 0 10px;line-height:1.4">${esc(fullAddr(p))}</p>
+              ${p.work_hours ? `
+              <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
+                <svg width="15" height="15" fill="none" stroke="var(--md-on-surface-variant)" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px">
+                  <circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 6v6l4 2"/>
+                </svg>
+                <p style="font-size:12.5px;color:var(--md-on-surface-variant);margin:0;line-height:1.5">${esc(p.work_hours)}</p>
+              </div>` : ''}
+              ${p.comment ? `
+              <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
+                <svg width="15" height="15" fill="none" stroke="var(--md-on-surface-variant)" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p style="font-size:12.5px;color:var(--md-on-surface-variant);margin:0;line-height:1.5">${esc(p.comment)}</p>
+              </div>` : ''}
+              ${p.phone ? `
+              <a href="tel:${esc(p.phone)}" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--md-primary);font-weight:600;text-decoration:none;margin-top:4px">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                </svg>
+                ${esc(p.phone)}
+              </a>` : ''}
+            </div>
+          </div>
+        </div>`;
+
+      c.innerHTML = `
+        <div style="padding:0 0 24px">
+
+          <!-- Шапка магазина -->
+          <div style="background:linear-gradient(135deg,#1a6b3c 0%,#2d9e5f 100%);border-radius:20px;padding:28px 20px;margin-bottom:20px;text-align:center;position:relative;overflow:hidden">
+            <div style="font-size:48px;margin-bottom:8px">🍵</div>
+            <h2 style="font-size:22px;font-weight:800;color:#fff;margin:0 0 6px;letter-spacing:-.3px">Чайное Дерево</h2>
+            <p style="font-size:13px;color:rgba(255,255,255,.8);margin:0;line-height:1.5">Магазин качественного чая<br>и чайных аксессуаров</p>
+          </div>
+
+          <!-- О магазине -->
+          <div style="background:var(--md-surface-container-low);border-radius:16px;padding:18px 16px;margin-bottom:20px">
+            <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 10px">О магазине</p>
+            <p style="font-size:14px;color:var(--md-on-surface);line-height:1.7;margin:0">
+              Мы собрали лучшие сорта чая со всего мира — от классических китайских пуэров и улунов до редких горных сборов. Каждый чай проходит ручную проверку качества.
+            </p>
+            <p style="font-size:14px;color:var(--md-on-surface);line-height:1.7;margin:12px 0 0">
+              Доставляем по всей России. Возможен самовывоз из наших пунктов выдачи.
+            </p>
+          </div>
+
+          <!-- Пункты самовывоза -->
+          ${points.length ? `
+          <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">
+            Пункты самовывоза
+          </p>
+          ${points.map(pointCard).join('')}
+          ` : ''}
+
+        </div>`;
     },
 
     checkout() { this.navigate('checkout'); },

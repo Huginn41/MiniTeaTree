@@ -21,8 +21,12 @@ class PickupPoint(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(PKType, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
-    address: Mapped[str] = mapped_column(String(256), nullable=False)
-    work_hours: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    street: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    building: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    address: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    work_hours: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # Координаты для карты (если потом понадобится).
     lat: Mapped[float | None] = mapped_column(nullable=True)
