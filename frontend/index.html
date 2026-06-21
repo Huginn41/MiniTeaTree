@@ -1616,8 +1616,50 @@
     },
 
     // ─── Checkout ─────────────────────────────────────────────────────────────
+    _pickupPoint: null,
+
+    _pickupAddr(p) {
+      const parts = [];
+      if (p.city)     parts.push(p.city);
+      if (p.street)   parts.push(p.street);
+      if (p.building) parts.push('д. ' + p.building);
+      return parts.join(', ') || p.address || '';
+    },
+
     async renderCheckout(c) {
       this.setHeader('Оформление заказа');
+      c.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:40px 0"><div style="width:28px;height:28px;border:3px solid var(--md-primary);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></div></div>`;
+
+      let pickupPoints = [];
+      try { pickupPoints = await api('/info/pickup-points'); } catch(_) {}
+
+      // Auto-select first pickup point and store globally for _selectPickup
+      if (pickupPoints.length > 0) this._pickupPoint = pickupPoints[0];
+      window._checkoutPickupPoints = pickupPoints;
+
+      const esc2 = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      const pickupCard = (p, checked) => `
+        <label class="radio-card" style="flex-direction:column;align-items:flex-start;gap:0;cursor:pointer">
+          <div style="display:flex;align-items:center;gap:10px;width:100%">
+            <input type="radio" name="pickup_point" value="${p.id}" ${checked?'checked':''} onchange="App._selectPickup(${p.id})"/>
+            <span style="font-size:15px;font-weight:600">${esc2(p.name)}</span>
+          </div>
+          <div style="margin-left:28px;margin-top:4px">
+            <p style="font-size:12.5px;color:var(--md-on-surface-variant);margin:0;line-height:1.5">${esc2(this._pickupAddr(p))}</p>
+            ${p.work_hours ? `<p style="font-size:12px;color:var(--md-on-surface-variant);margin:2px 0 0;display:flex;align-items:center;gap:4px"><span>🕐</span>${esc2(p.work_hours)}</p>` : ''}
+          </div>
+        </label>`;
+
+      let pickupSection = '';
+      if (pickupPoints.length === 0) {
+        pickupSection = `<p style="font-size:13px;color:var(--md-on-surface-variant);padding:8px 0">Адрес уточним после оформления заказа</p>`;
+      } else if (pickupPoints.length === 1) {
+        pickupSection = pickupCard(pickupPoints[0], true);
+      } else {
+        pickupSection = pickupPoints.map((p,i) => pickupCard(p, i===0)).join('');
+      }
+
       c.innerHTML = `
         <form id="checkout-form" onsubmit="App.submitOrder(event)">
 
@@ -1637,6 +1679,11 @@
                 <div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">Доставка по адресу</div>
               </div>
             </label>
+          </div>
+
+          <div id="pickup-section" style="margin-bottom:20px">
+            <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">ПУНКТ САМОВЫВОЗА</p>
+            <div style="display:flex;flex-direction:column;gap:8px">${pickupSection}</div>
           </div>
 
           <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">КОНТАКТЫ</p>
@@ -1661,11 +1708,28 @@
 
       document.querySelectorAll('input[name="delivery_type"]').forEach(r => {
         r.addEventListener('change', () => {
-          document.getElementById('address-field').style.display =
-            r.value === 'courier' ? 'block' : 'none';
+          const isPickup = r.value === 'pickup';
+          document.getElementById('pickup-section').style.display = isPickup ? 'block' : 'none';
+          document.getElementById('address-field').style.display = isPickup ? 'none' : 'block';
         });
       });
       c.querySelectorAll('.ripple-container').forEach(addRipple);
+    },
+
+    _selectPickup(id) {
+      // Find pickup point by id from last fetched list — stored on select
+      const radios = document.querySelectorAll('input[name="pickup_point"]');
+      radios.forEach(r => {
+        if (parseInt(r.value) === id) {
+          r.closest('label').style.outline = '2px solid var(--md-primary)';
+        } else {
+          r.closest('label').style.outline = '';
+        }
+      });
+      // Update from window data (injected via onclick)
+      if (window._checkoutPickupPoints) {
+        this._pickupPoint = window._checkoutPickupPoints.find(p => p.id === id) || this._pickupPoint;
+      }
     },
 
     async submitOrder(e) {
@@ -1676,12 +1740,14 @@
       try {
         const form = e.target;
         const delivery_type = form.querySelector('input[name="delivery_type"]:checked').value;
+        const pickupAddr = delivery_type === 'pickup' && this._pickupPoint
+          ? this._pickupAddr(this._pickupPoint) : '';
         const order = await api('/orders', {
           method: 'POST',
           body: JSON.stringify({
             delivery_type,
             contact_phone: form.contact_phone.value || null,
-            address: delivery_type === 'courier' ? (form.address?.value || '') : '',
+            address: delivery_type === 'courier' ? (form.address?.value || '') : pickupAddr,
             comment: form.comment.value || null,
           }),
         });
@@ -1790,6 +1856,37 @@
               ${o.delivery_info.address ? `<p style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${esc(o.delivery_info.address)}</p>` : ''}
             </div>
           ` : ''}
+          ${isPickup && App._pickupPoint ? (() => {
+            const p = App._pickupPoint;
+            const addr = App._pickupAddr(p);
+            const mapSrc = p.map_embed_src || '';
+            return `
+            <div style="margin-top:10px;border-radius:var(--radius-sm);overflow:hidden;background:var(--md-surface-container)">
+              <div style="padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+                <span style="font-size:20px;flex-shrink:0">📍</span>
+                <div>
+                  <p style="font-size:13px;font-weight:700;color:var(--md-on-surface);margin:0 0 2px">Можете забрать заказ здесь:</p>
+                  <p style="font-size:13px;color:var(--md-on-surface);margin:0 0 2px">${esc(p.name)}</p>
+                  ${addr ? `<p style="font-size:12px;color:var(--md-on-surface-variant);margin:0 0 4px">${esc(addr)}</p>` : ''}
+                  ${p.work_hours ? `<p style="font-size:12px;color:var(--md-on-surface-variant);margin:0">🕐 ${esc(p.work_hours)}</p>` : ''}
+                </div>
+              </div>
+              ${mapSrc ? `
+              <div style="position:relative;width:100%;height:220px;overflow:hidden">
+                <iframe src="${mapSrc}" width="100%" height="220" frameborder="0" allowfullscreen style="border:0;display:block"></iframe>
+              </div>
+              <a href="https://yandex.ru/maps/?text=${encodeURIComponent(addr)}" target="_blank"
+                style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;font-size:13px;font-weight:600;color:var(--md-primary);text-decoration:none;border-top:1px solid var(--md-outline-variant)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                Открыть в Яндекс Картах
+              </a>` : (addr ? `
+              <a href="https://yandex.ru/maps/?text=${encodeURIComponent(addr)}" target="_blank"
+                style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;font-size:13px;font-weight:600;color:var(--md-primary);text-decoration:none;border-top:1px solid var(--md-outline-variant)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                Открыть в Яндекс Картах
+              </a>` : '')}
+            </div>`;
+          })() : ''}
         </div>
 
         ${newOrderBanner}

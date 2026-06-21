@@ -20,6 +20,7 @@ def upgrade() -> None:
     op.add_column("pickup_points", sa.Column("street", sa.String(128), nullable=True))
     op.add_column("pickup_points", sa.Column("building", sa.String(32), nullable=True))
     op.add_column("pickup_points", sa.Column("comment", sa.Text, nullable=True))
+    op.add_column("pickup_points", sa.Column("map_embed_src", sa.String(512), nullable=True))
     op.alter_column("pickup_points", "work_hours", type_=sa.String(256))
 
 
@@ -28,4 +29,5 @@ def downgrade() -> None:
     op.drop_column("pickup_points", "street")
     op.drop_column("pickup_points", "building")
     op.drop_column("pickup_points", "comment")
+    op.drop_column("pickup_points", "map_embed_src")
     op.alter_column("pickup_points", "work_hours", type_=sa.String(128))

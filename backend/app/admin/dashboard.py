@@ -38,7 +38,7 @@ def _topnav(active: str = "") -> str:
     <span class="ct-nav-link"><i class="fa-solid fa-users"></i>CRM <span class="ct-dropdown-arrow">▾</span></span>
     <div class="ct-dropdown-menu">
       <a class="ct-dropdown-item" href="/admin/user/list">Клиенты</a>
-      <a class="ct-dropdown-item" href="/admin/notificationtarget/list">Уведомления</a>
+      <a class="ct-dropdown-item" href="/admin/notification-target/list">Уведомления</a>
     </div>
   </div>
   <div class="ct-nav-item ct-dropdown">
@@ -47,16 +47,16 @@ def _topnav(active: str = "") -> str:
       <a class="ct-dropdown-item" href="/admin/product/list">Товары</a>
       <a class="ct-dropdown-item" href="/admin/category/list">Категории</a>
       <a class="ct-dropdown-item" href="/admin/banner/list">Баннеры</a>
-      <a class="ct-dropdown-item" href="/admin/faqitem/list">FAQ</a>
-      <a class="ct-dropdown-item" href="/admin/pickuppoint/list">Самовывоз</a>
+      <a class="ct-dropdown-item" href="/admin/faq-item/list">FAQ</a>
+      <a class="ct-dropdown-item" href="/admin/pickup-point/list">Самовывоз</a>
     </div>
   </div>
   <div class="ct-nav-item ct-dropdown">
     <span class="ct-nav-link"><i class="fa-solid fa-gear"></i>Система <span class="ct-dropdown-arrow">▾</span></span>
     <div class="ct-dropdown-menu">
-      <a class="ct-dropdown-item" href="/admin/adminuser/list">Администраторы</a>
-      <a class="ct-dropdown-item" href="/admin/ymlimport/list">YML-импорты</a>
-      <a class="ct-dropdown-item" href="/admin/paymentevent/list">Платежи</a>
+      <a class="ct-dropdown-item" href="/admin/admin-user/list">Администраторы</a>
+      <a class="ct-dropdown-item" href="/admin/yml-import/list">YML-импорты</a>
+      <a class="ct-dropdown-item" href="/admin/payment-event/list">Платежи</a>
     </div>
   </div>
   <div class="ct-logout">

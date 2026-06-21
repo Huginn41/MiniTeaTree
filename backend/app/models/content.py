@@ -27,6 +27,7 @@ class PickupPoint(TimestampMixin, Base):
     address: Mapped[str] = mapped_column(String(256), nullable=False, default="")
     work_hours: Mapped[str | None] = mapped_column(String(256), nullable=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    map_embed_src: Mapped[str | None] = mapped_column(String(512), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # Координаты для карты (если потом понадобится).
     lat: Mapped[float | None] = mapped_column(nullable=True)

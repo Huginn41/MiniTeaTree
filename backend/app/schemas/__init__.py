@@ -118,6 +118,9 @@ class PickupPointOut(BaseModel):
     work_hours: str | None = None
     comment: str | None = None
     phone: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    map_embed_src: str | None = None
 
     model_config = {"from_attributes": True}
 

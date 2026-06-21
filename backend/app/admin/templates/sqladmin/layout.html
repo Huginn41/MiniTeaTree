@@ -184,19 +184,19 @@ body { background: #f4f6fb !important; margin: 0; }
   </div>
 
   <!-- CRM -->
-  {% set crm_active = request.url.path.startswith('/admin/user') or request.url.path.startswith('/admin/notificationtarget') %}
+  {% set crm_active = request.url.path.startswith('/admin/user') or request.url.path.startswith('/admin/notification-target') %}
   <div class="ct-nav-item ct-dropdown">
     <span class="ct-nav-link {% if crm_active %}active{% endif %}">
       <i class="fa-solid fa-users"></i> CRM <span class="ct-dropdown-arrow">▾</span>
     </span>
     <div class="ct-dropdown-menu">
       <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/user') %}active{% endif %}" href="/admin/user/list">Клиенты</a>
-      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/notificationtarget') %}active{% endif %}" href="/admin/notificationtarget/list">Уведомления</a>
+      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/notification-target') %}active{% endif %}" href="/admin/notification-target/list">Уведомления</a>
     </div>
   </div>
 
   <!-- Настройки -->
-  {% set shop_active = request.url.path.startswith('/admin/product') or request.url.path.startswith('/admin/category') or request.url.path.startswith('/admin/banner') or request.url.path.startswith('/admin/faqitem') or request.url.path.startswith('/admin/pickuppoint') %}
+  {% set shop_active = request.url.path.startswith('/admin/product') or request.url.path.startswith('/admin/category') or request.url.path.startswith('/admin/banner') or request.url.path.startswith('/admin/faq-item') or request.url.path.startswith('/admin/pickup-point') %}
   <div class="ct-nav-item ct-dropdown">
     <span class="ct-nav-link {% if shop_active %}active{% endif %}">
       <i class="fa-solid fa-store"></i> Настройки <span class="ct-dropdown-arrow">▾</span>
@@ -205,21 +205,21 @@ body { background: #f4f6fb !important; margin: 0; }
       <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/product') %}active{% endif %}" href="/admin/product/list">Товары</a>
       <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/category') %}active{% endif %}" href="/admin/category/list">Категории</a>
       <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/banner') %}active{% endif %}" href="/admin/banner/list">Баннеры</a>
-      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/faqitem') %}active{% endif %}" href="/admin/faqitem/list">FAQ</a>
-      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/pickuppoint') %}active{% endif %}" href="/admin/pickuppoint/list">Самовывоз</a>
+      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/faq-item') %}active{% endif %}" href="/admin/faq-item/list">FAQ</a>
+      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/pickup-point') %}active{% endif %}" href="/admin/pickup-point/list">Самовывоз</a>
     </div>
   </div>
 
   <!-- Система -->
-  {% set sys_active = request.url.path.startswith('/admin/adminuser') or request.url.path.startswith('/admin/ymlimport') or request.url.path.startswith('/admin/paymentevent') %}
+  {% set sys_active = request.url.path.startswith('/admin/admin-user') or request.url.path.startswith('/admin/yml-import') or request.url.path.startswith('/admin/payment-event') %}
   <div class="ct-nav-item ct-dropdown">
     <span class="ct-nav-link {% if sys_active %}active{% endif %}">
       <i class="fa-solid fa-gear"></i> Система <span class="ct-dropdown-arrow">▾</span>
     </span>
     <div class="ct-dropdown-menu">
-      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/adminuser') %}active{% endif %}" href="/admin/adminuser/list">Администраторы</a>
-      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/ymlimport') %}active{% endif %}" href="/admin/ymlimport/list">YML-импорты</a>
-      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/paymentevent') %}active{% endif %}" href="/admin/paymentevent/list">Платежи</a>
+      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/admin-user') %}active{% endif %}" href="/admin/admin-user/list">Администраторы</a>
+      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/yml-import') %}active{% endif %}" href="/admin/yml-import/list">YML-импорты</a>
+      <a class="ct-dropdown-item {% if request.url.path.startswith('/admin/payment-event') %}active{% endif %}" href="/admin/payment-event/list">Платежи</a>
     </div>
   </div>
 

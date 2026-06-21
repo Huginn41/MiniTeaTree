@@ -1429,25 +1429,19 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "city": "Город",
             "street": "Улица",
             "building": "Дом",
-            "address": "Адрес (устар.)",
+            "address": "Адрес",
             "work_hours": "Режим работы",
             "comment": "Комментарий",
             "phone": "Телефон",
+            "map_embed_src": "Ссылка Яндекс Карт (src iframe)",
             "is_active": "Активен",
             "sort_order": "Порядок",
         }
         form_columns = [
             "name", "city", "street", "building",
             "work_hours", "comment", "phone",
-            "sort_order", "is_active",
+            "map_embed_src", "sort_order", "is_active",
         ]
-        form_widget_args = {
-            "work_hours": {"placeholder": "Пн–Пт: 10:00–19:00, Сб: 11:00–18:00, Вс: выходной"},
-            "comment": {"placeholder": "Как найти: ориентир, этаж, вход…", "rows": 3},
-            "city": {"placeholder": "Москва"},
-            "street": {"placeholder": "ул. Ленина"},
-            "building": {"placeholder": "12А"},
-        }
         page_size = 50
 
     # ===== КАТАЛОГ =====
