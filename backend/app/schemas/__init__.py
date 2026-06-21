@@ -18,6 +18,7 @@ class CategoryBrief(BaseModel):
     name: str
     slug: str
     icon: str | None = None
+    image_path: str | None = None
 
     model_config = {"from_attributes": True}
 

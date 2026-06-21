@@ -25,6 +25,8 @@ class Category(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Иконка-эмодзи или имя SVG-иконки для UI.
     icon: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Фото категории (путь к файлу).
+    image_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     sort_order: Mapped[int] = mapped_column(
         Integer, server_default=text("0"), nullable=False, default=0
     )

@@ -406,7 +406,7 @@
     }
     .category-tile:active { transform: scale(0.96); background: var(--md-primary-container); }
     .category-tile .cat-icon {
-      width: 44px; height: 44px;
+      width: 56px; height: 56px;
       border-radius: 50%;
       background: var(--md-surface);
       display: flex;
@@ -414,6 +414,13 @@
       justify-content: center;
       font-size: 22px;
       box-shadow: var(--md-shadow-1);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .category-tile .cat-icon img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .category-tile span {
       font-size: 11px;
@@ -1162,7 +1169,7 @@
       html += `<div class="category-grid">
         ${cats.map(cat => `
           <button class="category-tile" onclick="App.navigate('catalog', '${cat.slug}')">
-            <div class="cat-icon">${cat.icon || '🍃'}</div>
+            <div class="cat-icon">${cat.image_path ? `<img src="${cat.image_path}" alt="${esc(cat.name)}" loading="lazy"/>` : (cat.icon || '🍃')}</div>
             <span>${esc(cat.name)}</span>
           </button>
         `).join('')}

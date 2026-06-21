@@ -1185,7 +1185,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         name_plural = "Категории"
         category = "Настройки магазина"
 
-        column_list = ["sort_order", "name", "slug", "created_at"]
+        column_list = ["sort_order", "name", "slug", "image_path", "created_at"]
         column_searchable_list = ["name", "slug"]
         column_sortable_list = ["sort_order", "name"]
         column_default_sort = [("sort_order", False)]
@@ -1193,8 +1193,17 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "sort_order": "Порядок",
             "name": "Название",
             "slug": "API тег",
+            "image_path": "Фото",
+            "icon": "Иконка (эмодзи)",
+            "description": "Описание",
             "created_at": "Создана",
         }
+        column_formatters = {
+            "image_path": lambda m, a: Markup(
+                f'<img src="{m.image_path}" style="width:48px;height:48px;object-fit:cover;border-radius:6px">'
+            ) if m.image_path else "—",
+        }
+        form_columns = ["name", "slug", "image_path", "icon", "description", "sort_order", "is_active"]
         form_excluded_columns = ["products", "created_at", "updated_at"]
         page_size = 50
 
