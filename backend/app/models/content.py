@@ -24,7 +24,7 @@ class PickupPoint(TimestampMixin, Base):
     city: Mapped[str | None] = mapped_column(String(64), nullable=True)
     street: Mapped[str | None] = mapped_column(String(128), nullable=True)
     building: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    address: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    address: Mapped[str] = mapped_column(String(256), nullable=False, default="", server_default=text("''"))
     work_hours: Mapped[str | None] = mapped_column(String(256), nullable=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     map_embed_src: Mapped[str | None] = mapped_column(String(512), nullable=True)
