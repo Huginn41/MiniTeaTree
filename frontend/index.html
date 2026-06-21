@@ -1739,8 +1739,8 @@
         </div>`;
       }
 
-      // Ссылка на оплату от менеджера
-      const paymentLinkHtml = o.payment_link ? `
+      // Ссылка на оплату — только пока заказ ждёт оплаты
+      const paymentLinkHtml = (o.payment_link && o.status === 'awaiting_payment') ? `
         <div style="background:var(--md-primary-container);border-radius:var(--radius-md);padding:16px;margin-bottom:12px">
           <p style="font-size:12px;font-weight:600;color:var(--md-on-primary-container);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px">ССЫЛКА НА ОПЛАТУ</p>
           <p style="font-size:13px;color:var(--md-on-primary-container);margin-bottom:12px;line-height:1.5">Менеджер прислал ссылку для оплаты. Нажмите кнопку ниже:</p>
