@@ -5,13 +5,7 @@
 """
 
 import asyncio
-import os
-import sys
 from pathlib import Path
-
-# Добавляем backend/ в путь
-sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-os.environ.setdefault("APP_ENV", "production")
 
 from app.config import get_settings
 from app.db import configure_engine, get_session_factory
@@ -27,22 +21,16 @@ async def main() -> None:
         rows = (await session.execute(select(ProductImage.path))).scalars().all()
 
     referenced = {r for r in rows if r}
-    uploads_dir = Path(__file__).parent.parent / "backend" / "static" / "uploads"
+    uploads_dir = Path(__file__).parent.parent / "static" / "uploads"
 
     if not uploads_dir.exists():
         print("Папка static/uploads/ не найдена")
         return
 
-    deleted = 0
-    freed = 0
-    orphans = []
-
-    for f in sorted(uploads_dir.iterdir()):
-        if not f.is_file():
-            continue
-        rel = f"/static/uploads/{f.name}"
-        if rel not in referenced:
-            orphans.append(f)
+    orphans = [
+        f for f in sorted(uploads_dir.iterdir())
+        if f.is_file() and f"/static/uploads/{f.name}" not in referenced
+    ]
 
     if not orphans:
         print("Мусора нет — все файлы привязаны к товарам.")
@@ -57,12 +45,12 @@ async def main() -> None:
         print("Отменено.")
         return
 
+    freed = 0
     for f in orphans:
         freed += f.stat().st_size
         f.unlink()
-        deleted += 1
 
-    print(f"\nГотово: удалено {deleted} файлов, освобождено {freed / 1024 / 1024:.1f} MB")
+    print(f"\nГотово: удалено {len(orphans)} файлов, освобождено {freed / 1024 / 1024:.1f} MB")
 
 
 asyncio.run(main())
