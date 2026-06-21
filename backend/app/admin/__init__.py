@@ -925,6 +925,124 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             await session.commit()
         return _JSONResponse({"ok": True})
 
+    # ===== CRM ЗАКАЗА =====
+
+    @app.get("/admin/crm/order/{order_id}", include_in_schema=False)
+    async def admin_crm_order(order_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            from starlette.responses import RedirectResponse
+            return RedirectResponse("/admin/login")
+        from app.db import get_session_factory
+        from sqlalchemy.orm import selectinload
+        async with get_session_factory()() as session:
+            result = await session.execute(
+                select(Order)
+                .options(
+                    selectinload(Order.items),
+                    selectinload(Order.delivery_info),
+                    selectinload(Order.user),
+                )
+                .where(Order.id == order_id)
+            )
+            order = result.scalar_one_or_none()
+        if not order:
+            return _JSONResponse(status_code=404, content={"error": "Not found"})
+        from fastapi.responses import HTMLResponse as _HTMLResponse
+        from app.admin.crm_order import render_crm_order
+        admin_username = request.session.get("admin_username", "")
+        html = render_crm_order(order, admin_username=admin_username)
+        return _HTMLResponse(html)
+
+    @app.post("/admin-api/order/{order_id}/payment-link", include_in_schema=False)
+    async def admin_order_payment_link(order_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        if request.session.get("admin_readonly"):
+            return _JSONResponse(status_code=403, content={"error": "Readonly"})
+        data = await request.json()
+        link = (data.get("link") or "").strip()
+        if not link.startswith("http"):
+            return _JSONResponse(status_code=400, content={"error": "Invalid link"})
+        from app.db import get_session_factory
+        from sqlalchemy.orm import selectinload
+        async with get_session_factory()() as session:
+            result = await session.execute(
+                select(Order)
+                .options(selectinload(Order.user))
+                .where(Order.id == order_id)
+            )
+            order = result.scalar_one_or_none()
+            if not order:
+                return _JSONResponse(status_code=404, content={"error": "Not found"})
+            order.payment_link = link
+            order.status = "awaiting_payment"
+            await session.commit()
+            # Уведомляем клиента
+            if order.user:
+                try:
+                    from app.bot.notify import _send_message
+                    import asyncio as _asyncio
+                    _asyncio.create_task(_send_message(
+                        order.user.telegram_id,
+                        f"👀 Мы увидели ваш заказ <b>{order.number}</b>!\n\n"
+                        f"Для оформления перейдите по ссылке на оплату:\n{link}",
+                    ))
+                except Exception:
+                    pass
+        return _JSONResponse({"ok": True})
+
+    @app.post("/admin-api/order/{order_id}/tracking", include_in_schema=False)
+    async def admin_order_tracking(order_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        if request.session.get("admin_readonly"):
+            return _JSONResponse(status_code=403, content={"error": "Readonly"})
+        data = await request.json()
+        link = (data.get("link") or "").strip()
+        from app.db import get_session_factory
+        async with get_session_factory()() as session:
+            result = await session.execute(select(Order).where(Order.id == order_id))
+            order = result.scalar_one_or_none()
+            if not order:
+                return _JSONResponse(status_code=404, content={"error": "Not found"})
+            order.tracking_link = link
+            await session.commit()
+        return _JSONResponse({"ok": True})
+
+    @app.post("/admin-api/order/{order_id}/feedback", include_in_schema=False)
+    async def admin_order_feedback(order_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from sqlalchemy.orm import selectinload
+        async with get_session_factory()() as session:
+            result = await session.execute(
+                select(Order)
+                .options(selectinload(Order.items), selectinload(Order.user))
+                .where(Order.id == order_id)
+            )
+            order = result.scalar_one_or_none()
+            if not order or not order.user:
+                return _JSONResponse(status_code=404, content={"error": "Not found"})
+            items_text = ", ".join(
+                f"{oi.snapshot_name} {oi.snapshot_weight_g}г" for oi in order.items
+            )
+            settings = get_settings()
+            shop_link = settings.public_base_url.rstrip("/")
+            try:
+                from app.bot.notify import _send_message
+                import asyncio as _asyncio
+                _asyncio.create_task(_send_message(
+                    order.user.telegram_id,
+                    f"Здравствуйте! 🌿\n\n"
+                    f"Вы заказывали у нас: <b>{items_text}</b>\n\n"
+                    f"Понравилось ли вам всё? Будем рады вашему отзыву — "
+                    f"напишите нам прямо здесь или зайдите в магазин:\n{shop_link}",
+                ))
+            except Exception:
+                pass
+        return _JSONResponse({"ok": True})
+
     @app.get("/admin-api/me", include_in_schema=False)
     async def admin_me(request: Request):
         if request.session.get("admin_token") != "authenticated":
@@ -1102,7 +1220,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         }
 
         column_formatters = {
-            "number": lambda m, a: Markup(f'<a href="/admin/order/edit/{m.id}" style="font-weight:600;color:var(--bs-primary)">{m.number}</a>'),
+            "number": lambda m, a: Markup(f'<a href="/admin/crm/order/{m.id}" style="font-weight:600;color:var(--bs-primary)">{m.number}</a>'),
             "user": lambda m, a: m.user.display_name if m.user else "—",
             "total_amount": lambda m, a: Markup(f"<b>{float(m.total_amount):.0f} ₽</b>"),
             "status": lambda m, a: _status_select(m.id, "status", m.status, _STATUS_CHOICES),

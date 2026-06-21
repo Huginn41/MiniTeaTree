@@ -56,7 +56,7 @@ def _order_keyboard(order: Order) -> dict:
     base = settings.public_base_url.rstrip("/")
     is_delivery = order.delivery_info and order.delivery_info.type != "pickup"
 
-    row = [{"text": "🔍 Открыть в CRM", "url": f"{base}/admin/order/edit/{order.id}"}]
+    row = [{"text": "🔍 Открыть в CRM", "url": f"{base}/admin/crm/order/{order.id}"}]
     if is_delivery:
         row.append({"text": "💳 Ссылка на оплату", "callback_data": f"pay_link:{order.id}"})
 

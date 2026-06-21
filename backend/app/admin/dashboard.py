@@ -259,13 +259,13 @@ function renderPending(orders){
       ? '<span class="age-pill age-warn">'+Math.round(h)+' ч</span>'
       : '<span class="age-pill age-ok">< 1 ч</span>';
     return '<tr class="'+rc+'">'
-      +'<td><a class="order-num" href="/admin/order/edit/'+o.id+'">'+o.number+'</a></td>'
+      +'<td><a class="order-num" href="/admin/crm/order/'+o.id+'">'+o.number+'</a></td>'
       +'<td>'+o.client+'</td>'
       +'<td><b>'+fmt(o.total)+' ₽</b></td>'
       +'<td><small>'+(SL[o.status]||o.status)+'</small></td>'
       +'<td>'+ap+'</td>'
       +'<td><small class="text-muted">'+fmtDt(o.created_at)+'</small></td>'
-      +'<td><a href="/admin/order/edit/'+o.id+'" class="btn btn-xs btn-outline-primary" style="font-size:12px;padding:2px 10px">→</a></td>'
+      +'<td><a href="/admin/crm/order/'+o.id+'" class="btn btn-xs btn-outline-primary" style="font-size:12px;padding:2px 10px">→</a></td>'
       +'</tr>';
   }).join('');
 }
