@@ -13,6 +13,18 @@ from pathlib import Path
 
 _UPLOADS_DIR = Path(__file__).parent.parent.parent / "static" / "uploads"
 
+# Только эти категории тянем из YML (остальные — наборы, акции, корп и т.д.)
+_ALLOWED_CATEGORY_IDS: set[str] = {
+    "259909418189",  # Белый чай
+    "335781806222",  # Зеленый чай
+    "304021293803",  # Улун
+    "339681340449",  # Черный чай
+    "498825979524",  # Пуэр
+    "950569481763",  # Ароматный черный
+    "315717479281",  # Ароматный зеленый
+    "998169255933",  # Чайные напитки
+}
+
 _TRANSLIT: dict[str, str] = {
     "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "yo",
     "ж": "zh", "з": "z", "и": "i", "й": "j", "к": "k", "л": "l", "м": "m",
@@ -45,6 +57,14 @@ def _parse_weight(text: str) -> int | None:
 def _strip_weight_suffix(name: str) -> str:
     """'Чай "Манговый Улун" - 50 г.' → 'Чай "Манговый Улун"'"""
     return re.sub(r"\s*[-–—]\s*\d+\s*г\.?\s*$", "", name).strip()
+
+
+def _strip_html(text: str) -> str:
+    """Убирает HTML-теги и лишние пробелы из описания."""
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 async def _download_image(url: str, client) -> str | None:
@@ -113,6 +133,9 @@ async def run_yml_import(import_id: int, url: str) -> None:
 
             groups: dict[str, list] = {}
             for offer in root.findall(".//offer"):
+                cat_id = (offer.findtext("categoryId") or "").strip()
+                if cat_id not in _ALLOWED_CATEGORY_IDS:
+                    continue
                 gid = offer.get("group_id") or offer.get("id", "")
                 groups.setdefault(gid, []).append(offer)
 
@@ -140,11 +163,12 @@ async def run_yml_import(import_id: int, url: str) -> None:
                         product_name = _strip_weight_suffix(raw_name) or raw_name
                         slug = _slugify(product_name)
 
-                        # ── Описание ──
-                        description = next(
+                        # ── Описание (очищаем HTML из CDATA) ──
+                        raw_desc = next(
                             (o.findtext("description", "").strip() for o in offers if o.findtext("description", "").strip()),
                             None,
                         )
+                        description = _strip_html(raw_desc) if raw_desc else None
 
                         sku = (offers[0].findtext("vendorCode") or "").strip() or None
 
@@ -166,7 +190,7 @@ async def run_yml_import(import_id: int, url: str) -> None:
                             log.append(f"[~] {product_name}")
 
                         # ── Варианты ──
-                        best_price_100g = 0.0
+                        best_price_per_gram = 0.0
                         for offer in offers:
                             weight_text = next(
                                 (p.text or "" for p in offer.findall("param") if p.get("name") == "Вес"), ""
@@ -180,7 +204,7 @@ async def run_yml_import(import_id: int, url: str) -> None:
                                 price = 0.0
 
                             if weight_g > 0:
-                                best_price_100g = max(best_price_100g, price * 100 / weight_g)
+                                best_price_per_gram = max(best_price_per_gram, price / weight_g)
 
                             variant = (await session.execute(
                                 select(ProductVariant).where(
@@ -194,7 +218,7 @@ async def run_yml_import(import_id: int, url: str) -> None:
                             else:
                                 variant.price = price
 
-                        product.base_price = best_price_100g
+                        product.base_price = best_price_per_gram
                         await session.flush()
 
                         # ── Изображения (только для новых товаров) ──
