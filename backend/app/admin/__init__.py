@@ -915,14 +915,39 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         from app.models.enums import ORDER_STATUS_VALUES
         if value not in ORDER_STATUS_VALUES:
             return _JSONResponse(status_code=400, content={"error": "Invalid status value"})
+        from datetime import UTC, datetime as _dt
         from app.db import get_session_factory
+        from sqlalchemy.orm import selectinload as _sil
+        user_telegram_id = None
         async with get_session_factory()() as session:
-            result = await session.execute(select(Order).where(Order.id == order_id))
+            result = await session.execute(
+                select(Order).options(_sil(Order.user)).where(Order.id == order_id)
+            )
             order = result.scalar_one_or_none()
             if not order:
                 return _JSONResponse(status_code=404, content={"error": "Not found"})
+            old_status = order.status
             order.status = value
+            if value == "delivered" and not order.delivered_at:
+                order.delivered_at = _dt.now(UTC)
+            if value == "in_delivery" and not order.paid_at:
+                order.paid_at = _dt.now(UTC)
+            if order.user:
+                user_telegram_id = order.user.telegram_id
+            order_number = order.number
             await session.commit()
+        # Уведомляем клиента если статус реально изменился
+        if old_status != value and user_telegram_id:
+            try:
+                import asyncio as _aio
+                from app.bot.status_notify import notify_status_changed as _notify
+                _aio.create_task(_notify(
+                    Order(id=order_id, number=order_number, status=value),
+                    value,
+                    user_telegram_id,
+                ))
+            except Exception:
+                pass
         return _JSONResponse({"ok": True})
 
     # ===== CRM ЗАКАЗА =====
@@ -1031,14 +1056,17 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             shop_link = settings.public_base_url.rstrip("/")
             try:
                 from app.bot.notify import _send_message
-                import asyncio as _asyncio
-                _asyncio.create_task(_send_message(
+                sent = await _send_message(
                     order.user.telegram_id,
                     f"Здравствуйте! 🌿\n\n"
                     f"Вы заказывали у нас: <b>{items_text}</b>\n\n"
                     f"Понравилось ли вам всё? Будем рады вашему отзыву — "
                     f"напишите нам прямо здесь или зайдите в магазин:\n{shop_link}",
-                ))
+                )
+                if sent:
+                    from datetime import UTC, datetime as _dt
+                    order.feedback_sent_at = _dt.now(UTC)
+                    await session.commit()
             except Exception:
                 pass
         return _JSONResponse({"ok": True})

@@ -90,8 +90,7 @@ async def test_create_order(client: AsyncClient, user_with_cart):
     data = resp.json()
     assert data["number"].startswith("ЧД-")
     assert data["total_amount"] == 700.0  # 350 * 2
-    assert data["status_payment"] == "pending"
-    assert data["status_delivery"] == "new"
+    assert data["status"] == "new"
     assert len(data["items"]) == 1
     assert data["items"][0]["snapshot_name"] == "Сенча"
     assert data["items"][0]["snapshot_weight_g"] == 25

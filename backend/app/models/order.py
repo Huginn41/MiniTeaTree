@@ -67,6 +67,8 @@ class Order(TimestampMixin, Base):
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Когда доставлен/выдан.
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Когда отправлен запрос обратной связи (чтобы не слать повторно).
+    feedback_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User", back_populates="orders")
     items = relationship(

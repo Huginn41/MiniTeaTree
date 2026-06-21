@@ -22,7 +22,7 @@ from app.models import (
     ProductVariant,
     User,
 )
-from app.models.enums import OrderDeliveryStatus, OrderPaymentStatus
+from app.models.enums import OrderStatus
 
 
 async def _make_user(db, telegram_id: int = 100500) -> User:
@@ -120,7 +120,7 @@ async def test_cart_one_per_user_and_items(db_session) -> None:
 
 
 async def test_order_statuses_defaults(db_session) -> None:
-    """Новый заказ получает дефолтные статусы pending / new."""
+    """Новый заказ получает статус new по умолчанию."""
     user = await _make_user(db_session)
     order = Order(
         user_id=user.id,
@@ -131,8 +131,7 @@ async def test_order_statuses_defaults(db_session) -> None:
     await db_session.commit()
     await db_session.refresh(order)
 
-    assert order.status_payment == OrderPaymentStatus.PENDING.value
-    assert order.status_delivery == OrderDeliveryStatus.NEW.value
+    assert order.status == OrderStatus.NEW.value
     assert order.delivery_cost == 0
     assert order.total_amount == 500
 

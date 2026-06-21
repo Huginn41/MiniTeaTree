@@ -44,8 +44,7 @@ async def order_with_items(db_session):
         user_id=user.id,
         number="ЧД-000200",
         total_amount=800,
-        status_payment="pending",
-        status_delivery="new",
+        status="new",
         comment="Побыстрее, пожалуйста",
     )
     db_session.add(order)
@@ -137,7 +136,7 @@ async def test_order_notification_called_on_create(client: AsyncClient, db_sessi
         json={"delivery_type": "pickup"},
     )
     assert resp.status_code == 201
-    assert resp.json()["status_payment"] == "pending"
+    assert resp.json()["status"] == "new"
 
 
 # ---------- bot webhook ----------

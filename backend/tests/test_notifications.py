@@ -41,8 +41,7 @@ async def admin_and_order(db_session):
         user_id=customer.id,
         number="ЧД-000300",
         total_amount=900,
-        status_payment="paid",
-        status_delivery="new",
+        status="new",
     )
     db_session.add(order)
     await db_session.flush()
@@ -64,10 +63,10 @@ async def test_update_status_ok(client: AsyncClient, admin_and_order):
     resp = await client.patch(
         f"/api/orders/{order.number}/status",
         headers=_auth(admin),
-        json={"status_delivery": "shipping"},
+        json={"status": "in_delivery"},
     )
     assert resp.status_code == 200
-    assert resp.json()["status_delivery"] == "shipping"
+    assert resp.json()["status"] == "in_delivery"
 
 
 async def test_update_status_delivered_sets_timestamp(client: AsyncClient, admin_and_order, db_session):
@@ -78,7 +77,7 @@ async def test_update_status_delivered_sets_timestamp(client: AsyncClient, admin
     resp = await client.patch(
         f"/api/orders/{order.number}/status",
         headers=_auth(admin),
-        json={"status_delivery": "delivered"},
+        json={"status": "delivered"},
     )
     assert resp.status_code == 200
     assert resp.json()["delivered_at"] is not None
@@ -92,7 +91,7 @@ async def test_update_status_non_admin_forbidden(client: AsyncClient, admin_and_
     resp = await client.patch(
         f"/api/orders/{order.number}/status",
         headers=_auth(customer),
-        json={"status_delivery": "shipping"},
+        json={"status": "in_delivery"},
     )
     assert resp.status_code == 403
 
@@ -105,7 +104,7 @@ async def test_update_status_invalid_value(client: AsyncClient, admin_and_order)
     resp = await client.patch(
         f"/api/orders/{order.number}/status",
         headers=_auth(admin),
-        json={"status_delivery": "invalid_status"},
+        json={"status": "invalid_status"},
     )
     assert resp.status_code == 400
 
@@ -117,7 +116,7 @@ async def test_update_status_not_found(client: AsyncClient, admin_and_order):
     resp = await client.patch(
         "/api/orders/ЧД-999999/status",
         headers=_auth(admin),
-        json={"status_delivery": "shipping"},
+        json={"status": "in_delivery"},
     )
     assert resp.status_code == 404
 
@@ -125,7 +124,7 @@ async def test_update_status_not_found(client: AsyncClient, admin_and_order):
 async def test_update_status_unauthorized(client: AsyncClient, admin_and_order):
     resp = await client.patch(
         f"/api/orders/{admin_and_order['order'].number}/status",
-        json={"status_delivery": "shipping"},
+        json={"status": "in_delivery"},
     )
     assert resp.status_code == 401
 
@@ -137,8 +136,8 @@ async def test_status_notify_skips_fake_token():
     from app.bot.status_notify import notify_status_changed
     from app.models.order import Order
 
-    order = Order(id=1, number="ЧД-000001", total_amount=500, status_payment="paid", status_delivery="shipping")
-    result = await notify_status_changed(order, "shipping", 123456)
+    order = Order(id=1, number="ЧД-000001", total_amount=500, status="in_delivery")
+    result = await notify_status_changed(order, "in_delivery", 123456)
     assert result is False
 
 
@@ -147,6 +146,6 @@ async def test_status_notify_unknown_status():
     from app.bot.status_notify import notify_status_changed
     from app.models.order import Order
 
-    order = Order(id=2, number="ЧД-000002", total_amount=500, status_payment="paid", status_delivery="new")
+    order = Order(id=2, number="ЧД-000002", total_amount=500, status="new")
     result = await notify_status_changed(order, "some_future_status", 123456)
     assert result is False

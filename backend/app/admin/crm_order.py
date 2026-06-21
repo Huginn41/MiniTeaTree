@@ -227,16 +227,18 @@ def _delivered_card(order, now: datetime) -> str:
         delta = now - delivered_at.replace(tzinfo=timezone.utc)
         days_since = delta.days
 
+    feedback_sent = bool(getattr(order, "feedback_sent_at", None))
     feedback_disabled = days_since < 3
-    items_text = ", ".join(
-        f"{oi.snapshot_name} {oi.snapshot_weight_g}г" for oi in (order.items or [])
-    )
+
     body = (
         '<p class="crm-hint">🎉 Заказ успешно доставлен!</p>'
         '<div class="crm-divider"></div>'
         '<p class="crm-hint" style="font-weight:600">Обратная связь</p>'
     )
-    if feedback_disabled:
+    if feedback_sent:
+        body += '<p class="crm-hint">✅ Запрос обратной связи уже отправлен клиенту.</p>'
+        body += _btn("💬 Запросить обратную связь", "", "secondary", disabled=True)
+    elif feedback_disabled:
         days_left = 3 - days_since
         body += (
             f'<p class="crm-hint">Кнопка станет активной через {days_left} д. '
