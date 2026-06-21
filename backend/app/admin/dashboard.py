@@ -737,11 +737,13 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
 
   <!-- Пункты самовывоза -->
   <div class="about-section">
-    <div class="about-section-title">Пункты самовывоза</div>
-    <p style="font-size:13px;color:#6c757d;margin-bottom:12px">Пункты самовывоза редактируются в отдельном разделе:</p>
-    <a href="/admin/pickup-point/list" class="btn btn-outline-secondary btn-sm">
-      <i class="fa-solid fa-location-dot me-1"></i>Управление пунктами самовывоза →
-    </a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="about-section-title mb-0">Пункты самовывоза</div>
+      <button class="btn btn-sm btn-outline-primary" onclick="addPickupPoint()">
+        <i class="fa-solid fa-plus me-1"></i>Добавить
+      </button>
+    </div>
+    <div id="pickup-list"></div>
   </div>
 
 </div>
@@ -896,6 +898,107 @@ async function saveAll() {
   }
 }
 
+// ---- Пункты самовывоза ----
+function renderPickupPoints(items) {
+  var list = document.getElementById('pickup-list');
+  list.innerHTML = '';
+  if (!items.length) {
+    list.innerHTML = '<p class="text-muted" style="font-size:13px">Нет пунктов. Нажмите «Добавить».</p>';
+    return;
+  }
+  items.forEach(function(p) {
+    var div = document.createElement('div');
+    div.className = 'faq-item-row';
+    div.dataset.id = p.id;
+    var addr = [p.city, p.street, p.building ? 'д. '+p.building : ''].filter(Boolean).join(', ') || p.address || '—';
+    div.innerHTML =
+      '<div class="faq-item-header" onclick="toggleFaq(this)">' +
+        '<span class="drag-handle">⠿</span>' +
+        '<span class="faq-question-text">' + esc(p.name) + ' — ' + esc(addr) + '</span>' +
+        '<button class="btn btn-sm btn-outline-danger ms-auto" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();deletePickup(' + p.id + ',this.closest(\'.faq-item-row\'))">Удалить</button>' +
+      '</div>' +
+      '<div class="faq-item-body">' + pickupForm(p) + '</div>';
+    list.appendChild(div);
+  });
+}
+
+function pickupForm(p) {
+  p = p || {};
+  return '<div class="row g-2">' +
+    '<div class="col-md-4"><label class="form-label">Название</label><input class="form-control pp-name" value="' + esc(p.name||'') + '"></div>' +
+    '<div class="col-md-4"><label class="form-label">Город</label><input class="form-control pp-city" value="' + esc(p.city||'') + '"></div>' +
+    '<div class="col-md-4"><label class="form-label">Улица</label><input class="form-control pp-street" value="' + esc(p.street||'') + '"></div>' +
+    '<div class="col-md-3"><label class="form-label">Дом</label><input class="form-control pp-building" value="' + esc(p.building||'') + '"></div>' +
+    '<div class="col-md-3"><label class="form-label">Телефон</label><input class="form-control pp-phone" value="' + esc(p.phone||'') + '"></div>' +
+    '<div class="col-md-6"><label class="form-label">Режим работы</label><input class="form-control pp-hours" value="' + esc(p.work_hours||'') + '" placeholder="Пн-Пт 10:00–20:00"></div>' +
+    '<div class="col-12"><label class="form-label">Комментарий / как найти</label><input class="form-control pp-comment" value="' + esc(p.comment||'') + '"></div>' +
+    '<div class="col-12"><label class="form-label">Ссылка на Яндекс-карту (src из виджета)</label><input class="form-control pp-map" value="' + esc(p.map_embed_src||'') + '" placeholder="https://yandex.ru/map-widget/v1/?..."></div>' +
+    '</div>' +
+    '<div class="d-flex gap-2 mt-3">' +
+      '<button class="btn btn-sm btn-primary" onclick="savePickup(this.closest(\'.faq-item-row\'))">Сохранить</button>' +
+      '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaq(this.closest(\'.faq-item-row\').querySelector(\'.faq-item-header\'))">Отмена</button>' +
+    '</div>';
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function addPickupPoint() {
+  var list = document.getElementById('pickup-list');
+  var empty = list.querySelector('.text-muted');
+  if (empty) empty.remove();
+  var div = document.createElement('div');
+  div.className = 'faq-item-row';
+  div.dataset.id = '';
+  div.innerHTML =
+    '<div class="faq-item-header" onclick="toggleFaq(this)">' +
+      '<span class="faq-question-text">Новый пункт самовывоза</span>' +
+    '</div>' +
+    '<div class="faq-item-body open">' + pickupForm({}) + '</div>';
+  list.appendChild(div);
+  div.querySelector('.pp-name').focus();
+}
+
+async function savePickup(row) {
+  var id = row.dataset.id;
+  var data = {
+    name: row.querySelector('.pp-name').value.trim(),
+    city: row.querySelector('.pp-city').value.trim(),
+    street: row.querySelector('.pp-street').value.trim(),
+    building: row.querySelector('.pp-building').value.trim(),
+    phone: row.querySelector('.pp-phone').value.trim(),
+    work_hours: row.querySelector('.pp-hours').value.trim(),
+    comment: row.querySelector('.pp-comment').value.trim(),
+    map_embed_src: row.querySelector('.pp-map').value.trim(),
+  };
+  if (!data.name) { alert('Введите название'); return; }
+  var btn = row.querySelector('.btn-primary');
+  btn.disabled = true; btn.textContent = 'Сохраняем…';
+  try {
+    var resp;
+    if (id) {
+      resp = await fetch('/admin-api/pickup-points/'+id, {method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    } else {
+      resp = await fetch('/admin-api/pickup-points', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    }
+    if (!resp.ok) throw new Error('Ошибка сервера');
+    var d = await resp.json();
+    row.dataset.id = d.id;
+    var addr = [d.city, d.street, d.building ? 'д.'+d.building : ''].filter(Boolean).join(', ') || '—';
+    row.querySelector('.faq-question-text').textContent = d.name + ' — ' + addr;
+    row.querySelector('.faq-item-body').classList.remove('open');
+    btn.disabled = false; btn.textContent = 'Сохранить';
+  } catch(e) { btn.disabled = false; btn.textContent = 'Сохранить'; alert('Ошибка: ' + e.message); }
+}
+
+async function deletePickup(id, row) {
+  if (!confirm('Удалить пункт самовывоза?')) return;
+  if (id) {
+    var r = await fetch('/admin-api/pickup-points/'+id, {method:'DELETE', credentials:'include'});
+    if (!r.ok) { alert('Ошибка удаления'); return; }
+  }
+  row.remove();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   fetch('/admin-api/about', {credentials:'include'})
     .then(function(r){ return r.json(); })
@@ -908,13 +1011,14 @@ document.addEventListener('DOMContentLoaded', function() {
         var img = document.getElementById('banner-img');
         img.src = d.banner_image_path; img.style.display = 'block';
         document.getElementById('remove-banner-btn').style.display = 'inline-flex';
-      } else {
-        initDescEditor('');
       }
     });
   fetch('/admin-api/faq', {credentials:'include'})
     .then(function(r){ return r.json(); })
     .then(function(d){ renderFaq(d); });
+  fetch('/admin-api/pickup-points', {credentials:'include'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){ renderPickupPoints(d); });
 });
 </script>
 </body>
@@ -1040,7 +1144,7 @@ def setup_dashboard(app: FastAPI) -> None:
         if not file:
             return JSONResponse(status_code=400, content={"error": "no file"})
         ext = Path(file.filename).suffix.lower() or ".jpg"
-        media_dir = Path("/app/app/static/media")
+        media_dir = Path("/app/static/media")
         media_dir.mkdir(parents=True, exist_ok=True)
         fname = f"{uuid.uuid4().hex}{ext}"
         dest = media_dir / fname
@@ -1097,5 +1201,87 @@ def setup_dashboard(app: FastAPI) -> None:
         from app.models.content import FaqItem
         async with get_session_factory()() as s:
             await s.execute(delete(FaqItem).where(FaqItem.id == faq_id))
+            await s.commit()
+        return JSONResponse({"ok": True})
+
+    # ---- Pickup points CRUD ----
+
+    def _pp_dict(p) -> dict:
+        return {"id": p.id, "name": p.name, "city": p.city, "street": p.street,
+                "building": p.building, "address": p.address, "work_hours": p.work_hours,
+                "comment": p.comment, "phone": p.phone, "map_embed_src": p.map_embed_src,
+                "is_active": p.is_active, "sort_order": p.sort_order}
+
+    @app.get("/admin-api/pickup-points", include_in_schema=False)
+    async def pp_list(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from sqlalchemy import select
+        from app.db import get_session_factory
+        from app.models.content import PickupPoint
+        async with get_session_factory()() as s:
+            r = await s.execute(select(PickupPoint).order_by(PickupPoint.sort_order, PickupPoint.id))
+            return JSONResponse([_pp_dict(p) for p in r.scalars().all()])
+
+    @app.post("/admin-api/pickup-points", include_in_schema=False)
+    async def pp_create(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from app.models.content import PickupPoint
+        body = await request.json()
+        async with get_session_factory()() as s:
+            city = body.get("city", "")
+            street = body.get("street", "")
+            building = body.get("building", "")
+            parts = [x for x in [city, street, ("д. "+building if building else "")] if x]
+            address = ", ".join(parts) if parts else ""
+            p = PickupPoint(
+                name=body.get("name", ""),
+                city=city, street=street, building=building, address=address,
+                work_hours=body.get("work_hours") or None,
+                comment=body.get("comment") or None,
+                phone=body.get("phone") or None,
+                map_embed_src=body.get("map_embed_src") or None,
+                is_active=True, sort_order=0,
+            )
+            s.add(p)
+            await s.commit()
+            await s.refresh(p)
+            return JSONResponse(_pp_dict(p))
+
+    @app.patch("/admin-api/pickup-points/{pp_id}", include_in_schema=False)
+    async def pp_update(pp_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from sqlalchemy import select
+        from app.db import get_session_factory
+        from app.models.content import PickupPoint
+        body = await request.json()
+        async with get_session_factory()() as s:
+            r = await s.execute(select(PickupPoint).where(PickupPoint.id == pp_id))
+            p = r.scalar_one_or_none()
+            if not p:
+                return JSONResponse(status_code=404, content={"error": "not found"})
+            for field in ("name", "city", "street", "building", "work_hours", "comment", "phone", "map_embed_src"):
+                if field in body:
+                    setattr(p, field, body[field] or None if field != "name" else body[field])
+            city = p.city or ""
+            street = p.street or ""
+            building = p.building or ""
+            parts = [x for x in [city, street, ("д. "+building if building else "")] if x]
+            p.address = ", ".join(parts) if parts else p.address
+            await s.commit()
+            return JSONResponse(_pp_dict(p))
+
+    @app.delete("/admin-api/pickup-points/{pp_id}", include_in_schema=False)
+    async def pp_delete(pp_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from sqlalchemy import delete
+        from app.db import get_session_factory
+        from app.models.content import PickupPoint
+        async with get_session_factory()() as s:
+            await s.execute(delete(PickupPoint).where(PickupPoint.id == pp_id))
             await s.commit()
         return JSONResponse({"ok": True})
