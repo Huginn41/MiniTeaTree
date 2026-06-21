@@ -1012,13 +1012,18 @@ document.addEventListener('DOMContentLoaded', function() {
         img.src = d.banner_image_path; img.style.display = 'block';
         document.getElementById('remove-banner-btn').style.display = 'inline-flex';
       }
-    });
+    })
+    .catch(function(e){ console.error('about load error:', e); initDescEditor(''); });
+
   fetch('/admin-api/faq', {credentials:'include'})
     .then(function(r){ return r.json(); })
-    .then(function(d){ renderFaq(d); });
+    .then(function(d){ renderFaq(d); })
+    .catch(function(e){ console.error('faq load error:', e); renderFaq([]); });
+
   fetch('/admin-api/pickup-points', {credentials:'include'})
     .then(function(r){ return r.json(); })
-    .then(function(d){ renderPickupPoints(d); });
+    .then(function(d){ renderPickupPoints(d); })
+    .catch(function(e){ console.error('pickup load error:', e); renderPickupPoints([]); });
 });
 </script>
 </body>
@@ -1144,7 +1149,7 @@ def setup_dashboard(app: FastAPI) -> None:
         if not file:
             return JSONResponse(status_code=400, content={"error": "no file"})
         ext = Path(file.filename).suffix.lower() or ".jpg"
-        media_dir = Path("/app/static/media")
+        media_dir = Path("/app/app/static/media")
         media_dir.mkdir(parents=True, exist_ok=True)
         fname = f"{uuid.uuid4().hex}{ext}"
         dest = media_dir / fname
