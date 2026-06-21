@@ -1971,8 +1971,9 @@
       this.setHeader('О нас');
       c.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:40px 0"><div style="width:32px;height:32px;border:3px solid var(--md-primary);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></div></div>`;
 
-      let points = [];
+      let points = [], faq = [];
       try { points = await api('/info/pickup-points'); } catch(_) {}
+      try { faq = await api('/info/faq'); } catch(_) {}
 
       const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
@@ -2057,6 +2058,33 @@
             Пункты самовывоза
           </p>
           ${points.map(pointCard).join('')}
+          ` : ''}
+
+          <!-- FAQ -->
+          ${faq.length ? `
+          <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">
+            Часто задаваемые вопросы
+          </p>
+          <div id="faq-list">
+            ${faq.map((f, i) => `
+            <div class="faq-item" style="background:var(--md-surface-container-low);border-radius:14px;margin-bottom:8px;overflow:hidden">
+              <button onclick="(function(btn){
+                var body=btn.closest('.faq-item').querySelector('.faq-body');
+                var arrow=btn.querySelector('.faq-arrow');
+                var open=body.style.display!=='none';
+                document.querySelectorAll('.faq-body').forEach(function(b){b.style.display='none';});
+                document.querySelectorAll('.faq-arrow').forEach(function(a){a.style.transform='';});
+                if(!open){body.style.display='block';arrow.style.transform='rotate(180deg)';}
+              })(this)"
+                style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:15px 16px;background:none;border:none;cursor:pointer;text-align:left;gap:12px">
+                <span style="font-size:14px;font-weight:600;color:var(--md-on-surface);line-height:1.4">${esc(f.question)}</span>
+                <span class="faq-arrow" style="flex-shrink:0;font-size:18px;color:var(--md-primary);transition:transform .25s;${i===0?'transform:rotate(180deg)':''}">⌄</span>
+              </button>
+              <div class="faq-body" style="padding:0 16px 15px;display:${i===0?'block':'none'}">
+                <p style="font-size:13.5px;color:var(--md-on-surface-variant);line-height:1.65;margin:0">${esc(f.answer)}</p>
+              </div>
+            </div>`).join('')}
+          </div>
           ` : ''}
 
         </div>`;
