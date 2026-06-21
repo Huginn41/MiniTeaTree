@@ -67,17 +67,30 @@ def _strip_html(text: str) -> str:
     return text.strip()
 
 
+_MAX_IMAGE_PX = 900  # максимальная сторона после ресайза
+
+
+def _save_as_webp(data: bytes, dest: Path) -> None:
+    """Конвертирует изображение в WebP, ресайзит до _MAX_IMAGE_PX px по длинной стороне."""
+    from PIL import Image
+    import io
+    img = Image.open(io.BytesIO(data))
+    img = img.convert("RGB")
+    w, h = img.size
+    if max(w, h) > _MAX_IMAGE_PX:
+        ratio = _MAX_IMAGE_PX / max(w, h)
+        img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+    img.save(dest, "WEBP", quality=82, method=4)
+
+
 async def _download_image(url: str, client) -> str | None:
     try:
         r = await client.get(url, timeout=20, follow_redirects=True)
         if r.status_code != 200:
             return None
-        ext = url.rsplit(".", 1)[-1].split("?")[0].lower()[:5]
-        if ext not in {"jpg", "jpeg", "png", "webp", "gif"}:
-            ext = "jpg"
-        name = f"{uuid.uuid4().hex}.{ext}"
+        name = f"{uuid.uuid4().hex}.webp"
         _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-        (_UPLOADS_DIR / name).write_bytes(r.content)
+        _save_as_webp(r.content, _UPLOADS_DIR / name)
         return f"/static/media/uploads/{name}"
     except Exception:
         return None

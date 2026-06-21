@@ -723,18 +723,25 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     from fastapi.responses import JSONResponse as _JSONResponse
 
     _UPLOADS_DIR = Path(__file__).parent.parent / "static" / "media" / "uploads"
+    _MAX_IMAGE_PX = 900
+
+    def _to_webp(data: bytes, dest: Path) -> None:
+        from PIL import Image
+        import io as _bio
+        img = Image.open(_bio.BytesIO(data)).convert("RGB")
+        w, h = img.size
+        if max(w, h) > _MAX_IMAGE_PX:
+            r = _MAX_IMAGE_PX / max(w, h)
+            img = img.resize((int(w * r), int(h * r)), Image.LANCZOS)
+        img.save(dest, "WEBP", quality=82, method=4)
 
     @app.post("/admin-api/upload")
     async def admin_upload(request: Request, file: UploadFile = _File(...)):
         if request.session.get("admin_token") != "authenticated":
             return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
         _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-        ext = os.path.splitext(file.filename or "")[1].lower()
-        if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
-            ext = ".jpg"
-        name = f"{_uuid.uuid4().hex}{ext}"
-        with open(_UPLOADS_DIR / name, "wb") as f:
-            shutil.copyfileobj(file.file, f)
+        name = f"{_uuid.uuid4().hex}.webp"
+        _to_webp(await file.read(), _UPLOADS_DIR / name)
         return _JSONResponse({"path": f"/static/media/uploads/{name}"})
 
     @app.get("/admin-api/product/{product_id}/images")
@@ -756,12 +763,8 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         if request.session.get("admin_token") != "authenticated":
             return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
         _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-        ext = os.path.splitext(file.filename or "")[1].lower()
-        if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
-            ext = ".jpg"
-        name = f"{_uuid.uuid4().hex}{ext}"
-        with open(_UPLOADS_DIR / name, "wb") as f:
-            shutil.copyfileobj(file.file, f)
+        name = f"{_uuid.uuid4().hex}.webp"
+        _to_webp(await file.read(), _UPLOADS_DIR / name)
         path = f"/static/media/uploads/{name}"
         from app.db import get_session_factory
         from app.models.product import ProductImage

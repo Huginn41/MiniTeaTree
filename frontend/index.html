@@ -1349,7 +1349,7 @@
       const navHide = n <= 1 ? ' style="display:none"' : '';
       lb.innerHTML = `
         <div class="lb-track">
-          ${images.map(img => `<img src="${img.path}" alt="" draggable="false"/>`).join('')}
+          ${images.map((img, i) => `<img src="${img.path}" alt="" draggable="false" loading="${i===0?'eager':'lazy'}"/>`).join('')}
         </div>
         <button class="lb-close" aria-label="Закрыть">
           <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
@@ -1437,7 +1437,7 @@
             html += `
               <div class="cart-item">
                 <div class="cart-item-img">
-                  ${item.main_image ? `<img src="${item.main_image}" alt="${esc(item.product_name)}"/>` : '🍵'}
+                  ${item.main_image ? `<img src="${item.main_image}" alt="${esc(item.product_name)}" loading="lazy"/>` : '🍵'}
                 </div>
                 <div style="flex:1;min-width:0">
                   <p style="font-size:14px;font-weight:600;color:var(--md-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(item.product_name)}</p>
