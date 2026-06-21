@@ -1,7 +1,8 @@
-"""Уведомления клиентам при смене статуса доставки.
+"""Уведомления клиентам при смене статуса заказа.
 
 Вызывается из PATCH /api/orders/{number}/status (endpoint для менеджера).
-Шлёт сообщение напрямую клиенту (telegram_id из users) через Bot API.
+Некоторые статусы не шлют авто-уведомление (awaiting_payment, assembling, new)
+— они обрабатываются отдельной логикой в handlers.py.
 """
 
 from __future__ import annotations
@@ -13,38 +14,50 @@ from app.models.order import Order
 
 log = get_logger("app.bot.status_notify")
 
-# Текстовые метки и эмодзи для каждого статуса доставки
-_STATUS_MESSAGES: dict[str, str] = {
-    "new": "📋 Ваш заказ {number} получен и ждёт обработки.",
-    "manager_contacted": "👋 Менеджер принял заказ {number} и скоро свяжется с вами.",
-    "awaiting_delivery_payment": (
-        "💳 Для завершения заказа {number} оплатите доставку по ссылке от менеджера."
+# Авто-уведомления для статусов. None = не слать клиенту (обрабатывается вручную).
+_STATUS_MESSAGES: dict[str, str | None] = {
+    "new": None,
+    "assembling": None,
+    "awaiting_payment": None,  # клиент получает сообщение с ссылкой через FSM-флоу
+    "ready": (
+        "✅ <b>Ваш заказ {number} готов!</b>\n\n"
+        "Приходите забрать в наш магазин 🍵\n"
+        "Если будут вопросы — напишите нам."
     ),
-    "delivery_paid": "✅ Оплата доставки по заказу {number} подтверждена. Готовим к отправке.",
-    "shipping": "🚚 Заказ {number} отправлен и уже в пути!",
-    "delivered": "🎉 Заказ {number} доставлен. Спасибо, что выбрали Чайное Дерево! 🌿",
-    "cancelled": "❌ Заказ {number} отменён. Если есть вопросы — напишите менеджеру.",
+    "in_delivery": (
+        "🚚 <b>Заказ {number} передан в доставку!</b>\n\n"
+        "Скоро он будет у вас. Мы сообщим, когда заказ прибудет в пункт выдачи."
+    ),
+    "at_pvz": (
+        "📦 <b>Ваш заказ {number} в пункте выдачи!</b>\n\n"
+        "Поторопитесь забрать — заказ ждёт вас 🏪"
+    ),
+    "delivered": (
+        "🎉 <b>Заказ {number} доставлен!</b>\n\n"
+        "Спасибо, что выбрали Чайное Дерево 🌿\n"
+        "Приятного чаепития!"
+    ),
+    "cancelled": "❌ Заказ {number} отменён. Если есть вопросы — напишите нам.",
 }
 
 
 async def notify_status_changed(order: Order, new_status: str, user_telegram_id: int) -> bool:
-    """Отправляет клиенту уведомление о смене статуса доставки.
+    """Отправляет клиенту уведомление о смене статуса.
 
-    Возвращает True если сообщение отправлено, False при ошибке или отсутствии токена.
+    Возвращает True если сообщение отправлено, False если статус без авто-уведомления.
     """
     from app.config import get_settings
+
+    template = _STATUS_MESSAGES.get(new_status)
+    if not template:
+        return False
 
     settings = get_settings()
     token = settings.bot_token.get_secret_value()
     if not token or token == "0:fake":
         return False
 
-    template = _STATUS_MESSAGES.get(new_status)
-    if not template:
-        return False
-
     text = template.format(number=order.number)
-
     base = settings.telegram_api_base_url.rstrip("/") if settings.telegram_api_base_url else "https://api.telegram.org"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:

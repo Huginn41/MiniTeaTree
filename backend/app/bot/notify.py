@@ -24,7 +24,6 @@ _NOTIFY_ROLES = {"shop", "owner", "manager"}
 
 
 def _order_text(order: Order) -> str:
-    """Форматирует текст уведомления о новом заказе."""
     lines = [
         f"🛒 <b>Новый заказ {order.number}</b>",
         f"💰 Сумма: {float(order.total_amount):.0f} ₽",
@@ -35,15 +34,15 @@ def _order_text(order: Order) -> str:
         type_label = {"pickup": "Самовывоз", "courier": "Курьер", "pvz": "ПВЗ"}.get(di.type, di.type)
         lines.append(f"🚚 Доставка: {type_label}")
         if di.address:
-            lines.append(f"📍 Адрес: {di.address}")
+            lines.append(f"📍 {di.address}")
         if di.contact_phone:
-            lines.append(f"📞 Телефон: {di.contact_phone}")
+            lines.append(f"📞 {di.contact_phone}")
 
     if order.items:
         lines.append("")
         lines.append("📦 Состав:")
         for oi in order.items:
-            lines.append(f"  • {oi.snapshot_name} {oi.snapshot_weight_g}г × {oi.quantity} шт.")
+            lines.append(f"  • {oi.snapshot_name} {oi.snapshot_weight_g}г × {oi.quantity}")
 
     if order.comment:
         lines.append(f"\n💬 {order.comment}")
@@ -51,23 +50,35 @@ def _order_text(order: Order) -> str:
     return "\n".join(lines)
 
 
-async def _send_message(chat_id: int, text: str) -> bool:
+def _order_keyboard(order: Order) -> dict:
+    """Inline-клавиатура для уведомления о новом заказе."""
+    settings = get_settings()
+    base = settings.public_base_url.rstrip("/")
+    is_delivery = order.delivery_info and order.delivery_info.type != "pickup"
+
+    row = [{"text": "🔍 Открыть в CRM", "url": f"{base}/admin/order/edit/{order.id}"}]
+    if is_delivery:
+        row.append({"text": "💳 Ссылка на оплату", "callback_data": f"pay_link:{order.id}"})
+
+    return {"inline_keyboard": [row]}
+
+
+async def _send_message(chat_id: int, text: str, reply_markup: dict | None = None) -> bool:
     """Отправляет Telegram-сообщение. Возвращает True при успехе."""
     settings = get_settings()
     token = settings.bot_token.get_secret_value()
     if not token or token == "0:fake":
         return False
 
-    # Используем Cloudflare Worker прокси если задан (Selectel блокирует api.telegram.org)
     base = settings.telegram_api_base_url.rstrip("/") if settings.telegram_api_base_url else "https://api.telegram.org"
     url = f"{base}/bot{token}/sendMessage"
+    payload: dict = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(url, json={
-                "chat_id": chat_id,
-                "text": text,
-                "parse_mode": "HTML",
-            })
+            resp = await client.post(url, json=payload)
         if not resp.json().get("ok"):
             log.warning("telegram_send_failed", chat_id=chat_id, resp=resp.json())
             return False
@@ -78,10 +89,7 @@ async def _send_message(chat_id: int, text: str) -> bool:
 
 
 async def notify_new_order(order: Order, session: AsyncSession) -> int:
-    """Уведомляет всех активных менеджеров о новом заказе.
-
-    Возвращает количество успешно отправленных сообщений.
-    """
+    """Уведомляет всех активных менеджеров о новом заказе с кнопками."""
     stmt = select(NotificationTarget).where(
         NotificationTarget.is_active.is_(True),
         NotificationTarget.role.in_(_NOTIFY_ROLES),
@@ -94,9 +102,10 @@ async def notify_new_order(order: Order, session: AsyncSession) -> int:
         return 0
 
     text = _order_text(order)
+    keyboard = _order_keyboard(order)
     sent = 0
     for target in targets:
-        if await _send_message(target.telegram_id, text):
+        if await _send_message(target.telegram_id, text, reply_markup=keyboard):
             sent += 1
 
     log.info("order_notifications_sent", order_number=order.number, sent=sent, total=len(targets))
