@@ -438,6 +438,18 @@
       line-height: 1.25;
       text-shadow: 0 1px 3px rgba(0,0,0,0.55);
     }
+    .cat-show-more {
+      grid-column: 1 / -1;
+      background: var(--md-surface-container);
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 11px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--md-primary);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
 
     /* ===== Product Cards ===== */
     .products-scroll {
@@ -1175,15 +1187,26 @@
         <h2>Категории</h2>
         <a onclick="App.navigate('catalog')">Все →</a>
       </div>`;
+      const catTile = cat => `
+        <button class="category-tile" onclick="App.navigate('catalog', '${cat.slug}')">
+          ${cat.image_path
+            ? `<img class="cat-bg" src="${cat.image_path}" alt="${esc(cat.name)}" loading="lazy"/>`
+            : `<div class="cat-emoji">${cat.icon || '🍃'}</div>`}
+          <span>${esc(cat.name)}</span>
+        </button>`;
+      const catsVisible = cats.slice(0, 3);
+      const catsHidden  = cats.slice(3);
       html += `<div class="category-grid">
-        ${cats.map(cat => `
-          <button class="category-tile" onclick="App.navigate('catalog', '${cat.slug}')">
-            ${cat.image_path
-              ? `<img class="cat-bg" src="${cat.image_path}" alt="${esc(cat.name)}" loading="lazy"/>`
-              : `<div class="cat-emoji">${cat.icon || '🍃'}</div>`}
-            <span>${esc(cat.name)}</span>
-          </button>
-        `).join('')}
+        ${catsVisible.map(catTile).join('')}
+        ${catsHidden.length ? `
+          <div id="cats-hidden" style="display:contents">
+            ${catsHidden.map(catTile).join('')}
+          </div>
+          <button class="cat-show-more" id="cats-more-btn" onclick="
+            document.getElementById('cats-hidden').style.display='contents';
+            this.remove();
+          ">Показать ещё (${catsHidden.length})</button>
+        ` : ''}
       </div>`;
 
       // Popular
