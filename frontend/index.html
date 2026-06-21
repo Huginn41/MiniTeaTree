@@ -790,14 +790,14 @@
       font-weight: 600;
       letter-spacing: 0.2px;
     }
-    .status-badge.pending    { background: #FFF3E0; color: #E65100; }
-    .status-badge.paid       { background: #E8F5E9; color: #2E7D32; }
-    .status-badge.failed     { background: var(--md-error-container); color: var(--md-error); }
-    .status-badge.cancelled  { background: var(--md-surface-container); color: var(--md-on-surface-variant); }
-    .status-badge.refunded   { background: #E3F2FD; color: #1565C0; }
-    .status-badge.new        { background: #E8EAF6; color: #3949AB; }
-    .status-badge.shipping   { background: #F3E5F5; color: #7B1FA2; }
-    .status-badge.delivered  { background: #E8F5E9; color: #2E7D32; }
+    .status-badge.new              { background: #E8EAF6; color: #3949AB; }
+    .status-badge.assembling       { background: #FFF8E1; color: #E65100; }
+    .status-badge.ready            { background: #E8F5E9; color: #2E7D32; }
+    .status-badge.awaiting_payment { background: #FFF3E0; color: #E65100; }
+    .status-badge.in_delivery      { background: #F3E5F5; color: #7B1FA2; }
+    .status-badge.at_pvz           { background: #E3F2FD; color: #1565C0; }
+    .status-badge.delivered        { background: #E8F5E9; color: #2E7D32; }
+    .status-badge.cancelled        { background: var(--md-surface-container); color: var(--md-on-surface-variant); }
 
     /* ===== Profile Avatar ===== */
     .avatar-circle {
@@ -1584,7 +1584,7 @@
                     <p style="font-size:14px;font-weight:700;color:var(--md-on-surface)">${o.number}</p>
                     <p style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${fmtDate(o.created_at)} · ${o.items_count} шт. · ${fmtPrice(o.total_amount)} ₽</p>
                   </div>
-                  <span class="status-badge ${o.status_payment}">${_payLabel(o.status_payment)}</span>
+                  <span class="status-badge ${o.status}">${_statusLabel(o.status)}</span>
                   <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--md-outline);flex-shrink:0">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                   </svg>
@@ -1691,21 +1691,27 @@
       const o = await api(`/orders/${orderNumber}`);
 
       const delivLabel = { pickup: 'Самовывоз', courier: 'Курьер', pvz: 'Пункт выдачи' };
+      const isPickup = o.delivery_info?.type === 'pickup';
 
-      // Шаги процесса: показываем прогресс заказа
-      const steps = [
-        { key: 'new',      label: 'Заказ принят' },
-        { key: 'shipping', label: 'В пути' },
-        { key: 'delivered', label: 'Доставлен' },
+      // Шаги для самовывоза и доставки
+      const stepsDelivery = [
+        { key: 'new',              label: 'Заказ принят' },
+        { key: 'awaiting_payment', label: 'Ожидает оплату' },
+        { key: 'in_delivery',      label: 'В пути' },
+        { key: 'at_pvz',           label: 'В пункте выдачи' },
+        { key: 'delivered',        label: 'Доставлен' },
       ];
-      const _stepMap = {
-        new: 0, manager_contacted: 0,
-        awaiting_delivery_payment: 0, delivery_paid: 0,
-        shipping: 1, delivered: 2,
-      };
-      const isDelivered = o.status_delivery === 'delivered';
-      const currentStepIdx = _stepMap[o.status_delivery] ?? 0;
-      const isCancelled = o.status_delivery === 'cancelled';
+      const stepsPickup = [
+        { key: 'new',       label: 'Заказ принят' },
+        { key: 'assembling', label: 'Собираем' },
+        { key: 'ready',     label: 'Готов к выдаче' },
+        { key: 'delivered', label: 'Получен' },
+      ];
+      const steps = isPickup ? stepsPickup : stepsDelivery;
+      const stepKeys = steps.map(s => s.key);
+      const isDelivered = o.status === 'delivered';
+      const currentStepIdx = Math.max(0, stepKeys.indexOf(o.status));
+      const isCancelled = o.status === 'cancelled';
 
       let progressHtml = '';
       if (isCancelled) {
@@ -1733,27 +1739,27 @@
         </div>`;
       }
 
-      // Ссылка на оплату доставки от менеджера
-      const paymentLinkHtml = o.delivery_info?.ym_payment_link ? `
+      // Ссылка на оплату от менеджера
+      const paymentLinkHtml = o.payment_link ? `
         <div style="background:var(--md-primary-container);border-radius:var(--radius-md);padding:16px;margin-bottom:12px">
-          <p style="font-size:12px;font-weight:600;color:var(--md-on-primary-container);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px">ССЫЛКА НА ОПЛАТУ ДОСТАВКИ</p>
-          <p style="font-size:13px;color:var(--md-on-primary-container);margin-bottom:12px;line-height:1.5">Менеджер прислал ссылку для оплаты доставки. Нажмите кнопку ниже:</p>
-          <a href="${esc(o.delivery_info.ym_payment_link)}" target="_blank"
+          <p style="font-size:12px;font-weight:600;color:var(--md-on-primary-container);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px">ССЫЛКА НА ОПЛАТУ</p>
+          <p style="font-size:13px;color:var(--md-on-primary-container);margin-bottom:12px;line-height:1.5">Менеджер прислал ссылку для оплаты. Нажмите кнопку ниже:</p>
+          <a href="${esc(o.payment_link)}" target="_blank"
             style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--md-primary);color:white;padding:14px 20px;border-radius:100px;font-size:15px;font-weight:600;text-decoration:none">
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"/>
             </svg>
-            Оплатить доставку
+            Перейти к оплате
           </a>
         </div>` : '';
 
-      // Баннер «ожидайте звонка» для новых заказов
-      const newOrderBanner = o.status_delivery === 'new' ? `
+      // Баннер для нового заказа
+      const newOrderBanner = o.status === 'new' ? `
         <div style="background:#FFF8E1;border-radius:var(--radius-md);padding:14px 16px;margin-bottom:12px;display:flex;gap:12px;align-items:flex-start">
-          <span style="font-size:22px;flex-shrink:0">📞</span>
+          <span style="font-size:22px;flex-shrink:0">⏳</span>
           <div>
-            <p style="font-size:14px;font-weight:600;color:#E65100">Ожидайте звонка менеджера</p>
-            <p style="font-size:13px;color:#BF360C;margin-top:4px;line-height:1.5">Мы свяжемся с вами в рабочее время для подтверждения заказа и уточнения деталей доставки.</p>
+            <p style="font-size:14px;font-weight:600;color:#E65100">Заказ принят</p>
+            <p style="font-size:13px;color:#BF360C;margin-top:4px;line-height:1.5">Мы обрабатываем ваш заказ и скоро свяжемся с вами.</p>
           </div>
         </div>` : '';
 
@@ -1764,7 +1770,7 @@
               <p style="font-size:20px;font-weight:800;color:var(--md-primary)">${o.number}</p>
               <p style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${fmtDate(o.created_at)}</p>
             </div>
-            <span class="status-badge ${o.status_payment}">${_payLabel(o.status_payment)}</span>
+            <span class="status-badge ${o.status}">${_statusLabel(o.status)}</span>
           </div>
           ${o.delivery_info ? `
             <div style="background:var(--md-surface-container);border-radius:var(--radius-sm);padding:10px 12px">
@@ -1886,13 +1892,11 @@
   };
 
   // ─── Labels ────────────────────────────────────────────────────────────────
-  function _payLabel(s) {
-    return { pending: 'Ожидает', paid: 'Оплачен', refunded: 'Возврат', failed: 'Ошибка', cancelled: 'Отменён' }[s] || s;
-  }
-  function _delLabel(s) {
+  function _statusLabel(s) {
     return {
-      new: 'Новый', manager_contacted: 'Обрабатывается', awaiting_delivery_payment: 'Ожидает оплату',
-      delivery_paid: 'Оплачено', shipping: 'В доставке', delivered: 'Доставлен', cancelled: 'Отменён',
+      new: 'В обработке', assembling: 'Собираем', ready: 'Готов к выдаче',
+      awaiting_payment: 'Ожидает оплату', in_delivery: 'В пути',
+      at_pvz: 'В пункте выдачи', delivered: 'Получен', cancelled: 'Отменён',
     }[s] || s;
   }
 
