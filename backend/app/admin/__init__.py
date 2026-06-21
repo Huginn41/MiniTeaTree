@@ -945,29 +945,6 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
                 "error": rec.error,
             })
 
-    @app.post("/admin-api/uploads/cleanup", include_in_schema=False)
-    async def admin_uploads_cleanup(request: Request):
-        if request.session.get("admin_token") != "authenticated":
-            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
-        from app.db import get_session_factory
-        from app.models.product import ProductImage
-        from sqlalchemy import select
-        async with get_session_factory()() as session:
-            rows = (await session.execute(select(ProductImage.path))).scalars().all()
-        referenced = {r for r in rows if r}
-        uploads_dir = Path(__file__).parent.parent.parent / "static" / "uploads"
-        deleted, freed = 0, 0
-        if uploads_dir.exists():
-            for f in uploads_dir.iterdir():
-                if not f.is_file():
-                    continue
-                rel = f"/static/uploads/{f.name}"
-                if rel not in referenced:
-                    freed += f.stat().st_size
-                    f.unlink(missing_ok=True)
-                    deleted += 1
-        return _JSONResponse({"deleted": deleted, "freed_mb": round(freed / 1024 / 1024, 2)})
-
     from app.seed import DEMO_TG_IDS as _DEMO_TG_IDS
 
     class OrderAdmin(ModelView, model=Order):
