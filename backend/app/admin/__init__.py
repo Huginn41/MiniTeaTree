@@ -859,10 +859,19 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             img = img.resize((int(w * r), int(h * r)), Image.LANCZOS)
         img.save(dest, "WEBP", quality=85, method=4)
 
+    _UPLOAD_MAX_BYTES = 15 * 1024 * 1024  # 15 МБ — совпадает с nginx client_max_body_size
+
     @app.post("/admin-api/upload")
-    async def admin_upload(request: Request, file: UploadFile = _File(...)):
+    async def admin_upload(request: Request):
         if request.session.get("admin_token") != "authenticated":
             return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        try:
+            form = await request.form(max_part_size=_UPLOAD_MAX_BYTES)
+        except Exception:
+            return _JSONResponse(status_code=413, content={"error": "Файл слишком большой (макс. 15 МБ)"})
+        file = form.get("file")
+        if file is None:
+            return _JSONResponse(status_code=400, content={"error": "Нет файла"})
         _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{_uuid.uuid4().hex}.webp"
         try:
@@ -890,9 +899,16 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             return _JSONResponse([{"id": i.id, "path": i.path, "is_main": i.is_main, "alt": i.alt or "", "sort": i.sort} for i in imgs])
 
     @app.post("/admin-api/product/{product_id}/images")
-    async def admin_product_image_upload(product_id: int, request: Request, file: UploadFile = _File(...)):
+    async def admin_product_image_upload(product_id: int, request: Request):
         if request.session.get("admin_token") != "authenticated":
             return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        try:
+            form = await request.form(max_part_size=_UPLOAD_MAX_BYTES)
+        except Exception:
+            return _JSONResponse(status_code=413, content={"error": "Файл слишком большой (макс. 15 МБ)"})
+        file = form.get("file")
+        if file is None:
+            return _JSONResponse(status_code=400, content={"error": "Нет файла"})
         _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{_uuid.uuid4().hex}.webp"
         try:
