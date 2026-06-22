@@ -748,6 +748,34 @@ _ADMIN_JS = (r"""
     }
   }
 
+  // ---- N. Добавить «Бонусная система» в сайдбар SQLAdmin ----
+  function injectBonusLink(){
+    // Уже вставлено?
+    if(document.querySelector('a[href="/admin/bonus-settings"]')) return;
+    // Ищем collapse-блок секции «Настройки магазина»
+    var allToggles = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    var targetCollapse = null;
+    allToggles.forEach(function(t){
+      if(t.textContent.indexOf('Настройки магазина') !== -1){
+        var sel = t.getAttribute('data-bs-target') || t.getAttribute('href');
+        if(sel) targetCollapse = document.querySelector(sel);
+      }
+    });
+    if(!targetCollapse) return;
+    var link = document.createElement('a');
+    link.href = '/admin/bonus-settings';
+    link.className = 'nav-link';
+    link.innerHTML = '<i class="fa-solid fa-gift"></i><span>Бонусная система</span>';
+    if(window.location.pathname === '/admin/bonus-settings'){
+      link.classList.add('active');
+    }
+    targetCollapse.appendChild(link);
+    // Убедиться, что секция раскрыта если мы на странице бонусов
+    if(window.location.pathname === '/admin/bonus-settings'){
+      targetCollapse.classList.add('show');
+    }
+  }
+
   function init(){
     collapseInactive();
     initProductImages();
@@ -757,6 +785,7 @@ _ADMIN_JS = (r"""
     translateUI();
     initProductImportBtn();
     initCategoryDnD();
+    injectBonusLink();
   }
 
   if(document.readyState==='loading'){
