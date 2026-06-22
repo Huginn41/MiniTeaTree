@@ -2238,7 +2238,7 @@
               </button>
               <div class="faq-body" style="overflow:hidden;transition:height .3s ease;height:0">
                 <div class="faq-inner" style="padding:0 16px 15px">
-                  <div class="faq-rich">${f.answer}</div>
+                  <div class="faq-rich">${(f.answer||'').replace(/\n/g,'<br>')}</div>
                 </div>
               </div>
             </div>`).join('')}
