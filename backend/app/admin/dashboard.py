@@ -155,6 +155,7 @@ function statusBadge(s){ return '<span class="status-badge status-'+s+'">'+(SL[s
 DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="ru">
 <head>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Дашборд — Чайное Дерево</title>
@@ -312,6 +313,7 @@ document.addEventListener('DOMContentLoaded', load);
 ACTIVE_ORDERS_HTML = """<!DOCTYPE html>
 <html lang="ru">
 <head>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Текущие заказы — Чайное Дерево</title>
@@ -388,6 +390,7 @@ document.addEventListener('DOMContentLoaded', load);
 HISTORY_HTML = """<!DOCTYPE html>
 <html lang="ru">
 <head>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>История заказов — Чайное Дерево</title>
@@ -659,6 +662,7 @@ async def _get_history(period_days: int) -> dict:
 ABOUT_EDITOR_HTML = """<!DOCTYPE html>
 <html lang="ru">
 <head>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>О нас — редактор</title>

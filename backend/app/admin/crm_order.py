@@ -531,6 +531,7 @@ def render_crm_order(order, admin_username: str = "") -> str:
     return f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Заказ {_esc(order.number)} — CRM</title>

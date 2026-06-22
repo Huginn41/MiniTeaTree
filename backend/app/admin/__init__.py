@@ -114,6 +114,7 @@ class AdminAuth(AuthenticationBackend):
 
 
 _ADMIN_CSS = ("""
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <style>
 /* ── Шрифт Futura ── */
 @font-face { font-family:'Futura'; src:url('/static/fonts/FuturaLightC.otf') format('opentype'); font-weight:300; font-display:swap; }
