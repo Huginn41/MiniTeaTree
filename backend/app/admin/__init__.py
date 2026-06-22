@@ -11,12 +11,7 @@ from typing import Any, Callable
 import bcrypt as _bcrypt
 from markupsafe import Markup
 from fastapi import FastAPI
-from sqladmin import Admin, ModelView
-try:
-    from sqladmin import Link as _AdminLink
-    _HAS_LINK = True
-except ImportError:
-    _HAS_LINK = False
+from sqladmin import Admin, ModelView, BaseView, expose
 from sqladmin import widgets as _sqladmin_widgets
 
 # wtforms 3.2+ добавил validation_attrs, sqladmin 0.27 этого не знает
@@ -1966,13 +1961,17 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     admin.add_view(CategoryAdmin)
     admin.add_view(BannerAdmin)
     admin.add_view(PickupPointAdmin)
-    if _HAS_LINK:
-        admin.add_link(_AdminLink(
-            label="Бонусная система",
-            icon="fa-solid fa-gift",
-            url="/admin/bonus-settings",
-            category="Настройки магазина",
-        ))
+    class BonusSettingsView(BaseView):
+        name = "Бонусная система"
+        icon = "fa-solid fa-gift"
+        category = "Настройки магазина"
+
+        @expose("/bonus-settings", methods=["GET"])
+        async def bonus_settings(self, request: Request):
+            from starlette.responses import RedirectResponse
+            return RedirectResponse("/admin/bonus-settings")
+
+    admin.add_view(BonusSettingsView)
     # Система
     admin.add_view(AdminUserAdmin)
     admin.add_view(YmlImportAdmin)
