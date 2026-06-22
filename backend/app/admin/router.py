@@ -195,7 +195,9 @@ async def admin_update_order_status(order_id: int, request: Request):
         return _JSONResponse(status_code=400, content={"error": "Invalid status value"})
     from datetime import UTC, datetime as _dt
     from app.db import get_session_factory
+    from sqlalchemy import select
     from sqlalchemy.orm import selectinload as _sil
+    from app.models.order import Order
     user_telegram_id = None
     async with get_session_factory()() as session:
         result = await session.execute(
@@ -239,7 +241,9 @@ async def admin_crm_order(order_id: int, request: Request):
         from starlette.responses import RedirectResponse
         return RedirectResponse("/admin/login")
     from app.db import get_session_factory
+    from sqlalchemy import select
     from sqlalchemy.orm import selectinload
+    from app.models.order import Order
     async with get_session_factory()() as session:
         result = await session.execute(
             select(Order)
