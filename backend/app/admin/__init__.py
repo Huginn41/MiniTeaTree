@@ -825,10 +825,10 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     # Endpoint для смены статуса прямо из списка
     from fastapi.responses import JSONResponse as _JSONResponse
 
-    _UPLOADS_DIR = Path(__file__).parent.parent / "static" / "media" / "uploads"
-    _MAX_IMAGE_PX = 900
+    _UPLOADS_DIR = Path(__file__).parent.parent.parent / "static" / "media" / "uploads"
+    _MAX_IMAGE_PX = 1600
 
-    def _to_webp(data: bytes, dest: Path) -> None:
+    def _to_webp(data: bytes, dest: Path, max_px: int = 1600) -> None:
         from PIL import Image
         import io as _bio
         img = Image.open(_bio.BytesIO(data))
@@ -840,10 +840,10 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         else:
             img = img.convert("RGB")
         w, h = img.size
-        if max(w, h) > _MAX_IMAGE_PX:
-            r = _MAX_IMAGE_PX / max(w, h)
+        if max(w, h) > max_px:
+            r = max_px / max(w, h)
             img = img.resize((int(w * r), int(h * r)), Image.LANCZOS)
-        img.save(dest, "WEBP", quality=82, method=4)
+        img.save(dest, "WEBP", quality=85, method=4)
 
     @app.post("/admin-api/upload")
     async def admin_upload(request: Request, file: UploadFile = _File(...)):
@@ -1669,17 +1669,22 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         name_plural = "Баннеры"
         category = "Настройки магазина"
 
-        column_list = ["sort", "title", "is_active", "link"]
+        column_list = ["sort", "image_path", "title", "is_active", "link"]
         column_sortable_list = ["sort"]
         column_labels = {
             "sort": "Порядок",
+            "image_path": "Фото",
             "title": "Заголовок",
             "subtitle": "Подзаголовок",
             "is_active": "Активен",
-            "image_path": "Путь к картинке",
             "link": "Ссылка",
         }
         column_formatters = {
+            "image_path": lambda m, a: Markup(
+                f'<img src="{m.image_path}" style="height:48px;border-radius:6px;object-fit:cover;max-width:120px" '
+                f'onerror="this.style.display=\'none\';this.nextSibling.style.display=\'inline\'">'
+                f'<span style="display:none;color:#dc3545;font-size:12px">⚠️ нет файла</span>'
+            ) if m.image_path else Markup('<span style="color:#aaa">—</span>'),
             "is_active": lambda m, a: Markup("✅") if m.is_active else Markup("❌"),
         }
         form_columns = ["title", "subtitle", "image_path", "link", "sort", "is_active"]

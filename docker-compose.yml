@@ -54,7 +54,7 @@ services:
       TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:-}
     volumes:
       # Загруженные фото и статика Mini App
-      - media_data:/app/app/static/media
+      - media_data:/app/static/media
     ports:
       # В проде对外 открыт только nginx (80/443). Для локальной разработки удобен порт app.
       - "127.0.0.1:8000:8000"
