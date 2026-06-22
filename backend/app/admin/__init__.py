@@ -310,11 +310,14 @@ _ADMIN_JS = (r"""
       btn.textContent = '⏳ Загрузка...'; btn.disabled = true;
       fetch('/admin-api/upload', {method:'POST', body:fd})
         .then(function(r){
-          if(!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'Ошибка сервера ' + r.status); });
-          return r.json();
+          return r.text().then(function(t){
+            var d; try { d = JSON.parse(t); } catch(x) { d = {}; }
+            if(!r.ok) throw new Error(d.error || ('Ошибка ' + r.status));
+            if(!d.path) throw new Error('Нет пути в ответе');
+            return d;
+          });
         })
         .then(function(d){
-          if(!d.path) throw new Error('Сервер не вернул путь');
           inp.value = d.path;
           preview.src = d.path; preview.style.opacity = '1';
           URL.revokeObjectURL(localUrl);
