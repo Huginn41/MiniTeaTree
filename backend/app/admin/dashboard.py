@@ -891,7 +891,7 @@ function makeFaqRow(item) {
   var aInput = document.createElement('textarea');
   aInput.className = 'form-control faq-answer';
   aInput.rows = 4;
-  aInput.value = item.answer || '';
+  aInput.value = (item.answer || '').replace(/<br[^>]*>/gi, '\n');
   aInput.style.resize = 'vertical';
 
   var actions = document.createElement('div');
@@ -943,7 +943,7 @@ async function saveFaqRow(row) {
   var id = row.dataset.id;
   var q = row.querySelector('.fq').value.trim();
   if (!q) { alert('Введите вопрос'); return; }
-  var answer = row.querySelector('.faq-answer').value;
+  var answer = row.querySelector('.faq-answer').value.replace(/\n/g, '<br>');
   var btn = row.querySelector('.fsb');
   btn.disabled = true; btn.textContent = 'Сохраняем…';
   try {
@@ -1040,7 +1040,7 @@ async function saveAll() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         title: document.getElementById('about-title').value.trim() || 'Чайное Дерево',
-        description_html: document.getElementById('desc-textarea').value,
+        description_html: document.getElementById('desc-textarea').value.replace(/\n/g, '<br>'),
         banner_image_path: bannerPath,
       })
     });
@@ -1088,7 +1088,7 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('about-title').value = title;
       document.getElementById('phone-title-preview').textContent = title;
       if (d.description_html) {
-        document.getElementById('desc-textarea').value = d.description_html;
+        document.getElementById('desc-textarea').value = d.description_html.replace(/<br[^>]*>/gi, '\n');
       }
       if (d.banner_image_path) {
         bannerPath = d.banner_image_path;
