@@ -68,7 +68,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -fsS http://127.0.0.1:8000/health || exit 1
 
 # Применяем миграции и стартуем uvicorn под gunicorn
-CMD ["sh", "-c", "alembic upgrade head && gunicorn app.main:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 -w 2 --timeout 120"]
+CMD ["sh", "-c", "alembic upgrade head && gunicorn app.main:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 -w 1 --timeout 120"]
 
 # ---------- Dev (hot reload) ----------
 FROM prod AS dev

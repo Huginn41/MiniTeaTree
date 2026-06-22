@@ -16,7 +16,7 @@ from aiogram import Dispatcher, F, Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, ErrorEvent, ForceReply, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, ErrorEvent, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from app.config import get_settings
 from app.logging import get_logger
@@ -233,13 +233,10 @@ async def cb_payment_link(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     # ForceReply: Telegram показывает интерфейс ответа на это сообщение.
     # Ответ на сообщение бота доходит боту даже в группе с Privacy Mode.
-    # ForceReply без selective=True — показываем всем пользователям чата.
-    # selective=True без @упоминания менеджера в тексте не работает в группах.
     prompt = await callback.message.answer(
         f"Введите ссылку на оплату для заказа <b>{order.number}</b>:\n"
-        "↩️ Ответьте на это сообщение (или /cancel для отмены)",
+        "(или /cancel для отмены)",
         parse_mode="HTML",
-        reply_markup=ForceReply(selective=False),
     )
     await state.set_state(AdminStates.waiting_payment_link)
     await state.update_data(
@@ -362,9 +359,8 @@ async def cb_tracking_link(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     prompt = await callback.message.answer(
         f"Введите ссылку для отслеживания заказа <b>{order.number}</b>:\n"
-        "↩️ Ответьте на это сообщение (или /cancel для отмены)",
+        "(или /cancel для отмены)",
         parse_mode="HTML",
-        reply_markup=ForceReply(selective=False),
     )
     await state.set_state(AdminStates.waiting_tracking_link)
     await state.update_data(

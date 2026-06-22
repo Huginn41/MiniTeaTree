@@ -230,12 +230,19 @@ async def _send_message(chat_id: int, text: str, reply_markup: dict | None = Non
 
 
 async def _edit_message(chat_id: int, message_id: int, text: str, reply_markup: dict | None = None) -> bool:
-    """Редактирует существующее сообщение."""
+    """Редактирует существующее сообщение.
+    Возвращает True при успехе; 'message is not modified' считается успехом.
+    """
     payload: dict = {"chat_id": chat_id, "message_id": message_id, "text": text, "parse_mode": "HTML"}
     if reply_markup:
         payload["reply_markup"] = reply_markup
     result = await _api_call("editMessageText", payload)
-    return bool(result.get("ok"))
+    if result.get("ok"):
+        return True
+    # Telegram 400 "message is not modified" — не ошибка, просто нет изменений
+    if "not modified" in str(result.get("description", "")).lower():
+        return True
+    return False
 
 
 async def delete_message(chat_id: int, message_id: int) -> None:
