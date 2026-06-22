@@ -831,7 +831,14 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     def _to_webp(data: bytes, dest: Path) -> None:
         from PIL import Image
         import io as _bio
-        img = Image.open(_bio.BytesIO(data)).convert("RGB")
+        img = Image.open(_bio.BytesIO(data))
+        if img.mode in ("RGBA", "LA", "P"):
+            img = img.convert("RGBA")
+            bg = Image.new("RGB", img.size, (255, 255, 255))
+            bg.paste(img, mask=img.split()[3])
+            img = bg
+        else:
+            img = img.convert("RGB")
         w, h = img.size
         if max(w, h) > _MAX_IMAGE_PX:
             r = _MAX_IMAGE_PX / max(w, h)
