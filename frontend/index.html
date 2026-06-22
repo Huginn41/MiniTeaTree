@@ -2072,13 +2072,6 @@
           </div>
 
           <!-- Пункты самовывоза -->
-          ${points.length ? `
-          <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">
-            Пункты самовывоза
-          </p>
-          ${points.map(pointCard).join('')}
-          ` : ''}
-
           <!-- FAQ — все закрыты по умолчанию -->
           ${faq.length ? `
           <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">
@@ -2115,6 +2108,13 @@
               </div>
             </div>`).join('')}
           </div>
+          ` : ''}
+
+          ${points.length ? `
+          <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">
+            Пункты самовывоза
+          </p>
+          ${points.map(pointCard).join('')}
           ` : ''}
 
         </div>`;
