@@ -809,6 +809,58 @@ class _AdminCollapseMiddleware(BaseHTTPMiddleware):
 def setup_admin(app: FastAPI, engine: Any) -> None:
     from app.admin.dashboard import setup_dashboard
     setup_dashboard(app)
+
+    # Кастомные HTML-страницы регистрируются ДО Admin.mount("/admin"),
+    # иначе SQLAdmin перехватывает /admin/* раньше FastAPI-роутера.
+    from fastapi.responses import JSONResponse as _JSONResponse, HTMLResponse as _HTMLResponse
+    from sqlalchemy import select as _select
+
+    @app.get("/admin/crm-customer/{user_id}", include_in_schema=False)
+    async def _admin_crm_customer(user_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            from starlette.responses import RedirectResponse
+            return RedirectResponse("/admin/login")
+        from app.db import get_session_factory
+        from sqlalchemy.orm import selectinload
+        from app.models.user import User as _User
+        from app.models.order import Order as _Order
+        async with get_session_factory()() as session:
+            result = await session.execute(
+                _select(_User)
+                .options(
+                    selectinload(_User.orders).selectinload(_Order.items),
+                    selectinload(_User.bonus_transactions),
+                )
+                .where(_User.id == user_id)
+            )
+            user = result.scalar_one_or_none()
+        if not user:
+            return _HTMLResponse("<h3>Клиент не найден</h3>", status_code=404)
+        from app.admin.crm_customer import render_crm_customer
+        return _HTMLResponse(render_crm_customer(user, admin_username=request.session.get("admin_username", "")))
+
+    @app.get("/admin/bonus-settings", include_in_schema=False)
+    async def _admin_bonus_settings_page(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            from starlette.responses import RedirectResponse
+            return RedirectResponse("/admin/login")
+        from app.db import get_session_factory
+        from app.models.bonus import BonusTier as _BonusTier, ShopSettings as _ShopSettings
+        async with get_session_factory()() as session:
+            tiers = (await session.execute(_select(_BonusTier).order_by(_BonusTier.min_amount))).scalars().all()
+            s = (await session.execute(_select(_ShopSettings).where(_ShopSettings.id == 1))).scalar_one_or_none()
+            max_pct = s.bonus_max_payment_pct if s else 50
+        from app.admin.bonus_settings import render_bonus_settings
+        return _HTMLResponse(render_bonus_settings(tiers, max_pct, admin_username=request.session.get("admin_username", "")))
+
+    @app.get("/admin/import", include_in_schema=False)
+    async def _admin_import_page(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            from starlette.responses import RedirectResponse
+            return RedirectResponse("/admin/login")
+        from app.admin.import_page import IMPORT_PAGE_HTML
+        return _HTMLResponse(IMPORT_PAGE_HTML)
+
     from app.config import get_settings
     from app.models.admin import AdminUser
     from app.models.banner import Banner
@@ -1051,33 +1103,6 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         html = render_crm_order(order, admin_username=admin_username)
         return _HTMLResponse(html)
 
-    @app.get("/admin/crm-customer/{user_id}", include_in_schema=False)
-    async def admin_crm_customer(user_id: int, request: Request):
-        if request.session.get("admin_token") != "authenticated":
-            from starlette.responses import RedirectResponse
-            return RedirectResponse("/admin/login")
-        from app.db import get_session_factory
-        from sqlalchemy.orm import selectinload
-        from app.models.user import User as _User
-        from app.models.order import Order as _Order, OrderItem as _OrderItem
-        from app.models.bonus import BonusTransaction as _BonusTx
-        async with get_session_factory()() as session:
-            result = await session.execute(
-                select(_User)
-                .options(
-                    selectinload(_User.orders).selectinload(_Order.items),
-                    selectinload(_User.bonus_transactions),
-                )
-                .where(_User.id == user_id)
-            )
-            user = result.scalar_one_or_none()
-        if not user:
-            return _JSONResponse(status_code=404, content={"error": "Not found"})
-        from fastapi.responses import HTMLResponse as _HTMLResponse
-        from app.admin.crm_customer import render_crm_customer
-        admin_username = request.session.get("admin_username", "")
-        html = render_crm_customer(user, admin_username=admin_username)
-        return _HTMLResponse(html)
 
     @app.patch("/admin-api/customer/{user_id}", include_in_schema=False)
     async def admin_customer_patch(user_id: int, request: Request):
@@ -1102,24 +1127,6 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
 
     # ── Бонусная система ────────────────────────────────────────────────────────
 
-    @app.get("/admin/bonus-settings", include_in_schema=False)
-    async def admin_bonus_settings_page(request: Request):
-        if request.session.get("admin_token") != "authenticated":
-            from starlette.responses import RedirectResponse
-            return RedirectResponse("/admin/login")
-        from app.db import get_session_factory
-        from app.models.bonus import BonusTier as _BonusTier, ShopSettings as _ShopSettings
-        from sqlalchemy import select as _sel
-        async with get_session_factory()() as session:
-            tiers_res = await session.execute(_sel(_BonusTier).order_by(_BonusTier.min_amount))
-            tiers = tiers_res.scalars().all()
-            settings_res = await session.execute(_sel(_ShopSettings).where(_ShopSettings.id == 1))
-            settings = settings_res.scalar_one_or_none()
-            max_pct = settings.bonus_max_payment_pct if settings else 50
-        from fastapi.responses import HTMLResponse as _HTMLResponse
-        from app.admin.bonus_settings import render_bonus_settings
-        admin_username = request.session.get("admin_username", "")
-        return _HTMLResponse(render_bonus_settings(tiers, max_pct, admin_username=admin_username))
 
     @app.get("/admin-api/bonus/settings", include_in_schema=False)
     async def admin_bonus_settings_get(request: Request):
@@ -1390,13 +1397,6 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     import io as _io
     from datetime import datetime as _datetime, timezone as _timezone_import
 
-    @app.get("/admin/import", include_in_schema=False)
-    async def admin_import_page(request: Request):
-        if request.session.get("admin_token") != "authenticated":
-            from starlette.responses import RedirectResponse
-            return RedirectResponse("/admin/login")
-        from app.admin.import_page import IMPORT_PAGE_HTML
-        return _HTMLResponse(IMPORT_PAGE_HTML)
 
     @app.get("/admin-api/import/excel/template", include_in_schema=False)
     async def admin_import_excel_template(request: Request):
