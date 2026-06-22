@@ -869,28 +869,61 @@ function makeFaqRow(item) {
   row.dataset.id = item.id || '';
   var uid = 'fe' + Date.now() + Math.random().toString(36).slice(2);
   row.dataset.uid = uid;
-  row.innerHTML =
-    '<div class="faq-head" onclick="toggleFaq(this)">' +
-      '<span style="color:#adb5bd;font-size:18px;flex-shrink:0">☰</span>' +
-      '<span style="flex:1;font-size:14px;font-weight:600;color:#212529">' + esc(item.question||'Новый вопрос') + '</span>' +
-      '<button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:11px;flex-shrink:0" ' +
-        'onclick="event.stopPropagation();delFaq(this.closest(\x27.faq-row\x27))">✕ Удалить</button>' +
-    '</div>' +
-    '<div class="faq-body" id="fb-' + uid + '">' +
-      '<label class="form-label mt-1">Вопрос</label>' +
-      '<input class="form-control mb-3 fq" value="' + esc(item.question||'') + '" ' +
-        'oninput="syncHead(this)">' +
-      '<label class="form-label">Ответ</label>' +
-      '<div id="qe-' + uid + '" style="min-height:100px"></div>' +
-      '<div id="qf-' + uid + '" style="display:none">' +
-        '<textarea class="form-control" rows="4" id="qt-' + uid + '"></textarea>' +
-      '</div>' +
-      '<div data-saved="' + esc(item.answer||'') + '" style="display:none" id="ans-' + uid + '"></div>' +
-      '<div class="d-flex gap-2 mt-3">' +
-        '<button class="btn btn-sm btn-primary fsb" onclick="saveFaqRow(this.closest(\x27.faq-row\x27))">Сохранить</button>' +
-        '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaq(this.closest(\x27.faq-row\x27).querySelector(\x27.faq-head\x27))">Закрыть</button>' +
-      '</div>' +
-    '</div>';
+
+  // Заголовок
+  var head = document.createElement('div');
+  head.className = 'faq-head';
+  head.addEventListener('click', function() { toggleFaq(head); });
+
+  var icon = document.createElement('span');
+  icon.style.cssText = 'color:#adb5bd;font-size:18px;flex-shrink:0';
+  icon.textContent = '☰';
+
+  var title = document.createElement('span');
+  title.style.cssText = 'flex:1;font-size:14px;font-weight:600;color:#212529';
+  title.textContent = item.question || 'Новый вопрос';
+
+  var delBtn = document.createElement('button');
+  delBtn.className = 'btn btn-sm btn-outline-danger';
+  delBtn.style.cssText = 'padding:2px 8px;font-size:11px;flex-shrink:0';
+  delBtn.textContent = '✕ Удалить';
+  delBtn.addEventListener('click', function(e) { e.stopPropagation(); delFaq(row); });
+
+  head.appendChild(icon);
+  head.appendChild(title);
+  head.appendChild(delBtn);
+
+  // Тело
+  var body = document.createElement('div');
+  body.className = 'faq-body';
+  body.id = 'fb-' + uid;
+  body.innerHTML =
+    '<label class="form-label mt-1">Вопрос</label>' +
+    '<input class="form-control mb-3 fq" value="' + esc(item.question||'') + '" oninput="syncHead(this)">' +
+    '<label class="form-label">Ответ</label>' +
+    '<div id="qe-' + uid + '" style="min-height:100px"></div>' +
+    '<div id="qf-' + uid + '" style="display:none"><textarea class="form-control" rows="4" id="qt-' + uid + '"></textarea></div>' +
+    '<div data-saved="' + esc(item.answer||'') + '" style="display:none" id="ans-' + uid + '"></div>';
+
+  var actions = document.createElement('div');
+  actions.className = 'd-flex gap-2 mt-3';
+
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'btn btn-sm btn-primary fsb';
+  saveBtn.textContent = 'Сохранить';
+  saveBtn.addEventListener('click', function() { saveFaqRow(row); });
+
+  var closeBtn = document.createElement('button');
+  closeBtn.className = 'btn btn-sm btn-outline-secondary';
+  closeBtn.textContent = 'Закрыть';
+  closeBtn.addEventListener('click', function() { toggleFaq(head); });
+
+  actions.appendChild(saveBtn);
+  actions.appendChild(closeBtn);
+  body.appendChild(actions);
+
+  row.appendChild(head);
+  row.appendChild(body);
   return row;
 }
 
