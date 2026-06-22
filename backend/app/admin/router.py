@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid as _uuid
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File as _File
 from fastapi.responses import JSONResponse as _JSONResponse, HTMLResponse as _HTMLResponse
 from starlette.requests import Request
 
