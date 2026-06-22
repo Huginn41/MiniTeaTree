@@ -118,6 +118,40 @@ async def cb_set_status(callback: CallbackQuery) -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Callback: кнопка «Подтвердить оплату»
+# ──────────────────────────────────────────────────────────────────────────────
+
+async def cb_confirm_payment(callback: CallbackQuery) -> None:
+    """Менеджер нажал «Подтвердить оплату» — фиксируем paid_at и обновляем карточку."""
+    order_id = int(callback.data.split(":")[1])
+
+    from datetime import UTC, datetime as _dt
+    from sqlalchemy import select
+    from app.db import get_session_factory
+    from app.models.order import Order
+
+    async with get_session_factory()() as session:
+        result = await session.execute(select(Order).where(Order.id == order_id))
+        order = result.scalar_one_or_none()
+        if not order:
+            await callback.answer("Заказ не найден", show_alert=True)
+            return
+        if order.paid_at:
+            await callback.answer("Оплата уже подтверждена", show_alert=False)
+            return
+        order.paid_at = _dt.now(UTC)
+        await session.commit()
+
+    await callback.answer("✅ Оплата подтверждена", show_alert=False)
+
+    try:
+        from app.bot.notify import update_order_notifications
+        await update_order_notifications(order_id)
+    except Exception:
+        pass
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Callback: кнопка «Ссылка на оплату»
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -317,9 +351,10 @@ def create_dispatcher() -> Dispatcher:
 
     router.message.register(cmd_start, CommandStart())
     router.message.register(cmd_cancel, F.text == "/cancel")
-    router.callback_query.register(cb_set_status,      F.data.startswith("set_status:"))
-    router.callback_query.register(cb_payment_link,    F.data.startswith("pay_link:"))
-    router.callback_query.register(cb_tracking_link,   F.data.startswith("tracking:"))
+    router.callback_query.register(cb_set_status,       F.data.startswith("set_status:"))
+    router.callback_query.register(cb_confirm_payment,  F.data.startswith("confirm_payment:"))
+    router.callback_query.register(cb_payment_link,     F.data.startswith("pay_link:"))
+    router.callback_query.register(cb_tracking_link,    F.data.startswith("tracking:"))
     router.message.register(msg_payment_link,  AdminStates.waiting_payment_link)
     router.message.register(msg_tracking_link, AdminStates.waiting_tracking_link)
 
