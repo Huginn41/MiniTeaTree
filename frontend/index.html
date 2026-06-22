@@ -509,9 +509,12 @@
       font-size: 13px;
       font-weight: 600;
       color: var(--md-on-surface);
-      white-space: nowrap;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 1.3;
+      max-height: 2.6em;
     }
     .product-card-small .pcard-cat {
       font-size: 11px;
@@ -2218,7 +2221,7 @@
             ${p.main_image ? `<img src="${p.main_image}" alt="${esc(p.name)}" loading="lazy"/>` : '🍵'}
           </div>
           <div class="pcard-body">
-            <div class="pcard-name" style="font-size:14px">${esc(p.name)}</div>
+            <div class="pcard-name" style="font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3;max-height:2.6em">${esc(p.name)}</div>
             <div class="pcard-cat" style="font-size:11px;margin-top:3px">${esc(p.category.name)}</div>
             <div class="pcard-price" style="font-size:15px;margin-top:8px">${priceLabel}</div>
           </div>
