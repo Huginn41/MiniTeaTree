@@ -663,11 +663,7 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>О нас — редактор</title>
 {BASE_CSS}
-<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
 <style>
-.ql-toolbar.ql-snow{border-radius:8px 8px 0 0!important;border-color:#dee2e6!important;background:#f8f9fa}
-.ql-container.ql-snow{border-radius:0 0 8px 8px!important;border-color:#dee2e6!important;font-size:14px}
-.ql-editor{min-height:120px}
 .ab-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:24px;margin-bottom:20px}
 .ab-label{font-size:12px;font-weight:700;color:#8c9aad;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
 .banner-zone{width:100%;height:200px;border-radius:12px;overflow:hidden;position:relative;
@@ -680,9 +676,8 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
   align-items:center;justify-content:center;gap:8px;opacity:0;transition:.2s;z-index:2}
 .banner-zone:hover .banner-hover{opacity:1}
 .banner-hover span{color:#fff;font-size:13px;font-weight:600}
-.faq-row{border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px;overflow:visible}
+.faq-row{border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px}
 .faq-head{display:flex;align-items:center;gap:10px;padding:13px 14px;background:#f8f9fa;border-radius:10px;cursor:pointer;user-select:none}
-.faq-body-open .faq-head{border-radius:10px 10px 0 0}
 .faq-head:hover{background:#eef2ff}
 .faq-body{display:none;padding:16px;border-top:1px solid #e9ecef}
 .faq-body.open{display:block}
@@ -690,19 +685,15 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
   border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px}
 .pp-row.sortable-ghost{opacity:.3;background:#e8f0fe}
 .pp-drag{cursor:grab;color:#adb5bd;font-size:20px;flex-shrink:0;line-height:1}
-#err-box{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px 16px;
-  margin-bottom:16px;font-size:13px;display:none}
 </style>
 </head>
 <body>
 {TOPNAV}
 <div class="container-fluid px-4 py-4" style="max-width:860px">
 
-  <div id="err-box"></div>
-
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h5 class="section-title mb-0">✏️ Редактор страницы «О нас»</h5>
-    <button id="save-all-btn" class="btn btn-sm btn-primary" onclick="saveAll()">
+    <button id="save-all-btn" class="btn btn-sm btn-primary">
       <i class="fa-solid fa-floppy-disk me-1"></i>Сохранить
     </button>
   </div>
@@ -710,7 +701,7 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
   <!-- 1. Баннер -->
   <div class="ab-card">
     <div class="ab-label">Обложка страницы</div>
-    <div class="banner-zone" id="banner-zone" onclick="document.getElementById('bfile').click()">
+    <div class="banner-zone" id="banner-zone">
       <div class="banner-zone-text" id="banner-text">
         <div class="banner-zone-emoji">🍵</div>
         <div>Нажмите чтобы загрузить фото</div>
@@ -724,7 +715,7 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
     </div>
     <input type="file" id="bfile" accept="image/*" style="display:none">
     <div class="d-flex align-items-center gap-3 mt-2">
-      <button class="btn btn-sm btn-outline-danger" id="rm-banner" onclick="removeBanner()" style="display:none">
+      <button class="btn btn-sm btn-outline-danger" id="rm-banner" style="display:none">
         <i class="fa-solid fa-trash me-1"></i>Убрать
       </button>
       <span id="banner-status" style="font-size:12px;color:#6c757d"></span>
@@ -737,18 +728,14 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
     <label class="form-label">Заголовок</label>
     <input type="text" id="about-title" class="form-control mb-3" placeholder="Чайное Дерево">
     <label class="form-label">Описание</label>
-    <div id="desc-editor" style="min-height:140px"></div>
-    <div id="desc-fallback" style="display:none">
-      <textarea id="desc-textarea" class="form-control" rows="6" placeholder="Описание магазина"></textarea>
-      <small class="text-muted">Rich-text редактор недоступен, используется обычный текст.</small>
-    </div>
+    <textarea id="desc-textarea" class="form-control" rows="7" placeholder="Расскажите о вашем магазине…" style="resize:vertical"></textarea>
   </div>
 
   <!-- 3. FAQ -->
   <div class="ab-card">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="ab-label mb-0">Часто задаваемые вопросы</div>
-      <button class="btn btn-sm btn-outline-primary" onclick="addFaq()">
+      <button id="add-faq-btn" class="btn btn-sm btn-outline-primary">
         <i class="fa-solid fa-plus me-1"></i>Добавить вопрос
       </button>
     </div>
@@ -763,40 +750,24 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
         <i class="fa-solid fa-pen me-1"></i>Добавить / редактировать
       </a>
     </div>
-    <p style="font-size:13px;color:#6c757d;margin-bottom:10px">Перетащите чтобы изменить порядок, затем нажмите «Сохранить порядок».</p>
+    <p style="font-size:13px;color:#6c757d;margin-bottom:10px">Перетащите чтобы изменить порядок.</p>
     <div id="pp-list"><p class="text-muted" style="font-size:13px">Загрузка…</p></div>
-    <button class="btn btn-sm btn-outline-primary mt-2" id="pp-order-btn" onclick="savePpOrder()" style="display:none">
+    <button class="btn btn-sm btn-outline-primary mt-2" id="pp-order-btn" style="display:none">
       <i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок
     </button>
   </div>
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" async></script>
 <script>
-/* globals Quill, Sortable */
 var bannerPath = null;
-var descEditor = null;
-var faqEditors = {};
-var TOOLBAR = [['bold','italic','underline'],[{'list':'bullet'}],['link'],['clean']];
-
-function showErr(msg) {
-  var b = document.getElementById('err-box');
-  b.textContent = '⚠️ ' + msg;
-  b.style.display = 'block';
-}
 
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── Баннер ──────────────────────────────────────────────────────────
-document.getElementById('bfile').addEventListener('change', function() {
-  if (!this.files || !this.files[0]) return;
-  uploadBanner(this.files[0]);
-});
-
 async function uploadBanner(file) {
   var status = document.getElementById('banner-status');
   status.style.color = '#6c757d';
@@ -806,9 +777,7 @@ async function uploadBanner(file) {
   try {
     var r = await fetch('/admin-api/upload-image', {method:'POST', credentials:'include', body:fd});
     var text = await r.text();
-    if (!r.ok) {
-      throw new Error('HTTP ' + r.status + ': ' + text.substring(0,120));
-    }
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + text.substring(0,120));
     var d = JSON.parse(text);
     bannerPath = d.path;
     var img = document.getElementById('banner-img');
@@ -822,34 +791,6 @@ async function uploadBanner(file) {
     status.style.color = '#dc3545';
     status.textContent = 'Ошибка загрузки: ' + e.message;
   }
-}
-
-function removeBanner() {
-  bannerPath = null;
-  document.getElementById('banner-img').style.display = 'none';
-  document.getElementById('banner-text').style.display = 'block';
-  document.getElementById('rm-banner').style.display = 'none';
-  document.getElementById('banner-status').textContent = '';
-}
-
-// ── Quill (с fallback на textarea) ──────────────────────────────────
-function initDescQuill(html) {
-  try {
-    if (typeof Quill === 'undefined') throw new Error('Quill not loaded');
-    descEditor = new Quill('#desc-editor', {theme:'snow', modules:{toolbar:TOOLBAR}});
-    if (html) descEditor.root.innerHTML = html;
-    document.getElementById('desc-editor').style.display = 'block';
-  } catch(e) {
-    document.getElementById('desc-editor').style.display = 'none';
-    document.getElementById('desc-fallback').style.display = 'block';
-    if (html) document.getElementById('desc-textarea').value = html;
-    console.warn('Quill init failed, using textarea:', e);
-  }
-}
-
-function getDescHtml() {
-  if (descEditor) return descEditor.root.innerHTML;
-  return document.getElementById('desc-textarea').value;
 }
 
 // ── FAQ ─────────────────────────────────────────────────────────────
@@ -867,13 +808,9 @@ function makeFaqRow(item) {
   var row = document.createElement('div');
   row.className = 'faq-row';
   row.dataset.id = item.id || '';
-  var uid = 'fe' + Date.now() + Math.random().toString(36).slice(2);
-  row.dataset.uid = uid;
 
-  // Заголовок
   var head = document.createElement('div');
   head.className = 'faq-head';
-  head.addEventListener('click', function() { toggleFaq(head); });
 
   var icon = document.createElement('span');
   icon.style.cssText = 'color:#adb5bd;font-size:18px;flex-shrink:0';
@@ -892,18 +829,29 @@ function makeFaqRow(item) {
   head.appendChild(icon);
   head.appendChild(title);
   head.appendChild(delBtn);
+  head.addEventListener('click', function() { toggleFaqBody(body); });
 
-  // Тело
   var body = document.createElement('div');
   body.className = 'faq-body';
-  body.id = 'fb-' + uid;
-  body.innerHTML =
-    '<label class="form-label mt-1">Вопрос</label>' +
-    '<input class="form-control mb-3 fq" value="' + esc(item.question||'') + '" oninput="syncHead(this)">' +
-    '<label class="form-label">Ответ</label>' +
-    '<div id="qe-' + uid + '" style="min-height:100px"></div>' +
-    '<div id="qf-' + uid + '" style="display:none"><textarea class="form-control" rows="4" id="qt-' + uid + '"></textarea></div>' +
-    '<div data-saved="' + esc(item.answer||'') + '" style="display:none" id="ans-' + uid + '"></div>';
+
+  var qLabel = document.createElement('label');
+  qLabel.className = 'form-label mt-1';
+  qLabel.textContent = 'Вопрос';
+
+  var qInput = document.createElement('input');
+  qInput.className = 'form-control mb-3 fq';
+  qInput.value = item.question || '';
+  qInput.addEventListener('input', function() { title.textContent = qInput.value || 'Новый вопрос'; });
+
+  var aLabel = document.createElement('label');
+  aLabel.className = 'form-label';
+  aLabel.textContent = 'Ответ';
+
+  var aInput = document.createElement('textarea');
+  aInput.className = 'form-control faq-answer';
+  aInput.rows = 4;
+  aInput.value = item.answer || '';
+  aInput.style.resize = 'vertical';
 
   var actions = document.createElement('div');
   actions.className = 'd-flex gap-2 mt-3';
@@ -916,86 +864,59 @@ function makeFaqRow(item) {
   var closeBtn = document.createElement('button');
   closeBtn.className = 'btn btn-sm btn-outline-secondary';
   closeBtn.textContent = 'Закрыть';
-  closeBtn.addEventListener('click', function() { toggleFaq(head); });
+  closeBtn.addEventListener('click', function() { body.classList.remove('open'); });
 
   actions.appendChild(saveBtn);
   actions.appendChild(closeBtn);
+  body.appendChild(qLabel);
+  body.appendChild(qInput);
+  body.appendChild(aLabel);
+  body.appendChild(aInput);
   body.appendChild(actions);
-
   row.appendChild(head);
   row.appendChild(body);
   return row;
 }
 
-function syncHead(input) {
-  var head = input.closest('.faq-row').querySelector('.faq-head span:nth-child(2)');
-  if (head) head.textContent = input.value || 'Новый вопрос';
-}
-
-function toggleFaq(head) {
-  var row = head.closest('.faq-row');
-  var uid = row.dataset.uid;
-  var body = document.getElementById('fb-' + uid);
-  var opening = !body.classList.contains('open');
-  document.querySelectorAll('.faq-body.open').forEach(function(b){ b.classList.remove('open'); });
-  if (!opening) return;
-  body.classList.add('open');
-  // Ленивый Quill
-  if (!faqEditors[uid]) {
-    var saved = document.getElementById('ans-' + uid).dataset.saved || '';
-    try {
-      if (typeof Quill === 'undefined') throw new Error('no Quill');
-      var q = new Quill('#qe-' + uid, {theme:'snow', modules:{toolbar:TOOLBAR}});
-      if (saved) q.root.innerHTML = saved;
-      faqEditors[uid] = q;
-    } catch(e) {
-      document.getElementById('qe-' + uid).style.display = 'none';
-      var tf = document.getElementById('qf-' + uid);
-      tf.style.display = 'block';
-      document.getElementById('qt-' + uid).value = saved;
-      faqEditors[uid] = {_textarea: true, uid: uid};
-    }
+function toggleFaqBody(body) {
+  var isOpen = body.classList.contains('open');
+  document.querySelectorAll('.faq-body.open').forEach(function(b) { b.classList.remove('open'); });
+  if (!isOpen) {
+    body.classList.add('open');
+    body.querySelector('.fq').focus();
   }
-}
-
-function getFaqAnswer(uid) {
-  var ed = faqEditors[uid];
-  if (!ed) return document.getElementById('ans-' + uid).dataset.saved || '';
-  if (ed._textarea) return document.getElementById('qt-' + uid).value;
-  return ed.root.innerHTML;
 }
 
 function addFaq() {
   var list = document.getElementById('faq-list');
-  var p = list.querySelector('p');
-  if (p) p.remove();
-  var row = makeFaqRow({id:null, question:'', answer:''});
+  var empty = list.querySelector('p');
+  if (empty) empty.remove();
+  var row = makeFaqRow({id: null, question: '', answer: ''});
   list.appendChild(row);
-  toggleFaq(row.querySelector('.faq-head'));
-  setTimeout(function(){ row.querySelector('.fq').focus(); }, 50);
+  var body = row.querySelector('.faq-body');
+  body.classList.add('open');
+  row.querySelector('.fq').focus();
 }
 
 async function saveFaqRow(row) {
   var id = row.dataset.id;
-  var uid = row.dataset.uid;
   var q = row.querySelector('.fq').value.trim();
   if (!q) { alert('Введите вопрос'); return; }
-  var answer = getFaqAnswer(uid);
+  var answer = row.querySelector('.faq-answer').value;
   var btn = row.querySelector('.fsb');
   btn.disabled = true; btn.textContent = 'Сохраняем…';
   try {
-    var url = id ? '/admin-api/faq/'+id : '/admin-api/faq';
+    var url = id ? '/admin-api/faq/' + id : '/admin-api/faq';
     var r = await fetch(url, {
       method: id ? 'PATCH' : 'POST',
-      credentials:'include',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({question:q, answer:answer})
+      credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question: q, answer: answer})
     });
     var text = await r.text();
-    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + text.substring(0,100));
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + text.substring(0, 100));
     var d = JSON.parse(text);
     row.dataset.id = d.id;
-    syncHead(row.querySelector('.fq'));
     row.querySelector('.faq-body').classList.remove('open');
     btn.disabled = false; btn.textContent = 'Сохранить';
   } catch(e) {
@@ -1008,7 +929,7 @@ async function delFaq(row) {
   if (!confirm('Удалить вопрос?')) return;
   var id = row.dataset.id;
   if (id) {
-    var r = await fetch('/admin-api/faq/'+id, {method:'DELETE', credentials:'include'});
+    var r = await fetch('/admin-api/faq/' + id, {method: 'DELETE', credentials: 'include'});
     if (!r.ok) { alert('Ошибка удаления'); return; }
   }
   row.remove();
@@ -1025,7 +946,7 @@ function renderPp(items) {
     return;
   }
   items.forEach(function(p) {
-    var addr = [p.city, p.street, p.building ? 'д.'+p.building : ''].filter(Boolean).join(', ') || p.address || '';
+    var addr = [p.city, p.street, p.building ? 'д.' + p.building : ''].filter(Boolean).join(', ') || p.address || '';
     var row = document.createElement('div');
     row.className = 'pp-row';
     row.dataset.id = p.id;
@@ -1039,25 +960,25 @@ function renderPp(items) {
   });
   document.getElementById('pp-order-btn').style.display = 'inline-flex';
   if (typeof Sortable !== 'undefined') {
-    Sortable.create(list, {handle:'.pp-drag', animation:150, ghostClass:'sortable-ghost'});
+    Sortable.create(list, {handle: '.pp-drag', animation: 150, ghostClass: 'sortable-ghost'});
   }
 }
 
 async function savePpOrder() {
   var rows = document.querySelectorAll('#pp-list .pp-row');
-  var order = Array.from(rows).map(function(r,i){ return {id:parseInt(r.dataset.id), sort_order:i}; });
+  var order = Array.from(rows).map(function(r, i) { return {id: parseInt(r.dataset.id), sort_order: i}; });
   var btn = document.getElementById('pp-order-btn');
   btn.disabled = true; btn.textContent = 'Сохраняем…';
   try {
     var r = await fetch('/admin-api/pickup-points/reorder', {
-      method:'POST', credentials:'include',
-      headers:{'Content-Type':'application/json'}, body:JSON.stringify(order)
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'}, body: JSON.stringify(order)
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     btn.disabled = false;
     btn.style.cssText = 'background:#1b873f;border-color:#1b873f;color:#fff;display:inline-flex';
     btn.textContent = '✓ Порядок сохранён';
-    setTimeout(function(){
+    setTimeout(function() {
       btn.style.cssText = 'display:inline-flex';
       btn.innerHTML = '<i class="fa-solid fa-arrows-up-down me-1"></i>Сохранить порядок';
     }, 2000);
@@ -1074,20 +995,20 @@ async function saveAll() {
   btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Сохраняем…';
   try {
     var r = await fetch('/admin-api/about', {
-      method:'POST', credentials:'include',
-      headers:{'Content-Type':'application/json'},
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         title: document.getElementById('about-title').value.trim() || 'Чайное Дерево',
-        description_html: getDescHtml(),
+        description_html: document.getElementById('desc-textarea').value,
         banner_image_path: bannerPath,
       })
     });
     var text = await r.text();
-    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + text.substring(0,100));
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + text.substring(0, 100));
     btn.disabled = false;
     btn.style.cssText = 'background:#1b873f;border-color:#1b873f';
     btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Сохранено';
-    setTimeout(function(){ btn.style.cssText=''; btn.innerHTML='<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить'; }, 2000);
+    setTimeout(function() { btn.style.cssText = ''; btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить'; }, 2000);
   } catch(e) {
     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Сохранить';
     alert('Ошибка сохранения: ' + e.message);
@@ -1096,25 +1017,34 @@ async function saveAll() {
 
 // ── Инициализация ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  // Проверяем что скрипты загрузились
-  if (typeof Quill === 'undefined') {
-    showErr('Не удалось загрузить редактор Quill. Функция форматирования недоступна, используйте обычный текст.');
-  }
-  if (typeof Sortable === 'undefined') {
-    console.warn('SortableJS not loaded, drag-and-drop unavailable');
-  }
+  // Баннер
+  document.getElementById('banner-zone').addEventListener('click', function() {
+    document.getElementById('bfile').click();
+  });
+  document.getElementById('bfile').addEventListener('change', function() {
+    if (this.files && this.files[0]) uploadBanner(this.files[0]);
+  });
+  document.getElementById('rm-banner').addEventListener('click', function(e) {
+    e.stopPropagation();
+    bannerPath = null;
+    document.getElementById('banner-img').style.display = 'none';
+    document.getElementById('banner-text').style.display = 'block';
+    document.getElementById('rm-banner').style.display = 'none';
+    document.getElementById('banner-status').textContent = '';
+  });
 
-  // Инициализируем редактор описания (с fallback)
-  initDescQuill('');
+  // Кнопки
+  document.getElementById('save-all-btn').addEventListener('click', saveAll);
+  document.getElementById('add-faq-btn').addEventListener('click', addFaq);
+  document.getElementById('pp-order-btn').addEventListener('click', savePpOrder);
 
   // Загружаем данные
-  fetch('/admin-api/about', {credentials:'include'})
-    .then(function(r){ return r.json(); })
+  fetch('/admin-api/about', {credentials: 'include'})
+    .then(function(r) { return r.json(); })
     .then(function(d) {
       document.getElementById('about-title').value = d.title || 'Чайное Дерево';
       if (d.description_html) {
-        if (descEditor) descEditor.root.innerHTML = d.description_html;
-        else document.getElementById('desc-textarea').value = d.description_html;
+        document.getElementById('desc-textarea').value = d.description_html;
       }
       if (d.banner_image_path) {
         bannerPath = d.banner_image_path;
@@ -1124,19 +1054,17 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('rm-banner').style.display = 'inline-flex';
       }
     })
-    .catch(function(e){
-      showErr('Не удалось загрузить данные О нас: ' + e.message);
-    });
+    .catch(function(e) { console.error('about load error:', e); });
 
-  fetch('/admin-api/faq', {credentials:'include'})
-    .then(function(r){ return r.json(); })
+  fetch('/admin-api/faq', {credentials: 'include'})
+    .then(function(r) { return r.json(); })
     .then(renderFaq)
-    .catch(function(e){ showErr('Не удалось загрузить FAQ: ' + e.message); renderFaq([]); });
+    .catch(function(e) { renderFaq([]); console.error('faq load error:', e); });
 
-  fetch('/admin-api/pickup-points', {credentials:'include'})
-    .then(function(r){ return r.json(); })
+  fetch('/admin-api/pickup-points', {credentials: 'include'})
+    .then(function(r) { return r.json(); })
     .then(renderPp)
-    .catch(function(e){ renderPp([]); console.error('pp:', e); });
+    .catch(function(e) { renderPp([]); console.error('pp load error:', e); });
 });
 </script>
 </body>

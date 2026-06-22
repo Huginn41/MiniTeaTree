@@ -1402,22 +1402,6 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         }
         page_size = 50
 
-    class FaqItemAdmin(ModelView, model=FaqItem):
-        name = "↳ FAQ"
-        name_plural = "FAQ"
-        category = "Настройки магазина"
-
-        column_list = ["sort", "question", "is_active"]
-        column_labels = {
-            "sort": "Порядок",
-            "question": "Вопрос",
-            "answer": "Ответ",
-            "is_active": "Активен",
-        }
-        column_sortable_list = ["sort"]
-        form_excluded_columns = ["created_at", "updated_at"]
-        page_size = 50
-
     class PickupPointAdmin(ModelView, model=PickupPoint):
         name = "↳ Самовывоз"
         name_plural = "Пункты самовывоза"
@@ -1641,7 +1625,6 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     admin.add_view(ProductAdmin)
     admin.add_view(CategoryAdmin)
     admin.add_view(BannerAdmin)
-    admin.add_view(FaqItemAdmin)
     admin.add_view(PickupPointAdmin)
     # Система
     admin.add_view(AdminUserAdmin)
