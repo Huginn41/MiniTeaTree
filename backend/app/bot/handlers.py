@@ -140,17 +140,18 @@ async def cb_payment_link(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer("Заказ не найден", show_alert=True)
         return
 
+    await callback.answer()
+    prompt = await callback.message.answer(
+        f"Введите ссылку на оплату для заказа <b>{order.number}</b>:\n"
+        "(или /cancel для отмены)",
+        parse_mode="HTML",
+    )
     await state.set_state(AdminStates.waiting_payment_link)
     await state.update_data(
         order_id=order_id,
         order_number=order.number,
         customer_tg_id=order.user.telegram_id if order.user else None,
-    )
-    await callback.answer()
-    await callback.message.answer(
-        f"Введите ссылку на оплату для заказа <b>{order.number}</b>:\n\n"
-        "(Или /cancel для отмены)",
-        parse_mode="HTML",
+        prompt_message_id=prompt.message_id,
     )
 
 
@@ -168,6 +169,7 @@ async def msg_payment_link(message: Message, state: FSMContext) -> None:
     order_id: int = data["order_id"]
     order_number: str = data["order_number"]
     customer_tg_id: int | None = data.get("customer_tg_id")
+    prompt_message_id: int | None = data.get("prompt_message_id")
 
     from sqlalchemy import select
     from app.db import get_session_factory
@@ -181,6 +183,23 @@ async def msg_payment_link(message: Message, state: FSMContext) -> None:
             order.status = "awaiting_payment"
             await session.commit()
 
+    await state.clear()
+
+    # Удаляем промпт и ответ менеджера — ссылка сохранится в карточке заказа
+    from app.bot.notify import delete_message as _del
+    chat_id = message.chat.id
+    if prompt_message_id:
+        await _del(chat_id, prompt_message_id)
+    await _del(chat_id, message.message_id)
+
+    # Обновить карточку заказа у всех менеджеров (ссылка появится в тексте)
+    try:
+        from app.bot.notify import update_order_notifications
+        await update_order_notifications(order_id)
+    except Exception:
+        pass
+
+    # Уведомить клиента
     if customer_tg_id:
         from app.bot.notify import _send_message
         await _send_message(
@@ -188,17 +207,6 @@ async def msg_payment_link(message: Message, state: FSMContext) -> None:
             f"👀 Мы увидели ваш заказ <b>{order_number}</b>!\n\n"
             f"Для оформления перейдите по ссылке на оплату:\n{link}",
         )
-
-    try:
-        from app.bot.notify import update_order_notifications
-        await update_order_notifications(order_id)
-    except Exception:
-        pass
-
-    await state.clear()
-    await message.answer(
-        f"✅ Ссылка отправлена покупателю. Статус заказа {order_number} → «Ожидает оплаты»."
-    )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -221,13 +229,17 @@ async def cb_tracking_link(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer("Заказ не найден", show_alert=True)
         return
 
-    await state.set_state(AdminStates.waiting_tracking_link)
-    await state.update_data(order_id=order_id, order_number=order.number)
     await callback.answer()
-    await callback.message.answer(
-        f"Введите ссылку для отслеживания заказа <b>{order.number}</b>:\n\n"
-        "(Или /cancel для отмены)",
+    prompt = await callback.message.answer(
+        f"Введите ссылку для отслеживания заказа <b>{order.number}</b>:\n"
+        "(или /cancel для отмены)",
         parse_mode="HTML",
+    )
+    await state.set_state(AdminStates.waiting_tracking_link)
+    await state.update_data(
+        order_id=order_id,
+        order_number=order.number,
+        prompt_message_id=prompt.message_id,
     )
 
 
@@ -243,7 +255,7 @@ async def msg_tracking_link(message: Message, state: FSMContext) -> None:
 
     data = await state.get_data()
     order_id: int = data["order_id"]
-    order_number: str = data["order_number"]
+    prompt_message_id: int | None = data.get("prompt_message_id")
 
     from sqlalchemy import select
     from app.db import get_session_factory
@@ -256,14 +268,20 @@ async def msg_tracking_link(message: Message, state: FSMContext) -> None:
             order.tracking_link = link
             await session.commit()
 
+    await state.clear()
+
+    # Удаляем промпт и ответ менеджера — трек появится в карточке заказа
+    from app.bot.notify import delete_message as _del
+    chat_id = message.chat.id
+    if prompt_message_id:
+        await _del(chat_id, prompt_message_id)
+    await _del(chat_id, message.message_id)
+
     try:
         from app.bot.notify import update_order_notifications
         await update_order_notifications(order_id)
     except Exception:
         pass
-
-    await state.clear()
-    await message.answer(f"✅ Трек-номер сохранён для заказа {order_number}.")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -275,8 +293,17 @@ async def cmd_cancel(message: Message, state: FSMContext) -> None:
     if current is None:
         await message.answer("Нечего отменять.")
         return
+
+    data = await state.get_data()
+    prompt_message_id: int | None = data.get("prompt_message_id")
     await state.clear()
-    await message.answer("Действие отменено.")
+
+    # Удаляем промпт бота и сообщение /cancel менеджера
+    from app.bot.notify import delete_message as _del
+    chat_id = message.chat.id
+    if prompt_message_id:
+        await _del(chat_id, prompt_message_id)
+    await _del(chat_id, message.message_id)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

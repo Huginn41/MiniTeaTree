@@ -56,22 +56,22 @@ _IN_DELIVERY  = {"in_delivery", "at_pvz"}
 
 
 def _order_text(order: Order) -> str:
-    status_label = _STATUS_LABELS.get(order.status, order.status)
-    lines = [f"🛒 <b>Заказ {order.number}</b>  |  {status_label}"]
+    # ── Шапка (неизменная часть) ──
+    lines = [f"🛒 <b>Заказ {order.number}</b>"]
 
     if order.user:
         lines.append(f"👤 {order.user.display_name}")
 
-    lines.append(f"💰 Сумма: <b>{float(order.total_amount):.0f} ₽</b>")
-
     if order.delivery_info:
         di = order.delivery_info
         type_label = {"pickup": "Самовывоз", "courier": "Курьер", "pvz": "ПВЗ"}.get(di.type, di.type)
-        lines.append(f"🚚 {type_label}")
+        lines.append(f"💰 <b>{float(order.total_amount):.0f} ₽</b>  ·  {type_label}")
         if di.address:
             lines.append(f"📍 {di.address}")
         if di.contact_phone:
             lines.append(f"📞 {di.contact_phone}")
+    else:
+        lines.append(f"💰 <b>{float(order.total_amount):.0f} ₽</b>")
 
     if order.items:
         lines.append("")
@@ -80,10 +80,16 @@ def _order_text(order: Order) -> str:
             lines.append(f"  • {oi.snapshot_name} {oi.snapshot_weight_g}г × {oi.quantity}")
 
     if order.comment:
-        lines.append(f"\n💬 {order.comment}")
+        lines.append(f"💬 {order.comment}")
+
+    # ── Статус (меняется при каждом обновлении) ──
+    lines.append("")
+    lines.append("─────────────────")
+    status_label = _STATUS_LABELS.get(order.status, order.status)
+    lines.append(f"▸ Этап: {status_label}")
 
     if order.payment_link:
-        lines.append(f"\n💳 <a href='{order.payment_link}'>Ссылка на оплату</a>")
+        lines.append(f"💳 <a href='{order.payment_link}'>Ссылка на оплату</a>")
     if order.tracking_link:
         lines.append(f"🚚 <a href='{order.tracking_link}'>Трек-номер</a>")
 
@@ -160,6 +166,11 @@ async def _edit_message(chat_id: int, message_id: int, text: str, reply_markup: 
         payload["reply_markup"] = reply_markup
     result = await _api_call("editMessageText", payload)
     return bool(result.get("ok"))
+
+
+async def delete_message(chat_id: int, message_id: int) -> None:
+    """Удаляет сообщение (ошибки игнорирует — сообщение уже могло быть удалено)."""
+    await _api_call("deleteMessage", {"chat_id": chat_id, "message_id": message_id})
 
 
 async def notify_new_order(order: Order, session: AsyncSession) -> int:
