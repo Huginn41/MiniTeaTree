@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime, timezone
 
 
@@ -20,14 +21,6 @@ def _fmt_dt(dt: datetime | None, date_only: bool = False) -> str:
     return local.strftime("%d.%m.%Y") if date_only else local.strftime("%d.%m.%Y %H:%M")
 
 
-_SEGMENT_META = {
-    "vip":       ("🌟 VIP",        "#7c3aed"),
-    "wholesale": ("📦 Оптовик",    "#0369a1"),
-    "regular":   ("☕ Постоянный", "#065f46"),
-    "at_risk":   ("⚠️ Под риском", "#b45309"),
-    "churned":   ("💤 Отток",      "#6b7280"),
-}
-
 _STATUS_LABELS = {
     "new": "Новый", "assembling": "Собираем", "ready": "Готов",
     "awaiting_payment": "Ожидает оплаты", "in_delivery": "В доставке",
@@ -36,242 +29,268 @@ _STATUS_LABELS = {
 _STATUS_COLORS = {
     "new": "#2563eb", "assembling": "#7c3aed", "ready": "#059669",
     "awaiting_payment": "#d97706", "in_delivery": "#0891b2",
-    "at_pvz": "#0369a1", "delivered": "#16a34a", "cancelled": "#6b7280",
+    "at_pvz": "#0369a1", "delivered": "#16a34a", "cancelled": "#9ca3af",
+}
+_STATUS_ICONS = {
+    "new": "🆕", "assembling": "📦", "ready": "✅",
+    "awaiting_payment": "⏳", "in_delivery": "🚚",
+    "at_pvz": "🏪", "delivered": "🎉", "cancelled": "❌",
 }
 
 
 _CSS = """
 <style>
 :root {
-  --c-bg:    #f4f6fa;
-  --c-card:  #ffffff;
-  --c-border:#e5e7eb;
-  --c-text:  #111827;
+  --c-bg: #f0f2f7;
+  --c-card: #ffffff;
+  --c-border: #e5e7eb;
+  --c-text: #111827;
   --c-muted: #6b7280;
-  --c-green: #16a34a;
   --c-primary: #1a6b3c;
+  --c-primary-light: #e8f5ee;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-       background: var(--c-bg); color: var(--c-text); font-size: 14px; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--c-bg); color: var(--c-text); font-size: 14px; line-height: 1.5;
+}
 
-.crm-wrap  { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
-.crm-back  { display:inline-flex;align-items:center;gap:6px;color:var(--c-primary);
-             font-weight:600;text-decoration:none;font-size:13px;margin-bottom:20px; }
-.crm-back:hover { text-decoration:underline; }
+.wrap { max-width: 1060px; margin: 0 auto; padding: 24px 16px 72px; }
+
+.back-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--c-primary); font-weight: 600; font-size: 13px;
+  text-decoration: none; margin-bottom: 20px;
+  padding: 6px 12px; border-radius: 8px; transition: background .15s;
+}
+.back-link:hover { background: var(--c-primary-light); text-decoration: none; }
 
 /* ── Profile header ── */
 .profile-header {
-  background: var(--c-card); border-radius: 16px; border: 1px solid var(--c-border);
-  padding: 28px 28px 24px; margin-bottom: 20px;
-  display: flex; align-items: flex-start; gap: 20px;
+  background: linear-gradient(135deg, #1a6b3c 0%, #2d9a5c 100%);
+  border-radius: 18px; padding: 28px 28px 24px;
+  display: flex; align-items: center; gap: 20px;
+  margin-bottom: 16px; color: #fff;
 }
 .avatar {
-  width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
-  background: var(--c-primary); color: #fff;
+  width: 76px; height: 76px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(255,255,255,.2); backdrop-filter: blur(4px);
+  border: 2.5px solid rgba(255,255,255,.4);
   display: flex; align-items: center; justify-content: center;
-  font-size: 28px; font-weight: 700; letter-spacing: -1px;
+  font-size: 28px; font-weight: 700; color: #fff; letter-spacing: -1px;
 }
-.profile-info { flex: 1; min-width: 0; }
-.profile-name { font-size: 22px; font-weight: 700; line-height: 1.2; margin-bottom: 6px; }
-.profile-meta { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-top: 10px; }
-.profile-meta-item { display: flex; align-items: center; gap: 5px; color: var(--c-muted); font-size: 13px; }
-.profile-meta-item a { color: var(--c-primary); text-decoration: none; font-weight: 600; }
-.profile-meta-item a:hover { text-decoration: underline; }
-.segment-badge {
-  display: inline-flex; align-items: center; padding: 4px 12px;
-  border-radius: 100px; font-size: 12px; font-weight: 700;
-  margin-top: 10px;
+.profile-name {
+  font-size: 22px; font-weight: 700; line-height: 1.2;
 }
+.profile-sub {
+  display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px;
+}
+.profile-sub-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; color: rgba(255,255,255,.85);
+}
+.profile-sub-item a {
+  color: #fff; font-weight: 600; text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,.4);
+}
+.profile-sub-item a:hover { border-color: #fff; }
 
 /* ── Stats row ── */
 .stats-row {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+  margin-bottom: 20px;
 }
-.stat-card {
-  background: var(--c-card); border-radius: 12px; border: 1px solid var(--c-border);
-  padding: 18px 20px;
-}
-.stat-label { font-size: 11px; font-weight: 600; color: var(--c-muted);
-              text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
-.stat-value { font-size: 22px; font-weight: 800; color: var(--c-text); }
-.stat-sub   { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
+@media (max-width: 860px) { .stats-row { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 560px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
 
-/* ── Grid ── */
-.crm-grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
-@media (max-width: 768px) { .crm-grid { grid-template-columns: 1fr; } .stats-row { grid-template-columns: repeat(2,1fr); } }
+.stat-card {
+  background: var(--c-card); border-radius: 14px; border: 1px solid var(--c-border);
+  padding: 16px 18px; position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--c-primary); border-radius: 14px 14px 0 0;
+}
+.stat-label {
+  font-size: 10px; font-weight: 700; color: var(--c-muted);
+  text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px;
+}
+.stat-value { font-size: 20px; font-weight: 800; color: var(--c-text); }
+.stat-sub { font-size: 11px; color: var(--c-muted); margin-top: 3px; }
+
+/* ── Main grid ── */
+.main-grid {
+  display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start;
+}
+@media (max-width: 760px) { .main-grid { grid-template-columns: 1fr; } }
 
 /* ── Card ── */
-.crm-card {
+.card {
   background: var(--c-card); border-radius: 14px; border: 1px solid var(--c-border);
-  padding: 20px 20px 16px; margin-bottom: 16px;
+  overflow: hidden; margin-bottom: 16px;
 }
-.crm-card-title {
-  font-size: 12px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .5px; color: var(--c-muted); margin-bottom: 14px;
+.card-header {
+  padding: 14px 20px; border-bottom: 1px solid var(--c-border);
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .6px; color: var(--c-muted);
+  display: flex; align-items: center; justify-content: space-between;
 }
+.card-header-count {
+  background: var(--c-primary-light); color: var(--c-primary);
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 100px;
+}
+.card-body { padding: 8px 0; }
+.card-empty { padding: 24px 20px; color: var(--c-muted); font-size: 13px; text-align: center; }
 
-/* ── Order history ── */
-.order-table { width: 100%; border-collapse: collapse; }
-.order-table th {
-  text-align: left; padding: 0 10px 10px; font-size: 11px; font-weight: 600;
-  color: var(--c-muted); text-transform: uppercase; letter-spacing: .5px;
-  border-bottom: 1px solid var(--c-border);
+/* ── Order cards ── */
+.order-card {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 20px; border-bottom: 1px solid var(--c-border);
+  text-decoration: none; color: inherit; transition: background .12s;
 }
-.order-table td { padding: 10px; border-bottom: 1px solid var(--c-border); }
-.order-table tr:last-child td { border-bottom: none; }
-.order-num { font-weight: 700; color: var(--c-primary); text-decoration: none; }
-.order-num:hover { text-decoration: underline; }
+.order-card:last-child { border-bottom: none; }
+.order-card:hover { background: #fafbff; }
+
+.order-icon {
+  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.order-main { flex: 1; min-width: 0; }
+.order-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.order-num { font-weight: 700; font-size: 14px; color: var(--c-primary); }
+.order-amount { font-weight: 800; font-size: 15px; white-space: nowrap; }
+.order-meta {
+  display: flex; align-items: center; gap: 10px; margin-top: 4px;
+}
+.order-date { font-size: 12px; color: var(--c-muted); }
 .status-pill {
-  display: inline-block; padding: 2px 8px; border-radius: 100px;
-  font-size: 11px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 9px; border-radius: 100px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.order-items-preview {
+  margin-top: 5px; font-size: 12px; color: var(--c-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* ── Info rows ── */
-.info-row { display: flex; justify-content: space-between; align-items: flex-start;
-            padding: 9px 0; border-bottom: 1px solid var(--c-border); }
-.info-row:last-child { border-bottom: none; }
-.info-label { color: var(--c-muted); font-size: 13px; }
-.info-value { font-weight: 600; font-size: 13px; text-align: right; }
-
-/* ── Notes ── */
-textarea.notes-area {
-  width: 100%; min-height: 100px; padding: 10px 12px;
-  border: 1.5px solid var(--c-border); border-radius: 10px;
-  font-family: inherit; font-size: 14px; resize: vertical;
-  color: var(--c-text); background: #fafafa;
+/* ── Top products ── */
+.top-product {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px; border-bottom: 1px solid var(--c-border);
 }
-textarea.notes-area:focus { outline: none; border-color: var(--c-primary); }
-
-/* ── Segment select ── */
-select.seg-select {
-  width: 100%; padding: 9px 12px; border: 1.5px solid var(--c-border);
-  border-radius: 10px; font-family: inherit; font-size: 14px;
-  color: var(--c-text); background: #fafafa; cursor: pointer;
+.top-product:last-child { border-bottom: none; }
+.top-rank {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
 }
-select.seg-select:focus { outline: none; border-color: var(--c-primary); }
-
-.save-btn {
-  margin-top: 12px; width: 100%; padding: 10px;
-  background: var(--c-primary); color: #fff; border: none;
-  border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer;
+.rank-1 { background: #fef3c7; color: #92400e; }
+.rank-2 { background: #f1f5f9; color: #475569; }
+.rank-3 { background: #fef2ef; color: #9a3412; }
+.top-product-name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; }
+.top-product-count {
+  font-size: 12px; font-weight: 700; color: var(--c-muted);
+  background: var(--c-bg); padding: 2px 8px; border-radius: 100px;
+  white-space: nowrap;
 }
-.save-btn:hover { background: #145530; }
-.save-btn:disabled { background: #aaa; cursor: default; }
-
-.crm-toast {
-  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  background: #1f2937; color: #fff; padding: 10px 22px; border-radius: 100px;
-  font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none;
-  transition: opacity .3s; z-index: 9999;
-}
-.crm-toast.show { opacity: 1; }
 </style>
-"""
-
-_JS = r"""
-function toast(msg) {
-  var t = document.getElementById('crm-toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-async function saveCrm() {
-  var btn = document.getElementById('save-btn');
-  btn.disabled = true;
-  var uid  = btn.dataset.uid;
-  var seg  = document.getElementById('seg-select').value;
-  var notes = document.getElementById('notes-area').value;
-  var r = await fetch('/admin-api/customer/' + uid, {
-    method: 'PATCH',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({segment: seg || null, notes: notes || null})
-  });
-  btn.disabled = false;
-  if (r.ok) { toast('✅ Сохранено'); }
-  else       { toast('❌ Ошибка сохранения'); }
-}
 """
 
 
 def render_crm_customer(user, admin_username: str = "") -> str:
     from app.admin.dashboard import _topnav
 
-    # ── initials avatar ──────────────────────────────────────────────────────
+    # ── Initials ─────────────────────────────────────────────────────────────
     parts = [user.first_name or "", user.last_name or ""]
     words = [p for p in parts if p]
     initials = "".join(w[0].upper() for w in words[:2]) or (user.username or "?")[0].upper()
 
-    # ── username/tg link ─────────────────────────────────────────────────────
-    tg_link = f'<a href="https://t.me/{user.username}" target="_blank">@{_esc(user.username)}</a>' \
-        if user.username else "—"
-
-    # ── segment ──────────────────────────────────────────────────────────────
-    seg_label, seg_color = _SEGMENT_META.get(user.segment or "", ("", "#6b7280"))
-    segment_badge = (
-        f'<span class="segment-badge" style="background:{seg_color}22;color:{seg_color}">'
-        f'{seg_label}</span>'
-    ) if user.segment else ""
-
-    # ── stats ─────────────────────────────────────────────────────────────────
+    # ── Stats ─────────────────────────────────────────────────────────────────
     orders = user.orders or []
     total_orders = len(orders)
     total_spent  = sum(float(o.total_amount) for o in orders)
     avg_check    = total_spent / total_orders if total_orders else 0
-    last_order   = max((o.created_at for o in orders), default=None)
+    last_order_dt = max((o.created_at for o in orders), default=None)
 
-    # ── order history table ──────────────────────────────────────────────────
+    # ── Top-3 products ───────────────────────────────────────────────────────
+    product_counter: Counter = Counter()
+    for o in orders:
+        if hasattr(o, "items") and o.items:
+            for item in o.items:
+                product_counter[item.snapshot_name] += item.quantity
+    top_products = product_counter.most_common(3)
+
+    # ── Order cards ───────────────────────────────────────────────────────────
     orders_sorted = sorted(orders, key=lambda o: o.created_at, reverse=True)
+
+    def order_card_html(o) -> str:
+        sc = _STATUS_COLORS.get(o.status, "#9ca3af")
+        sl = _STATUS_LABELS.get(o.status, o.status)
+        si = _STATUS_ICONS.get(o.status, "📋")
+        items_preview = ""
+        if hasattr(o, "items") and o.items:
+            parts_list = []
+            for it in sorted(o.items, key=lambda x: x.snapshot_name):
+                label = f"{_esc(it.snapshot_name)}"
+                if it.snapshot_weight_g:
+                    label += f" {it.snapshot_weight_g} г"
+                if it.quantity > 1:
+                    label += f" × {it.quantity}"
+                parts_list.append(label)
+            items_preview = ", ".join(parts_list)
+        return (
+            f'<a class="order-card" href="/crm/order/{o.id}">'
+            f'  <div class="order-icon" style="background:{sc}18">{si}</div>'
+            f'  <div class="order-main">'
+            f'    <div class="order-top">'
+            f'      <span class="order-num">{_esc(o.number)}</span>'
+            f'      <span class="order-amount">{float(o.total_amount):.0f} ₽</span>'
+            f'    </div>'
+            f'    <div class="order-meta">'
+            f'      <span class="order-date">{_fmt_dt(o.created_at)}</span>'
+            f'      <span class="status-pill" style="background:{sc}18;color:{sc}">{sl}</span>'
+            f'    </div>'
+            f'    {f"<div class=order-items-preview>{items_preview}</div>" if items_preview else ""}'
+            f'  </div>'
+            f'</a>'
+        )
+
     if orders_sorted:
-        rows = ""
-        for o in orders_sorted:
-            sc = _STATUS_COLORS.get(o.status, "#6b7280")
-            sl = _STATUS_LABELS.get(o.status, o.status)
-            rows += (
-                f'<tr>'
-                f'<td><a class="order-num" href="/crm/order/{o.id}">{_esc(o.number)}</a></td>'
-                f'<td style="color:#6b7280">{_fmt_dt(o.created_at, date_only=True)}</td>'
-                f'<td style="font-weight:700">{float(o.total_amount):.0f} ₽</td>'
-                f'<td><span class="status-pill" style="background:{sc}22;color:{sc}">{sl}</span></td>'
-                f'</tr>'
-            )
-        orders_html = f"""
-        <table class="order-table">
-          <thead><tr>
-            <th>Номер</th><th>Дата</th><th>Сумма</th><th>Статус</th>
-          </tr></thead>
-          <tbody>{rows}</tbody>
-        </table>"""
+        orders_html = "".join(order_card_html(o) for o in orders_sorted)
     else:
-        orders_html = '<p style="color:#6b7280;font-size:13px">Заказов пока нет</p>'
+        orders_html = '<div class="card-empty">Заказов пока нет</div>'
 
-    # ── profile meta ─────────────────────────────────────────────────────────
-    meta_items = ""
+    # ── Top products HTML ─────────────────────────────────────────────────────
+    rank_classes = ["rank-1", "rank-2", "rank-3"]
+    rank_emojis  = ["🥇", "🥈", "🥉"]
+    if top_products:
+        top_html = ""
+        for i, (name, qty) in enumerate(top_products):
+            rc = rank_classes[i] if i < 3 else "rank-3"
+            re = rank_emojis[i] if i < 3 else str(i + 1)
+            top_html += (
+                f'<div class="top-product">'
+                f'  <div class="top-rank {rc}">{re}</div>'
+                f'  <div class="top-product-name">{_esc(name)}</div>'
+                f'  <div class="top-product-count">{qty} шт</div>'
+                f'</div>'
+            )
+    else:
+        top_html = '<div class="card-empty">Нет данных</div>'
+
+    # ── Profile sub line ──────────────────────────────────────────────────────
+    sub_items = ""
+    if user.username:
+        sub_items += (
+            f'<div class="profile-sub-item">'
+            f'<a href="https://t.me/{_esc(user.username)}" target="_blank">@{_esc(user.username)}</a>'
+            f'</div>'
+        )
     if user.phone:
-        meta_items += f'<div class="profile-meta-item">📱 {_esc(user.phone)}</div>'
-    if user.email:
-        meta_items += f'<div class="profile-meta-item">✉️ {_esc(user.email)}</div>'
-    if user.city:
-        meta_items += f'<div class="profile-meta-item">📍 {_esc(user.city)}</div>'
-    meta_items += f'<div class="profile-meta-item">🔗 Telegram: {tg_link}</div>'
-    meta_items += f'<div class="profile-meta-item">ID: <code>{user.telegram_id}</code></div>'
-
-    # ── info rows (right panel) ───────────────────────────────────────────────
-    def info_row(label, value):
-        return f'<div class="info-row"><span class="info-label">{label}</span><span class="info-value">{value}</span></div>'
-
-    lang_labels = {"ru": "🇷🇺 Русский", "en": "🇬🇧 English", "uk": "🇺🇦 Украинский"}
-    info_rows = (
-        info_row("Зарегистрирован", _fmt_dt(user.created_at, date_only=True)) +
-        info_row("Последний вход", _fmt_dt(user.last_seen_at)) +
-        info_row("Язык", lang_labels.get(user.language_code or "", user.language_code or "—"))
-    )
-
-    # ── segment select options ────────────────────────────────────────────────
-    seg_options = '<option value="">— без сегмента —</option>'
-    for val, (lbl, _) in _SEGMENT_META.items():
-        sel = 'selected' if user.segment == val else ''
-        seg_options += f'<option value="{val}" {sel}>{lbl}</option>'
+        sub_items += f'<div class="profile-sub-item">📱 {_esc(user.phone)}</div>'
+    sub_items += f'<div class="profile-sub-item" style="opacity:.7">ID {user.telegram_id}</div>'
 
     nav = _topnav("crm", admin_username=admin_username)
 
@@ -287,17 +306,16 @@ def render_crm_customer(user, admin_username: str = "") -> str:
 </head>
 <body>
 {nav}
-<div class="crm-wrap">
+<div class="wrap">
 
-  <a href="/admin/user/list" class="crm-back">← Все клиенты</a>
+  <a href="/admin/user/list" class="back-link">← Все клиенты</a>
 
   <!-- Profile header -->
   <div class="profile-header">
     <div class="avatar">{_esc(initials)}</div>
-    <div class="profile-info">
+    <div>
       <div class="profile-name">{_esc(user.display_name)}</div>
-      {segment_badge}
-      <div class="profile-meta">{meta_items}</div>
+      <div class="profile-sub">{sub_items}</div>
     </div>
   </div>
 
@@ -316,43 +334,43 @@ def render_crm_customer(user, admin_username: str = "") -> str:
       <div class="stat-value">{avg_check:.0f} ₽</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Последний заказ</div>
-      <div class="stat-value" style="font-size:15px">{_fmt_dt(last_order, date_only=True)}</div>
+      <div class="stat-label">Последняя покупка</div>
+      <div class="stat-value" style="font-size:15px;line-height:1.3">{_fmt_dt(last_order_dt, date_only=True)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Был в апп</div>
+      <div class="stat-value" style="font-size:13px;line-height:1.3;padding-top:3px">{_fmt_dt(user.last_seen_at)}</div>
+      <div class="stat-sub">Зарег. {_fmt_dt(user.created_at, date_only=True)}</div>
     </div>
   </div>
 
   <!-- Main grid -->
-  <div class="crm-grid">
-    <!-- Left: orders -->
+  <div class="main-grid">
+
+    <!-- Left: order history -->
     <div>
-      <div class="crm-card">
-        <p class="crm-card-title">История заказов</p>
-        {orders_html}
+      <div class="card">
+        <div class="card-header">
+          История заказов
+          <span class="card-header-count">{total_orders}</span>
+        </div>
+        <div class="card-body">
+          {orders_html}
+        </div>
       </div>
     </div>
 
-    <!-- Right: info + edit -->
+    <!-- Right: top products -->
     <div>
-      <div class="crm-card">
-        <p class="crm-card-title">Информация</p>
-        {info_rows}
-      </div>
-
-      <div class="crm-card">
-        <p class="crm-card-title">Сегмент</p>
-        <select id="seg-select" class="seg-select">{seg_options}</select>
-      </div>
-
-      <div class="crm-card">
-        <p class="crm-card-title">Заметки менеджера</p>
-        <textarea id="notes-area" class="notes-area" placeholder="Добавьте заметку о клиенте…">{_esc(user.notes or "")}</textarea>
-        <button id="save-btn" class="save-btn" data-uid="{user.id}" onclick="saveCrm()">Сохранить</button>
+      <div class="card">
+        <div class="card-header">Топ товары</div>
+        <div class="card-body">
+          {top_html}
+        </div>
       </div>
     </div>
+
   </div>
 </div>
-
-<div id="crm-toast" class="crm-toast"></div>
-<script>{_JS}</script>
 </body>
 </html>"""

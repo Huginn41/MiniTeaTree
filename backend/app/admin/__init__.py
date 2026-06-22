@@ -1012,10 +1012,13 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         from app.db import get_session_factory
         from sqlalchemy.orm import selectinload
         from app.models.user import User as _User
+        from app.models.order import Order as _Order, OrderItem as _OrderItem
         async with get_session_factory()() as session:
             result = await session.execute(
                 select(_User)
-                .options(selectinload(_User.orders))
+                .options(
+                    selectinload(_User.orders).selectinload(_Order.items),
+                )
                 .where(_User.id == user_id)
             )
             user = result.scalar_one_or_none()
