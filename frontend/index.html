@@ -2058,21 +2058,18 @@
         <div style="padding:0 0 24px">
 
           <!-- Баннер / шапка -->
-          <div style="${bannerStyle}border-radius:20px;padding:28px 20px;margin-bottom:20px;text-align:center;position:relative;overflow:hidden">
-            ${about.banner_image_path ? '<div style="position:absolute;inset:0;background:rgba(0,0,0,.35);border-radius:20px"></div>' : ''}
-            <div style="position:relative;z-index:1">
-              ${about.banner_image_path ? '' : '<div style="font-size:48px;margin-bottom:8px">🍵</div>'}
-              <h2 style="font-size:22px;font-weight:800;color:#fff;margin:0;letter-spacing:-.3px;text-shadow:0 1px 4px rgba(0,0,0,.3)">${esc(title)}</h2>
-            </div>
+          <div style="${bannerStyle}border-radius:20px;min-height:220px;margin-bottom:20px;position:relative;overflow:hidden">
+            ${about.banner_image_path ? '<div style="position:absolute;inset:0;background:rgba(0,0,0,.15);border-radius:20px"></div>' : ''}
+            ${!about.banner_image_path ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:64px">🍵</div>' : ''}
           </div>
 
-          <!-- Описание из редактора -->
-          ${about.description_html && about.description_html.replace(/<[^>]+>/g,'').trim() ? `
-          <div style="background:var(--md-surface-container-low);border-radius:16px;padding:18px 16px;margin-bottom:20px">
-            <p style="font-size:13px;font-weight:700;color:var(--md-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;margin:0 0 10px">О магазине</p>
+          <!-- Заголовок и описание -->
+          <div style="margin-bottom:20px">
+            <h2 style="font-size:22px;font-weight:800;color:var(--md-on-surface);margin:0 0 12px;letter-spacing:-.3px">${esc(title)}</h2>
+            ${about.description_html && about.description_html.replace(/<[^>]+>/g,'').trim() ? `
             <div class="about-rich">${about.description_html}</div>
+            ` : ''}
           </div>
-          ` : ''}
 
           <!-- Пункты самовывоза -->
           ${points.length ? `
