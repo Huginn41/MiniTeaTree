@@ -309,15 +309,22 @@ _ADMIN_JS = (r"""
       var fd = new FormData(); fd.append('file', file);
       btn.textContent = '⏳ Загрузка...'; btn.disabled = true;
       fetch('/admin-api/upload', {method:'POST', body:fd})
-        .then(function(r){ return r.json(); })
+        .then(function(r){
+          if(!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'Ошибка сервера ' + r.status); });
+          return r.json();
+        })
         .then(function(d){
+          if(!d.path) throw new Error('Сервер не вернул путь');
           inp.value = d.path;
           preview.src = d.path; preview.style.opacity = '1';
           URL.revokeObjectURL(localUrl);
           btn.textContent = '✅ ' + file.name;
           btn.disabled = false;
         })
-        .catch(function(){ btn.textContent = '❌ Ошибка'; btn.disabled = false; preview.style.opacity = '1'; });
+        .catch(function(err){
+          btn.textContent = '❌ ' + (err.message || 'Ошибка');
+          btn.disabled = false; preview.style.opacity = '1';
+        });
     });
   }
 
@@ -829,16 +836,20 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     _MAX_IMAGE_PX = 1600
 
     def _to_webp(data: bytes, dest: Path, max_px: int = 1600) -> None:
-        from PIL import Image
+        from PIL import Image, UnidentifiedImageError
         import io as _bio
-        img = Image.open(_bio.BytesIO(data))
-        if img.mode in ("RGBA", "LA", "P"):
-            img = img.convert("RGBA")
-            bg = Image.new("RGB", img.size, (255, 255, 255))
-            bg.paste(img, mask=img.split()[3])
-            img = bg
-        else:
-            img = img.convert("RGB")
+        try:
+            img = Image.open(_bio.BytesIO(data))
+            img.load()  # форсируем загрузку — ловим битые файлы здесь
+        except (UnidentifiedImageError, Exception) as exc:
+            raise ValueError(f"Не удалось открыть изображение: {exc}") from exc
+
+        # Приводим к RGB через alpha_composite — работает с любым режимом PNG
+        if img.mode != "RGB":
+            rgba = img.convert("RGBA")
+            bg = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+            img = Image.alpha_composite(bg, rgba).convert("RGB")
+
         w, h = img.size
         if max(w, h) > max_px:
             r = max_px / max(w, h)
@@ -851,7 +862,14 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
         _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{_uuid.uuid4().hex}.webp"
-        _to_webp(await file.read(), _UPLOADS_DIR / name)
+        try:
+            _to_webp(await file.read(), _UPLOADS_DIR / name)
+        except ValueError as exc:
+            return _JSONResponse(status_code=422, content={"error": str(exc)})
+        except Exception as exc:
+            import logging as _log
+            _log.getLogger(__name__).exception("Upload error: %s", exc)
+            return _JSONResponse(status_code=500, content={"error": "Ошибка обработки изображения"})
         return _JSONResponse({"path": f"/static/media/uploads/{name}"})
 
     @app.get("/admin-api/product/{product_id}/images")
@@ -874,7 +892,12 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
         _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{_uuid.uuid4().hex}.webp"
-        _to_webp(await file.read(), _UPLOADS_DIR / name)
+        try:
+            _to_webp(await file.read(), _UPLOADS_DIR / name)
+        except Exception as exc:
+            import logging as _log
+            _log.getLogger(__name__).exception("Product image upload error: %s", exc)
+            return _JSONResponse(status_code=422, content={"error": "Ошибка обработки изображения"})
         path = f"/static/media/uploads/{name}"
         from app.db import get_session_factory
         from app.models.product import ProductImage
