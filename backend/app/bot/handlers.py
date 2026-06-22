@@ -127,11 +127,17 @@ async def cb_confirm_payment(callback: CallbackQuery) -> None:
 
     from datetime import UTC, datetime as _dt
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
     from app.db import get_session_factory
     from app.models.order import Order
+    from app.bot.notify import _order_text, _order_keyboard, _edit_message, update_order_notifications
 
     async with get_session_factory()() as session:
-        result = await session.execute(select(Order).where(Order.id == order_id))
+        result = await session.execute(
+            select(Order)
+            .options(selectinload(Order.user), selectinload(Order.items), selectinload(Order.delivery_info))
+            .where(Order.id == order_id)
+        )
         order = result.scalar_one_or_none()
         if not order:
             await callback.answer("Заказ не найден", show_alert=True)
@@ -141,11 +147,19 @@ async def cb_confirm_payment(callback: CallbackQuery) -> None:
             return
         order.paid_at = _dt.now(UTC)
         await session.commit()
+        text = _order_text(order)
+        keyboard = _order_keyboard(order)
 
     await callback.answer("✅ Оплата подтверждена", show_alert=False)
 
+    # Редактируем карточку напрямую — работает даже если _order_messages пуст
     try:
-        from app.bot.notify import update_order_notifications
+        await _edit_message(callback.message.chat.id, callback.message.message_id, text, keyboard)
+    except Exception:
+        pass
+
+    # Обновить карточки у остальных менеджеров
+    try:
         await update_order_notifications(order_id)
     except Exception:
         pass
