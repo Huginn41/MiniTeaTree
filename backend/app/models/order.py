@@ -69,6 +69,13 @@ class Order(TimestampMixin, Base):
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Когда отправлен запрос обратной связи (чтобы не слать повторно).
     feedback_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Откуда пришёл заказ: mini_app / bot / manual.
+    source: Mapped[str] = mapped_column(
+        String(32), server_default=text("'mini_app'"), nullable=False, default="mini_app"
+    )
+    # Когда отменён и причина отмены.
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancel_reason: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
     user = relationship("User", back_populates="orders")
     items = relationship(
@@ -84,6 +91,9 @@ class Order(TimestampMixin, Base):
         lazy="selectin",
         cascade="all, delete-orphan",
     )
+
+    def __str__(self) -> str:
+        return self.number
 
     def __repr__(self) -> str:
         return f"<Order id={self.id} number={self.number!r} status={self.status!r}>"

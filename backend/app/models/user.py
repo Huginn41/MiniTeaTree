@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy import BigInteger, Boolean, String, text
+from datetime import datetime
+
+from sqlalchemy import BigInteger, Boolean, DateTime, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -33,6 +35,21 @@ class User(TimestampMixin, Base):
     is_admin: Mapped[bool] = mapped_column(
         Boolean, server_default=text("false"), nullable=False, default=False
     )
+
+    # ── Дополнительные контакты ──────────────────────────────────────────────
+    email: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Язык интерфейса из Telegram (ru, en, …).
+    language_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # Город — заполняется из адреса первого заказа или вручную.
+    city: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    # ── CRM / маркетинг ──────────────────────────────────────────────────────
+    # Сегмент: vip / wholesale / regular / at_risk / churned
+    segment: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Заметки менеджера о клиенте.
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Время последнего входа в мини-апп (обновляется при авторизации).
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Связи (lazy — загружаются по запросу, чтобы не тащить всё подряд).
     cart = relationship("Cart", back_populates="user", uselist=False, lazy="selectin")
@@ -65,6 +82,12 @@ class User(TimestampMixin, Base):
         if not self.orders:
             return None
         return min(o.created_at for o in self.orders)
+
+    @property
+    def last_order_date(self):
+        if not self.orders:
+            return None
+        return max(o.created_at for o in self.orders)
 
     def __repr__(self) -> str:
         return f"<User id={self.id} tg={self.telegram_id}>"

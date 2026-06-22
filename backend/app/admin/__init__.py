@@ -1004,6 +1004,50 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         html = render_crm_order(order, admin_username=admin_username)
         return _HTMLResponse(html)
 
+    @app.get("/admin/crm-customer/{user_id}", include_in_schema=False)
+    async def admin_crm_customer(user_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            from starlette.responses import RedirectResponse
+            return RedirectResponse("/admin/login")
+        from app.db import get_session_factory
+        from sqlalchemy.orm import selectinload
+        from app.models.user import User as _User
+        async with get_session_factory()() as session:
+            result = await session.execute(
+                select(_User)
+                .options(selectinload(_User.orders))
+                .where(_User.id == user_id)
+            )
+            user = result.scalar_one_or_none()
+        if not user:
+            return _JSONResponse(status_code=404, content={"error": "Not found"})
+        from fastapi.responses import HTMLResponse as _HTMLResponse
+        from app.admin.crm_customer import render_crm_customer
+        admin_username = request.session.get("admin_username", "")
+        html = render_crm_customer(user, admin_username=admin_username)
+        return _HTMLResponse(html)
+
+    @app.patch("/admin-api/customer/{user_id}", include_in_schema=False)
+    async def admin_customer_patch(user_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        if request.session.get("admin_readonly"):
+            return _JSONResponse(status_code=403, content={"error": "Readonly"})
+        data = await request.json()
+        from app.db import get_session_factory
+        from app.models.user import User as _User
+        async with get_session_factory()() as session:
+            result = await session.execute(select(_User).where(_User.id == user_id))
+            user = result.scalar_one_or_none()
+            if not user:
+                return _JSONResponse(status_code=404, content={"error": "Not found"})
+            if "segment" in data:
+                user.segment = data["segment"] or None
+            if "notes" in data:
+                user.notes = data["notes"] or None
+            await session.commit()
+        return _JSONResponse({"ok": True})
+
     @app.post("/admin-api/order/{order_id}/payment-link", include_in_schema=False)
     async def admin_order_payment_link(order_id: int, request: Request):
         if request.session.get("admin_token") != "authenticated":
@@ -1361,46 +1405,80 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             return stmt
 
         column_list = [
-            "display_name", "phone",
-            "total_orders", "total_spent", "avg_check", "first_order_date",
-            "created_at",
+            "display_name", "segment", "phone", "city",
+            "total_orders", "total_spent", "avg_check",
+            "last_seen_at", "created_at",
         ]
-        column_searchable_list = ["username", "first_name", "phone"]
-        column_sortable_list = ["id", "created_at"]
+        column_searchable_list = ["username", "first_name", "phone", "email", "city"]
+        column_sortable_list = ["id", "created_at", "last_seen_at"]
         column_default_sort = [("created_at", True)]
 
+        _SEGMENT_LABELS = {
+            "vip": ("🌟 VIP", "#7c3aed"),
+            "wholesale": ("📦 Оптовик", "#0369a1"),
+            "regular": ("☕ Постоянный", "#065f46"),
+            "at_risk": ("⚠️ Под риском", "#b45309"),
+            "churned": ("💤 Отток", "#6b7280"),
+        }
+
         column_labels = {
-            "display_name": "Имя",
+            "display_name": "Клиент",
+            "segment": "Сегмент",
             "phone": "Телефон",
+            "email": "Email",
+            "city": "Город",
             "total_orders": "Заказов",
             "total_spent": "Потрачено",
             "avg_check": "Средний чек",
+            "last_seen_at": "Был в апп",
             "first_order_date": "Первый заказ",
+            "last_order_date": "Последний заказ",
             "created_at": "Зарегистрирован",
             "is_admin": "Администратор",
             "telegram_id": "Telegram ID",
             "first_name": "Имя",
             "last_name": "Фамилия",
             "username": "Username",
+            "notes": "Заметки",
+            "language_code": "Язык",
         }
 
         column_formatters = {
-            "display_name": lambda m, a: m.display_name,
+            "display_name": lambda m, a: Markup(
+                f'<a href="/admin/crm-customer/{m.id}" style="font-weight:600;text-decoration:none">'
+                f'{m.display_name}</a>'
+            ),
+            "segment": lambda m, a: Markup(
+                f'<span style="padding:3px 8px;border-radius:100px;font-size:11px;font-weight:600;'
+                f'background:{UserAdmin._SEGMENT_LABELS.get(m.segment, ("", "#6b7280"))[1]}22;'
+                f'color:{UserAdmin._SEGMENT_LABELS.get(m.segment, ("", "#6b7280"))[1]}">'
+                f'{UserAdmin._SEGMENT_LABELS.get(m.segment, (m.segment or "—", ""))[0]}</span>'
+            ) if m.segment else "—",
             "total_orders": lambda m, a: Markup(f"<b>{m.total_orders}</b>") if m.total_orders else "0",
             "total_spent": lambda m, a: f"{m.total_spent:.0f} ₽" if m.total_spent else "—",
             "avg_check": lambda m, a: f"{m.avg_check:.0f} ₽" if m.avg_check else "—",
-            "first_order_date": lambda m, a: m.first_order_date.strftime("%d.%m.%Y") if m.first_order_date else "—",
+            "last_seen_at": lambda m, a: _fmt_dt(m.last_seen_at) if m.last_seen_at else "—",
             "created_at": lambda m, a: _fmt_dt(m.created_at),
         }
 
-        form_columns = ["phone", "is_admin"]
+        form_columns = ["phone", "email", "city", "segment", "notes", "is_admin"]
+        form_choices = {
+            "segment": [
+                ("", "— без сегмента —"),
+                ("vip", "🌟 VIP"),
+                ("wholesale", "📦 Оптовик"),
+                ("regular", "☕ Постоянный"),
+                ("at_risk", "⚠️ Под риском"),
+                ("churned", "💤 Отток"),
+            ]
+        }
         can_delete = False
         page_size = 50
 
     class NotificationTargetAdmin(ModelView, model=NotificationTarget):
-        name = "↳ Уведомления"
+        name = "Уведомления"
         name_plural = "Уведомления (кому слать)"
-        category = "CRM"
+        category = "Система"
 
         column_list = ["telegram_id", "name", "role", "is_active"]
         column_labels = {

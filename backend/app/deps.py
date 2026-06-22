@@ -52,6 +52,10 @@ async def _upsert_user(session: AsyncSession, telegram_user: TelegramUser) -> Us
     Вызывается при первой авторизации через initData. Имя/username могут
     меняться в Telegram — обновляем их при каждом входе.
     """
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+
     user = await _get_user_by_telegram_id(session, telegram_user.id)
     if user is None:
         user = User(
@@ -59,6 +63,8 @@ async def _upsert_user(session: AsyncSession, telegram_user: TelegramUser) -> Us
             first_name=telegram_user.first_name,
             last_name=telegram_user.last_name,
             username=telegram_user.username,
+            language_code=telegram_user.language_code,
+            last_seen_at=now,
         )
         session.add(user)
         await session.commit()
@@ -71,6 +77,9 @@ async def _upsert_user(session: AsyncSession, telegram_user: TelegramUser) -> Us
             user.last_name = telegram_user.last_name
         if telegram_user.username is not None:
             user.username = telegram_user.username
+        if telegram_user.language_code:
+            user.language_code = telegram_user.language_code
+        user.last_seen_at = now
         await session.commit()
         await session.refresh(user)
     return user
