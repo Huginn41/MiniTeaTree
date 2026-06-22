@@ -694,7 +694,7 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
 .pp-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#f8f9fa;
   border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px}
 .pp-row.sortable-ghost{opacity:.3;background:#e8f0fe}
-.pp-drag{cursor:grab;color:#adb5bd;font-size:20px;flex-shrink:0;line-height:1}
+.pp-drag,.faq-drag{cursor:grab;color:#adb5bd;font-size:20px;flex-shrink:0;line-height:1;user-select:none}
 </style>
 </head>
 <body>
@@ -781,7 +781,7 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
 var bannerPath = null;
 
@@ -825,6 +825,22 @@ function renderFaq(items) {
     return;
   }
   items.forEach(function(item) { list.appendChild(makeFaqRow(item)); });
+  Sortable.create(list, {
+    handle: '.faq-drag', animation: 150, ghostClass: 'sortable-ghost',
+    onEnd: function() { saveFaqOrder(); },
+  });
+}
+
+async function saveFaqOrder() {
+  var ids = Array.from(document.querySelectorAll('#faq-list .faq-row'))
+    .map(function(r) { return parseInt(r.dataset.id); })
+    .filter(Boolean);
+  if (!ids.length) return;
+  await fetch('/admin-api/faq/reorder', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids: ids}),
+  });
 }
 
 function makeFaqRow(item) {
@@ -836,8 +852,9 @@ function makeFaqRow(item) {
   head.className = 'faq-head';
 
   var icon = document.createElement('span');
-  icon.style.cssText = 'color:#adb5bd;font-size:18px;flex-shrink:0';
-  icon.textContent = '☰';
+  icon.className = 'faq-drag';
+  icon.title = 'Перетащить';
+  icon.textContent = '⠿';
 
   var title = document.createElement('span');
   title.style.cssText = 'flex:1;font-size:14px;font-weight:600;color:#212529';
@@ -1274,6 +1291,23 @@ def setup_dashboard(app: FastAPI) -> None:
         from app.models.content import FaqItem
         async with get_session_factory()() as s:
             await s.execute(delete(FaqItem).where(FaqItem.id == faq_id))
+            await s.commit()
+        return JSONResponse({"ok": True})
+
+    @app.post("/admin-api/faq/reorder", include_in_schema=False)
+    async def faq_reorder(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        data = await request.json()
+        ids = data.get("ids", [])
+        from app.db import get_session_factory
+        from app.models.content import FaqItem
+        async with get_session_factory()() as s:
+            for sort, faq_id in enumerate(ids):
+                res = await s.execute(select(FaqItem).where(FaqItem.id == faq_id))
+                item = res.scalar_one_or_none()
+                if item:
+                    item.sort = sort
             await s.commit()
         return JSONResponse({"ok": True})
 
