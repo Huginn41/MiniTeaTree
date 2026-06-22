@@ -750,29 +750,28 @@ _ADMIN_JS = (r"""
 
   // ---- N. Добавить «Бонусная система» в сайдбар SQLAdmin ----
   function injectBonusLink(){
-    // Уже вставлено?
     if(document.querySelector('a[href="/admin/bonus-settings"]')) return;
-    // Ищем collapse-блок секции «Настройки магазина»
-    var allToggles = document.querySelectorAll('[data-bs-toggle="collapse"]');
-    var targetCollapse = null;
-    allToggles.forEach(function(t){
-      if(t.textContent.indexOf('Настройки магазина') !== -1){
-        var sel = t.getAttribute('data-bs-target') || t.getAttribute('href');
-        if(sel) targetCollapse = document.querySelector(sel);
+    // Находим любую ссылку категории «Настройки магазина» по href
+    var anchor = document.querySelector('a[href="/admin/banner/list"]');
+    if(!anchor) return;
+    var isActive = window.location.pathname === '/admin/bonus-settings';
+    // Клонируем структуру соседнего элемента (li или просто a)
+    var li = anchor.closest('li');
+    var newLink = document.createElement('a');
+    newLink.href = '/admin/bonus-settings';
+    newLink.className = anchor.className.replace(/\bactive\b/g, '').trim() + (isActive ? ' active' : '');
+    newLink.innerHTML = '<i class="fa-solid fa-gift me-2"></i><span>Бонусная система</span>';
+    if(li){
+      var newLi = document.createElement('li');
+      newLi.appendChild(newLink);
+      li.parentElement.appendChild(newLi);
+      if(isActive){
+        // раскрыть collapse-секцию
+        var collapse = li.closest('.collapse');
+        if(collapse) collapse.classList.add('show');
       }
-    });
-    if(!targetCollapse) return;
-    var link = document.createElement('a');
-    link.href = '/admin/bonus-settings';
-    link.className = 'nav-link';
-    link.innerHTML = '<i class="fa-solid fa-gift"></i><span>Бонусная система</span>';
-    if(window.location.pathname === '/admin/bonus-settings'){
-      link.classList.add('active');
-    }
-    targetCollapse.appendChild(link);
-    // Убедиться, что секция раскрыта если мы на странице бонусов
-    if(window.location.pathname === '/admin/bonus-settings'){
-      targetCollapse.classList.add('show');
+    } else {
+      anchor.parentElement.appendChild(newLink);
     }
   }
 
