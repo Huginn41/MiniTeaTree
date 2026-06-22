@@ -15,8 +15,38 @@ log = get_logger("app.bot.handlers")
 
 
 class AdminStates(StatesGroup):
-    waiting_payment_link = State()   # data: order_id, order_number, customer_tg_id
-    waiting_tracking_link = State()  # data: order_id, order_number
+    waiting_payment_link = State()   # data: order_id, order_number, customer_tg_id, card_chat_id, card_message_id
+    waiting_tracking_link = State()  # data: order_id, order_number, card_chat_id, card_message_id
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+async def _load_order(order_id: int):
+    """Загружает заказ со всеми нужными связями в отдельной сессии."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from app.db import get_session_factory
+    from app.models.order import Order
+
+    async with get_session_factory()() as session:
+        result = await session.execute(
+            select(Order)
+            .options(selectinload(Order.user))
+            .where(Order.id == order_id)
+        )
+        return result.scalar_one_or_none()
+
+
+async def _refresh_card(order_id: int, chat_id: int, message_id: int) -> None:
+    """Перегенерирует карточку и редактирует конкретное сообщение."""
+    from app.bot.notify import _order_text, _order_keyboard, _edit_message
+
+    order = await _load_order(order_id)
+    if not order:
+        return
+    await _edit_message(chat_id, message_id, _order_text(order), _order_keyboard(order))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -47,7 +77,7 @@ _STATUS_LABELS = {
     "assembling":       "📦 Собираем",
     "ready":            "✅ Готов",
     "awaiting_payment": "💳 Ожидает оплаты",
-    "in_delivery":      "🚚 В доставку",
+    "in_delivery":      "🚚 В доставке",
     "at_pvz":           "🏪 В ПВЗ",
     "delivered":        "🎉 Доставлен",
     "cancelled":        "❌ Отменён",
@@ -96,7 +126,10 @@ async def cb_set_status(callback: CallbackQuery) -> None:
     status_label = _STATUS_LABELS.get(new_status, new_status)
     await callback.answer(f"Статус → {status_label}", show_alert=False)
 
-    # Обновить карточки у всех менеджеров
+    # Редактируем карточку у текущего менеджера напрямую
+    await _refresh_card(order_id, callback.message.chat.id, callback.message.message_id)
+
+    # Обновить карточки у остальных менеджеров
     try:
         from app.bot.notify import update_order_notifications
         await update_order_notifications(order_id)
@@ -127,17 +160,11 @@ async def cb_confirm_payment(callback: CallbackQuery) -> None:
 
     from datetime import UTC, datetime as _dt
     from sqlalchemy import select
-    from sqlalchemy.orm import selectinload
     from app.db import get_session_factory
     from app.models.order import Order
-    from app.bot.notify import _order_text, _order_keyboard, _edit_message, update_order_notifications
 
     async with get_session_factory()() as session:
-        result = await session.execute(
-            select(Order)
-            .options(selectinload(Order.user), selectinload(Order.items), selectinload(Order.delivery_info))
-            .where(Order.id == order_id)
-        )
+        result = await session.execute(select(Order).where(Order.id == order_id))
         order = result.scalar_one_or_none()
         if not order:
             await callback.answer("Заказ не найден", show_alert=True)
@@ -147,19 +174,14 @@ async def cb_confirm_payment(callback: CallbackQuery) -> None:
             return
         order.paid_at = _dt.now(UTC)
         await session.commit()
-        text = _order_text(order)
-        keyboard = _order_keyboard(order)
 
     await callback.answer("✅ Оплата подтверждена", show_alert=False)
 
-    # Редактируем карточку напрямую — работает даже если _order_messages пуст
-    try:
-        await _edit_message(callback.message.chat.id, callback.message.message_id, text, keyboard)
-    except Exception:
-        pass
+    # Загружаем fresh-копию после commit и редактируем карточку
+    await _refresh_card(order_id, callback.message.chat.id, callback.message.message_id)
 
-    # Обновить карточки у остальных менеджеров
     try:
+        from app.bot.notify import update_order_notifications
         await update_order_notifications(order_id)
     except Exception:
         pass
@@ -200,6 +222,9 @@ async def cb_payment_link(callback: CallbackQuery, state: FSMContext) -> None:
         order_number=order.number,
         customer_tg_id=order.user.telegram_id if order.user else None,
         prompt_message_id=prompt.message_id,
+        # Сохраняем координаты карточки — чтобы обновить её напрямую из msg_payment_link
+        card_chat_id=callback.message.chat.id,
+        card_message_id=callback.message.message_id,
     )
 
 
@@ -218,6 +243,8 @@ async def msg_payment_link(message: Message, state: FSMContext) -> None:
     order_number: str = data["order_number"]
     customer_tg_id: int | None = data.get("customer_tg_id")
     prompt_message_id: int | None = data.get("prompt_message_id")
+    card_chat_id: int | None = data.get("card_chat_id")
+    card_message_id: int | None = data.get("card_message_id")
 
     from sqlalchemy import select
     from app.db import get_session_factory
@@ -228,21 +255,24 @@ async def msg_payment_link(message: Message, state: FSMContext) -> None:
         order = result.scalar_one_or_none()
         if order:
             order.payment_link = link
-            # Переводим в awaiting_payment только если заказ ещё не отправлен
             if order.status in {"new", "assembling", "ready"}:
                 order.status = "awaiting_payment"
             await session.commit()
 
     await state.clear()
 
-    # Удаляем промпт и ответ менеджера — ссылка сохранится в карточке заказа
+    # Удаляем промпт и ответ менеджера
     from app.bot.notify import delete_message as _del
     chat_id = message.chat.id
     if prompt_message_id:
         await _del(chat_id, prompt_message_id)
     await _del(chat_id, message.message_id)
 
-    # Обновить карточку заказа у всех менеджеров (ссылка появится в тексте)
+    # Обновляем карточку напрямую через сохранённые координаты
+    if card_chat_id and card_message_id:
+        await _refresh_card(order_id, card_chat_id, card_message_id)
+
+    # Также обновить карточки у остальных менеджеров
     try:
         from app.bot.notify import update_order_notifications
         await update_order_notifications(order_id)
@@ -290,6 +320,9 @@ async def cb_tracking_link(callback: CallbackQuery, state: FSMContext) -> None:
         order_id=order_id,
         order_number=order.number,
         prompt_message_id=prompt.message_id,
+        # Сохраняем координаты карточки
+        card_chat_id=callback.message.chat.id,
+        card_message_id=callback.message.message_id,
     )
 
 
@@ -306,6 +339,8 @@ async def msg_tracking_link(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     order_id: int = data["order_id"]
     prompt_message_id: int | None = data.get("prompt_message_id")
+    card_chat_id: int | None = data.get("card_chat_id")
+    card_message_id: int | None = data.get("card_message_id")
 
     from sqlalchemy import select
     from app.db import get_session_factory
@@ -320,12 +355,16 @@ async def msg_tracking_link(message: Message, state: FSMContext) -> None:
 
     await state.clear()
 
-    # Удаляем промпт и ответ менеджера — трек появится в карточке заказа
+    # Удаляем промпт и ответ менеджера
     from app.bot.notify import delete_message as _del
     chat_id = message.chat.id
     if prompt_message_id:
         await _del(chat_id, prompt_message_id)
     await _del(chat_id, message.message_id)
+
+    # Обновляем карточку напрямую
+    if card_chat_id and card_message_id:
+        await _refresh_card(order_id, card_chat_id, card_message_id)
 
     try:
         from app.bot.notify import update_order_notifications
@@ -348,7 +387,6 @@ async def cmd_cancel(message: Message, state: FSMContext) -> None:
     prompt_message_id: int | None = data.get("prompt_message_id")
     await state.clear()
 
-    # Удаляем промпт бота и сообщение /cancel менеджера
     from app.bot.notify import delete_message as _del
     chat_id = message.chat.id
     if prompt_message_id:
