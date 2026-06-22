@@ -670,16 +670,22 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
 <style>
 .ab-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:24px;margin-bottom:20px}
 .ab-label{font-size:12px;font-weight:700;color:#8c9aad;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
-.banner-zone{width:100%;height:200px;border-radius:12px;overflow:hidden;position:relative;
-  background:linear-gradient(135deg,#1a6b3c,#2d9e5f);cursor:pointer;border:2px dashed #2d9e5f;
+.phone-frame{background:#f0f2f5;border-radius:20px;padding:14px;margin-bottom:12px}
+.phone-inner{max-width:360px;margin:0 auto;background:#fff;border-radius:32px;padding:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,.13)}
+.phone-bar{height:6px;background:#e9ecef;border-radius:3px;width:40%;margin:0 auto 12px}
+.banner-zone{width:100%;min-height:180px;border-radius:20px;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,#1a6b3c,#2d9e5f);cursor:pointer;
   display:flex;align-items:center;justify-content:center;text-align:center}
 .banner-zone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.banner-overlay{position:absolute;inset:0;background:rgba(0,0,0,.15);display:none}
 .banner-zone-text{position:relative;z-index:1;color:rgba(255,255,255,.9);font-size:13px}
 .banner-zone-emoji{font-size:40px;margin-bottom:6px}
 .banner-hover{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:8px;opacity:0;transition:.2s;z-index:2}
+  align-items:center;justify-content:center;gap:8px;opacity:0;transition:.2s;z-index:3}
 .banner-zone:hover .banner-hover{opacity:1}
 .banner-hover span{color:#fff;font-size:13px;font-weight:600}
+.phone-title{font-size:17px;font-weight:800;color:#212529;padding:10px 4px 2px;letter-spacing:-.3px}
 .faq-row{border:1px solid #e9ecef;border-radius:10px;margin-bottom:8px}
 .faq-head{display:flex;align-items:center;gap:10px;padding:13px 14px;background:#f8f9fa;border-radius:10px;cursor:pointer;user-select:none}
 .faq-head:hover{background:#eef2ff}
@@ -705,33 +711,44 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
   <!-- 1. Баннер -->
   <div class="ab-card">
     <div class="ab-label">Обложка страницы</div>
-    <div class="banner-zone" id="banner-zone">
-      <div class="banner-zone-text" id="banner-text">
-        <div class="banner-zone-emoji">🍵</div>
-        <div>Нажмите чтобы загрузить фото</div>
-        <div style="font-size:11px;opacity:.7;margin-top:4px">JPG, PNG, WEBP — до 10 МБ</div>
-      </div>
-      <img id="banner-img" style="display:none" alt="">
-      <div class="banner-hover">
-        <i class="fa-solid fa-camera fa-2x text-white"></i>
-        <span>Изменить фото</span>
+    <div style="font-size:11px;color:#8c9aad;margin-bottom:12px;display:flex;align-items:center;gap:5px">
+      <i class="fa-solid fa-mobile-screen"></i> Предпросмотр — нажмите на обложку чтобы изменить фото
+    </div>
+    <div class="phone-frame">
+      <div class="phone-inner">
+        <div class="phone-bar"></div>
+        <div class="banner-zone" id="banner-zone">
+          <div class="banner-zone-text" id="banner-text">
+            <div class="banner-zone-emoji">🍵</div>
+            <div>Нажмите чтобы загрузить фото</div>
+            <div style="font-size:11px;opacity:.7;margin-top:4px">JPG, PNG, WebP</div>
+          </div>
+          <img id="banner-img" style="display:none" alt="">
+          <div class="banner-overlay" id="banner-overlay"></div>
+          <div class="banner-hover">
+            <i class="fa-solid fa-camera fa-2x text-white"></i>
+            <span>Изменить фото</span>
+          </div>
+        </div>
+        <div class="phone-title" id="phone-title-preview">Чайное Дерево</div>
       </div>
     </div>
     <input type="file" id="bfile" accept="image/*" style="display:none">
-    <div class="d-flex align-items-center gap-3 mt-2">
+    <div class="d-flex align-items-center gap-3">
       <button class="btn btn-sm btn-outline-danger" id="rm-banner" style="display:none">
-        <i class="fa-solid fa-trash me-1"></i>Убрать
+        <i class="fa-solid fa-trash me-1"></i>Убрать фото
       </button>
       <span id="banner-status" style="font-size:12px;color:#6c757d"></span>
     </div>
-    <div style="font-size:11px;color:#8c9aad;margin-top:6px;line-height:1.5;">📐 Рекомендуется <b>1200×500 px</b> (горизонтальная обложка) · JPG / PNG / WebP · до 5 МБ</div>
+    <div style="font-size:11px;color:#8c9aad;margin-top:8px;line-height:1.5;">📐 Рекомендуется <b>1200×500 px</b> · JPG / PNG / WebP · до 5 МБ</div>
   </div>
 
   <!-- 2. Заголовок и описание -->
   <div class="ab-card">
     <div class="ab-label">Заголовок и описание</div>
     <label class="form-label">Заголовок</label>
-    <input type="text" id="about-title" class="form-control mb-3" placeholder="Чайное Дерево">
+    <input type="text" id="about-title" class="form-control mb-3" placeholder="Чайное Дерево"
+      oninput="var v=this.value.trim()||'Чайное Дерево';document.getElementById('phone-title-preview').textContent=v">
     <label class="form-label">Описание</label>
     <textarea id="desc-textarea" class="form-control" rows="7" placeholder="Расскажите о вашем магазине…" style="resize:vertical"></textarea>
   </div>
@@ -788,6 +805,7 @@ async function uploadBanner(file) {
     var img = document.getElementById('banner-img');
     img.src = d.path;
     img.style.display = 'block';
+    document.getElementById('banner-overlay').style.display = 'block';
     document.getElementById('banner-text').style.display = 'none';
     document.getElementById('rm-banner').style.display = 'inline-flex';
     status.style.color = '#1b873f';
@@ -1033,6 +1051,7 @@ document.addEventListener('DOMContentLoaded', function() {
     e.stopPropagation();
     bannerPath = null;
     document.getElementById('banner-img').style.display = 'none';
+    document.getElementById('banner-overlay').style.display = 'none';
     document.getElementById('banner-text').style.display = 'block';
     document.getElementById('rm-banner').style.display = 'none';
     document.getElementById('banner-status').textContent = '';
@@ -1047,7 +1066,9 @@ document.addEventListener('DOMContentLoaded', function() {
   fetch('/admin-api/about', {credentials: 'include'})
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      document.getElementById('about-title').value = d.title || 'Чайное Дерево';
+      var title = d.title || 'Чайное Дерево';
+      document.getElementById('about-title').value = title;
+      document.getElementById('phone-title-preview').textContent = title;
       if (d.description_html) {
         document.getElementById('desc-textarea').value = d.description_html;
       }
@@ -1055,6 +1076,7 @@ document.addEventListener('DOMContentLoaded', function() {
         bannerPath = d.banner_image_path;
         document.getElementById('banner-img').src = d.banner_image_path;
         document.getElementById('banner-img').style.display = 'block';
+        document.getElementById('banner-overlay').style.display = 'block';
         document.getElementById('banner-text').style.display = 'none';
         document.getElementById('rm-banner').style.display = 'inline-flex';
       }
