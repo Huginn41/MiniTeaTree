@@ -30,11 +30,51 @@ _STATUS_LABELS = {
     "assembling":       "📦 Собираем",
     "ready":            "✅ Готов",
     "awaiting_payment": "💳 Ожидает оплаты",
-    "in_delivery":      "🚚 В доставку",
+    "in_delivery":      "🚚 В доставке",
     "at_pvz":           "🏪 В ПВЗ",
     "delivered":        "🎉 Доставлен",
     "cancelled":        "❌ Отменён",
 }
+
+# Цепочки этапов по типу доставки (в порядке отображения)
+_STAGE_CHAINS: dict[str, list[tuple[str, str]]] = {
+    "pickup": [
+        ("new",       "🆕 Новый"),
+        ("assembling","📦 Собираем"),
+        ("ready",     "✅ Готов"),
+        ("delivered", "🎉 Выдан"),
+    ],
+    "pvz": [
+        ("new",       "🆕 Новый"),
+        ("assembling","📦 Собираем"),
+        ("ready",     "✅ Готов"),
+        ("at_pvz",    "🏪 В ПВЗ"),
+        ("delivered", "🎉 Доставлен"),
+    ],
+    "courier": [
+        ("new",              "🆕 Принят"),
+        ("awaiting_payment", "💳 Оплата"),
+        ("in_delivery",      "🚚 В доставке"),
+        ("at_pvz",           "🏪 В ПВЗ"),
+        ("delivered",        "🎉 Доставлен"),
+    ],
+}
+
+
+def _stages_line(delivery_type: str, current_status: str) -> str:
+    """Строка прогресса этапов: пройденные · текущий жирный · будущие обычные."""
+    chain = _STAGE_CHAINS.get(delivery_type, _STAGE_CHAINS["courier"])
+    current_idx = next((i for i, (s, _) in enumerate(chain) if s == current_status), None)
+
+    parts = []
+    for i, (_, label) in enumerate(chain):
+        if current_idx is None or i > current_idx:
+            parts.append(label)          # будущий
+        elif i == current_idx:
+            parts.append(f"<b>{label}</b>")  # текущий
+        else:
+            parts.append(f"<s>{label}</s>")  # пройденный
+    return " → ".join(parts)
 
 # Следующие статусы — по типу доставки
 _NEXT_STATUSES: dict[str, dict[str, list[tuple[str, str]]]] = {
@@ -97,8 +137,11 @@ def _order_text(order: Order) -> str:
     # ── Статус (меняется при каждом обновлении) ──
     lines.append("")
     lines.append("─────────────────")
-    status_label = _STATUS_LABELS.get(order.status, order.status)
-    lines.append(f"▸ Этап: {status_label}")
+    delivery_type = (order.delivery_info.type if order.delivery_info else None) or "courier"
+    if order.status == "cancelled":
+        lines.append("❌ <b>Отменён</b>")
+    else:
+        lines.append(_stages_line(delivery_type, order.status))
 
     if order.payment_link:
         lines.append(f"💳 <a href='{order.payment_link}'>Ссылка на оплату</a>")
