@@ -1793,11 +1793,21 @@
               <span style="font-size:14px;color:var(--md-on-surface-variant)">Доступно баллов</span>
               <span style="font-size:16px;font-weight:700;color:var(--md-primary)">${Math.floor(bonusBalance)}</span>
             </div>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-              <input type="checkbox" id="use-bonus-cb" style="width:18px;height:18px;accent-color:var(--md-primary)" onchange="App._updateBonusHint()">
-              <span style="font-size:14px;font-weight:500">Списать баллы в счёт заказа</span>
-            </label>
-            <div id="bonus-hint" style="display:none;margin-top:10px;font-size:13px;color:var(--md-on-surface-variant);padding:10px;background:rgba(26,107,60,.08);border-radius:8px"></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input
+                id="bonus-amount-input"
+                type="number"
+                min="0"
+                max="${Math.floor(bonusBalance)}"
+                step="1"
+                placeholder="0"
+                class="md-input"
+                style="flex:1;margin:0"
+                oninput="App._updateBonusHint()"
+              >
+              <button type="button" class="btn btn-tonal" style="white-space:nowrap;padding:10px 14px;font-size:13px" onclick="App._setBonusMax()">Максимум</button>
+            </div>
+            <div id="bonus-hint" style="display:none;margin-top:10px;font-size:13px;color:#1a6b3c;padding:10px;background:rgba(26,107,60,.08);border-radius:8px;line-height:1.5"></div>
           </div>` : ''}
 
           <button type="submit" id="submit-order-btn" class="btn btn-filled ripple-container" style="width:100%">
@@ -1831,17 +1841,27 @@
       }
     },
 
+    _setBonusMax() {
+      const inp = document.getElementById('bonus-amount-input');
+      if (!inp) return;
+      inp.value = Math.floor(window._checkoutBonusBalance || 0);
+      this._updateBonusHint();
+    },
+
     _updateBonusHint() {
-      const cb = document.getElementById('use-bonus-cb');
+      const inp = document.getElementById('bonus-amount-input');
       const hint = document.getElementById('bonus-hint');
-      if (!cb || !hint) return;
-      if (cb.checked) {
-        const bal = window._checkoutBonusBalance || 0;
-        hint.style.display = 'block';
-        hint.textContent = `Со счёта будет списано до ${Math.floor(bal)} баллов (фактическая сумма зависит от итога заказа).`;
-      } else {
+      if (!inp || !hint) return;
+      const val = Math.max(0, Math.floor(+inp.value || 0));
+      const bal = Math.floor(window._checkoutBonusBalance || 0);
+      const maxPct = window._checkoutMaxBonusPct || 0;
+      if (val > bal) { inp.value = bal; }
+      if (val <= 0) {
         hint.style.display = 'none';
+        return;
       }
+      hint.style.display = 'block';
+      hint.innerHTML = `Будет списано <b>${val}</b> баллов (≈ ${val} ₽). Фактическая сумма не превысит ${maxPct}% от итога заказа.`;
     },
 
     async submitOrder(e) {
@@ -1854,9 +1874,8 @@
         const delivery_type = form.querySelector('input[name="delivery_type"]:checked').value;
         const pickupAddr = delivery_type === 'pickup' && this._pickupPoint
           ? this._pickupAddr(this._pickupPoint) : '';
-        const useBonusCb = document.getElementById('use-bonus-cb');
-        const useBonusAmount = (useBonusCb && useBonusCb.checked)
-          ? (window._checkoutBonusBalance || 0) : 0;
+        const bonusInp = document.getElementById('bonus-amount-input');
+        const useBonusAmount = bonusInp ? Math.max(0, Math.floor(+bonusInp.value || 0)) : 0;
         const order = await api('/orders', {
           method: 'POST',
           body: JSON.stringify({
