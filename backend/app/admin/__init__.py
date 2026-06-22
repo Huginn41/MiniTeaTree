@@ -1497,18 +1497,23 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             "sort_order": "Порядок",
             "name": "Название",
             "category": "Категория",
-            "base_price": "Цена за 1 г. (₽)",
+            "base_price": "Цена (₽/г или ₽/шт)",
             "slug": "API тег",
             "description": "Описание",
             "origin": "Происхождение",
             "tags": "Теги",
             "is_active": "Активен",
+            "is_unit": "Штучный товар",
+            "unit_label": "Единица (шт / блин / упак)",
         }
         column_formatters = {
-            "base_price": lambda m, a: f"{float(m.base_price):.2f} ₽/г",
+            "base_price": lambda m, a: (
+                f"{float(m.base_price):.0f} ₽/шт" if m.is_unit else f"{float(m.base_price):.2f} ₽/г"
+            ),
         }
         form_columns = [
             "category", "name", "slug", "base_price",
+            "is_unit", "unit_label",
             "description", "origin", "tags", "sort_order", "is_active",
         ]
         page_size = 50
@@ -1516,28 +1521,55 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         async def after_model_change(self, data, model, is_created, request):
             from app.db import get_session_factory
             from app.models.product import ProductVariant
-            from sqlalchemy import select
+            from sqlalchemy import select, delete
 
-            price_per_gram = float(model.base_price)
             async with get_session_factory()() as session:
-                for weight in (25, 50, 75, 100):
+                if model.is_unit:
+                    # Штучный товар: один вариант weight_g=0, цена = base_price
+                    await session.execute(
+                        delete(ProductVariant).where(
+                            ProductVariant.product_id == model.id,
+                            ProductVariant.weight_g != 0,
+                        )
+                    )
                     res = await session.execute(
                         select(ProductVariant).where(
                             ProductVariant.product_id == model.id,
-                            ProductVariant.weight_g == weight,
+                            ProductVariant.weight_g == 0,
                         )
                     )
                     variant = res.scalar_one_or_none()
-                    price = round(price_per_gram * weight, 2)
+                    price = float(model.base_price)
                     if variant:
                         variant.price = price
                     else:
                         session.add(ProductVariant(
-                            product_id=model.id,
-                            weight_g=weight,
-                            price=price,
-                            in_stock=True,
+                            product_id=model.id, weight_g=0, price=price, in_stock=True,
                         ))
+                else:
+                    # Весовой товар: 4 варианта 25/50/75/100 г
+                    await session.execute(
+                        delete(ProductVariant).where(
+                            ProductVariant.product_id == model.id,
+                            ProductVariant.weight_g == 0,
+                        )
+                    )
+                    price_per_gram = float(model.base_price)
+                    for weight in (25, 50, 75, 100):
+                        res = await session.execute(
+                            select(ProductVariant).where(
+                                ProductVariant.product_id == model.id,
+                                ProductVariant.weight_g == weight,
+                            )
+                        )
+                        variant = res.scalar_one_or_none()
+                        price = round(price_per_gram * weight, 2)
+                        if variant:
+                            variant.price = price
+                        else:
+                            session.add(ProductVariant(
+                                product_id=model.id, weight_g=weight, price=price, in_stock=True,
+                            ))
                 await session.commit()
 
         async def after_model_delete(self, model, request):

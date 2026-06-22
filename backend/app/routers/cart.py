@@ -68,6 +68,7 @@ async def get_cart(
                 product_name=product_name,
                 product_slug=product_slug,
                 main_image=main_image,
+                unit_label=product.unit_label if product else None,
             )
         )
 

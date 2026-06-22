@@ -42,6 +42,12 @@ class Product(TimestampMixin, Base):
     sort_order: Mapped[int] = mapped_column(
         Integer, server_default=text("0"), nullable=False, default=0
     )
+    # Штучный товар (блины, наборы): продаётся поштучно, не по граммам.
+    is_unit: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False, default=False
+    )
+    # Единица измерения для штучных товаров (шт / блин / упак).
+    unit_label: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     category = relationship("Category", back_populates="products", lazy="selectin")
     variants = relationship(

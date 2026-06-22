@@ -1339,38 +1339,86 @@
 
         ${p.variants.length ? `
           <div style="margin-top:20px">
-            <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase">Выберите вес</p>
-            <div class="variant-grid" id="variant-grid">
-              ${p.variants.map(v => `
-                <button class="variant-btn ${v.in_stock ? 'available' : 'out'}"
-                  data-variant-id="${v.id}" data-price="${v.price}" data-weight="${v.weight_g}"
-                  ${!v.in_stock ? 'disabled' : ''}>
-                  <div class="v-weight">${v.weight_g} г</div>
-                  <div class="v-price">${fmtPrice(v.price)} ₽</div>
-                  ${!v.in_stock ? '<div class="v-oos">Нет в наличии</div>' : ''}
-                </button>
-              `).join('')}
-            </div>
-            <div class="variant-actions" id="variant-actions">
-              <button class="btn-cart" id="btn-to-cart">В корзину</button>
-              <button class="btn-buy" id="btn-buy">Купить</button>
-            </div>
+            ${p.is_unit ? `
+              <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase">Количество</p>
+              <div style="display:flex;align-items:center;gap:0;margin-top:12px">
+                <div style="font-size:20px;font-weight:800;color:var(--md-primary)">${fmtPrice(p.variants[0].price)} ₽ / ${p.unit_label || 'шт'}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+                <div style="display:flex;align-items:center;background:var(--md-surface-container);border-radius:12px;overflow:hidden">
+                  <button id="unit-minus" style="width:44px;height:44px;border:none;background:none;font-size:22px;font-weight:300;color:var(--md-on-surface);cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+                  <span id="unit-qty" style="min-width:32px;text-align:center;font-size:17px;font-weight:700;color:var(--md-on-surface)">1</span>
+                  <button id="unit-plus" style="width:44px;height:44px;border:none;background:none;font-size:22px;font-weight:300;color:var(--md-on-surface);cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+                </div>
+                <button class="btn-cart" id="btn-to-cart" style="flex:1">В корзину</button>
+                <button class="btn-buy" id="btn-buy">Купить</button>
+              </div>
+            ` : `
+              <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase">Выберите вес</p>
+              <div class="variant-grid" id="variant-grid">
+                ${p.variants.map(v => `
+                  <button class="variant-btn ${v.in_stock ? 'available' : 'out'}"
+                    data-variant-id="${v.id}" data-price="${v.price}" data-weight="${v.weight_g}"
+                    ${!v.in_stock ? 'disabled' : ''}>
+                    <div class="v-weight">${v.weight_g} г</div>
+                    <div class="v-price">${fmtPrice(v.price)} ₽</div>
+                    ${!v.in_stock ? '<div class="v-oos">Нет в наличии</div>' : ''}
+                  </button>
+                `).join('')}
+              </div>
+              <div class="variant-actions" id="variant-actions">
+                <button class="btn-cart" id="btn-to-cart">В корзину</button>
+                <button class="btn-buy" id="btn-buy">Купить</button>
+              </div>
+            `}
           </div>
         ` : ''}
         <div style="height:24px"></div>
       </div>`;
 
       c.innerHTML = html;
+      this._currentProduct = p;
       if (p.images.length) this._initGallery(p.images);
       this._initVariantSelect();
     },
 
     _initVariantSelect() {
-      const grid    = document.getElementById('variant-grid');
-      const actions = document.getElementById('variant-actions');
       const btnCart = document.getElementById('btn-to-cart');
       const btnBuy  = document.getElementById('btn-buy');
-      if (!grid || !actions) return;
+
+      // Штучный товар — кнопки − / +
+      const unitMinus = document.getElementById('unit-minus');
+      const unitPlus  = document.getElementById('unit-plus');
+      const unitQty   = document.getElementById('unit-qty');
+      if (unitMinus && unitPlus && unitQty && btnCart && btnBuy) {
+        let qty = 1;
+        const variantId = this._currentProduct?.variants?.[0]?.id;
+        unitMinus.addEventListener('click', () => {
+          if (qty > 1) { qty--; unitQty.textContent = qty; }
+          tg?.HapticFeedback?.selectionChanged?.();
+        });
+        unitPlus.addEventListener('click', () => {
+          qty++; unitQty.textContent = qty;
+          tg?.HapticFeedback?.selectionChanged?.();
+        });
+        btnCart.addEventListener('click', async () => {
+          if (!variantId) return;
+          await App.addToCart(variantId, qty);
+          qty = 1; unitQty.textContent = 1;
+          tg?.HapticFeedback?.notificationOccurred?.('success');
+        });
+        btnBuy.addEventListener('click', async () => {
+          if (!variantId) return;
+          await App.addToCart(variantId, qty);
+          App.navigate('cart');
+        });
+        return;
+      }
+
+      // Весовой товар — выбор граммовки
+      const grid    = document.getElementById('variant-grid');
+      const actions = document.getElementById('variant-actions');
+      if (!grid || !actions || !btnCart || !btnBuy) return;
 
       let selectedId = null;
 
@@ -1515,7 +1563,7 @@
                 </div>
                 <div style="flex:1;min-width:0">
                   <p style="font-size:14px;font-weight:600;color:var(--md-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(item.product_name)}</p>
-                  <p style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${item.variant.weight_g} г</p>
+                  <p style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${item.variant.weight_g === 0 ? (item.unit_label || 'шт') : item.variant.weight_g + ' г'}</p>
                   <p style="font-size:14px;font-weight:700;color:var(--md-primary);margin-top:4px">${fmtPrice(item.variant.price * item.quantity)} ₽</p>
                 </div>
                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
@@ -1914,7 +1962,7 @@
             <div class="detail-row">
               <div>
                 <p style="font-size:14px;font-weight:600;color:var(--md-on-surface)">${esc(item.snapshot_name)}</p>
-                <p style="font-size:12px;color:var(--md-on-surface-variant)">${item.snapshot_weight_g} г · ${item.quantity} шт.</p>
+                <p style="font-size:12px;color:var(--md-on-surface-variant)">${item.snapshot_weight_g === 0 ? `${item.quantity} шт.` : `${item.snapshot_weight_g} г · ${item.quantity} шт.`}</p>
               </div>
               <span style="font-size:14px;font-weight:700;color:var(--md-primary)">${fmtPrice(item.unit_price * item.quantity)} ₽</span>
             </div>
@@ -1939,11 +1987,11 @@
     },
 
     // ─── Cart Actions ─────────────────────────────────────────────────────────
-    async addToCart(variantId) {
+    async addToCart(variantId, quantity = 1) {
       try {
         await api('/cart/items', {
           method: 'POST',
-          body: JSON.stringify({ variant_id: variantId, quantity: 1 }),
+          body: JSON.stringify({ variant_id: variantId, quantity }),
         });
         this.cartCount++;
         this.updateCartBadge();

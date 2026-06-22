@@ -59,6 +59,8 @@ class ProductListItem(BaseModel):
     category: CategoryBrief
     main_image: str | None = None
     variants: list[VariantOut] = []
+    is_unit: bool = False
+    unit_label: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -76,6 +78,8 @@ class ProductDetail(BaseModel):
     category: CategoryBrief
     variants: list[VariantOut] = []
     images: list[ProductImageOut] = []
+    is_unit: bool = False
+    unit_label: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -147,6 +151,7 @@ class CartItemOut(BaseModel):
     product_name: str = ""
     product_slug: str = ""
     main_image: str | None = None
+    unit_label: str | None = None
 
     model_config = {"from_attributes": True}
 
