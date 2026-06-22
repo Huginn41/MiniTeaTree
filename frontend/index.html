@@ -1352,8 +1352,8 @@
                   <div style="font-size:12px;color:var(--md-on-surface-variant)">${fmtPrice(p.variants[0].price)} ₽ / ${p.unit_label || 'шт'}</div>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
-                <button class="btn-cart" id="btn-to-cart" style="flex:1">В корзину</button>
+              <div class="variant-actions visible">
+                <button class="btn-cart" id="btn-to-cart">В корзину</button>
                 <button class="btn-buy" id="btn-buy">Купить</button>
               </div>
             ` : `
