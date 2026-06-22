@@ -1624,7 +1624,7 @@
         const name = [user.first_name, user.last_name].filter(Boolean).join(' ');
         html = `
           <div class="md-card" style="padding:20px;margin-bottom:16px">
-            <div style="display:flex;align-items:center;gap:16px">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:${user.bonus_balance > 0 || user.cashback_pct > 0 ? '16' : '0'}px">
               <div class="avatar-circle">${initials(user.first_name, user.last_name)}</div>
               <div>
                 <h2 style="font-size:18px;font-weight:700">${esc(name || 'Пользователь')}</h2>
@@ -1632,6 +1632,20 @@
                 ${user.phone ? `<p style="font-size:13px;color:var(--md-on-surface-variant);margin-top:2px">${esc(user.phone)}</p>` : ''}
               </div>
             </div>
+            ${(user.bonus_balance > 0 || user.cashback_pct > 0) ? `
+            <div style="display:flex;gap:10px">
+              <div style="flex:1;background:linear-gradient(135deg,#1a6b3c,#2d9c5d);border-radius:12px;padding:14px 16px;color:#fff">
+                <div style="font-size:11px;opacity:.8;font-weight:600;letter-spacing:.5px;text-transform:uppercase">Баллы</div>
+                <div style="font-size:24px;font-weight:700;margin-top:4px">${Math.floor(user.bonus_balance)}</div>
+                <div style="font-size:11px;opacity:.7;margin-top:2px">≈ ${Math.floor(user.bonus_balance)} ₽</div>
+              </div>
+              ${user.cashback_pct > 0 ? `
+              <div style="flex:1;background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:12px;padding:14px 16px;color:#fff">
+                <div style="font-size:11px;opacity:.8;font-weight:600;letter-spacing:.5px;text-transform:uppercase">Кешбэк</div>
+                <div style="font-size:24px;font-weight:700;margin-top:4px">${user.cashback_pct}%</div>
+                <div style="font-size:11px;opacity:.7;margin-top:2px">с каждого заказа</div>
+              </div>` : ''}
+            </div>` : ''}
           </div>`;
 
         try {
@@ -1690,11 +1704,23 @@
       c.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:40px 0"><div style="width:28px;height:28px;border:3px solid var(--md-primary);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></div></div>`;
 
       let pickupPoints = [];
+      let bonusBalance = 0;
+      let maxBonusPct = 0;
       try { pickupPoints = await api('/info/pickup-points'); } catch(_) {}
+      try {
+        const profile = await api('/profile/me');
+        bonusBalance = profile.bonus_balance || 0;
+      } catch(_) {}
+      try {
+        const bonusCfg = await api('/info/bonus-config');
+        maxBonusPct = bonusCfg.max_payment_pct || 0;
+      } catch(_) {}
 
       // Auto-select first pickup point and store globally for _selectPickup
       if (pickupPoints.length > 0) this._pickupPoint = pickupPoints[0];
       window._checkoutPickupPoints = pickupPoints;
+      window._checkoutBonusBalance = bonusBalance;
+      window._checkoutMaxBonusPct = maxBonusPct;
 
       const esc2 = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
@@ -1760,6 +1786,20 @@
           <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">КОММЕНТАРИЙ</p>
           <textarea class="md-input" name="comment" rows="3" placeholder="Пожелания к заказу..." style="resize:none;margin-bottom:20px"></textarea>
 
+          ${bonusBalance > 0 && maxBonusPct > 0 ? `
+          <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">ОПЛАТА БАЛЛАМИ</p>
+          <div class="md-card" style="padding:16px;margin-bottom:20px;background:var(--md-surface-variant)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <span style="font-size:14px;color:var(--md-on-surface-variant)">Доступно баллов</span>
+              <span style="font-size:16px;font-weight:700;color:var(--md-primary)">${Math.floor(bonusBalance)}</span>
+            </div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="use-bonus-cb" style="width:18px;height:18px;accent-color:var(--md-primary)" onchange="App._updateBonusHint()">
+              <span style="font-size:14px;font-weight:500">Списать баллы в счёт заказа</span>
+            </label>
+            <div id="bonus-hint" style="display:none;margin-top:10px;font-size:13px;color:var(--md-on-surface-variant);padding:10px;background:rgba(26,107,60,.08);border-radius:8px"></div>
+          </div>` : ''}
+
           <button type="submit" id="submit-order-btn" class="btn btn-filled ripple-container" style="width:100%">
             Подтвердить заказ
           </button>
@@ -1791,6 +1831,19 @@
       }
     },
 
+    _updateBonusHint() {
+      const cb = document.getElementById('use-bonus-cb');
+      const hint = document.getElementById('bonus-hint');
+      if (!cb || !hint) return;
+      if (cb.checked) {
+        const bal = window._checkoutBonusBalance || 0;
+        hint.style.display = 'block';
+        hint.textContent = `Со счёта будет списано до ${Math.floor(bal)} баллов (фактическая сумма зависит от итога заказа).`;
+      } else {
+        hint.style.display = 'none';
+      }
+    },
+
     async submitOrder(e) {
       e.preventDefault();
       const btn = document.getElementById('submit-order-btn');
@@ -1801,6 +1854,9 @@
         const delivery_type = form.querySelector('input[name="delivery_type"]:checked').value;
         const pickupAddr = delivery_type === 'pickup' && this._pickupPoint
           ? this._pickupAddr(this._pickupPoint) : '';
+        const useBonusCb = document.getElementById('use-bonus-cb');
+        const useBonusAmount = (useBonusCb && useBonusCb.checked)
+          ? (window._checkoutBonusBalance || 0) : 0;
         const order = await api('/orders', {
           method: 'POST',
           body: JSON.stringify({
@@ -1808,6 +1864,7 @@
             contact_phone: form.contact_phone.value || null,
             address: delivery_type === 'courier' ? (form.address?.value || '') : pickupAddr,
             comment: form.comment.value || null,
+            use_bonus_amount: useBonusAmount,
           }),
         });
         this.cartCount = 0;

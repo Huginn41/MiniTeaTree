@@ -245,6 +245,7 @@ class OrderCreate(BaseModel):
     delivery_type: str = "pickup"
     address: str = ""
     contact_phone: str | None = None
+    use_bonus_amount: float = 0.0
 
 
 class OrderStatusUpdate(BaseModel):
@@ -263,5 +264,7 @@ class ProfileOut(BaseModel):
     last_name: str | None = None
     username: str | None = None
     phone: str | None = None
+    bonus_balance: float = 0.0
+    cashback_pct: float = 0.0
 
     model_config = {"from_attributes": True}

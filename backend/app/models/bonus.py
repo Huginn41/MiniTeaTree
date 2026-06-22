@@ -18,6 +18,10 @@ class ShopSettings(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     bonus_max_payment_pct: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
+    # Если True — кэшбэк не начисляется, когда заказ частично оплачен баллами
+    bonus_no_cashback_on_redemption: Mapped[bool] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
 
 
 class BonusTier(Base):

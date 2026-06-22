@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.deps import CurrentUser, get_current_user
+from app.models.bonus import BonusTransaction, BonusTier, ShopSettings
 from app.models.cart import Cart, CartItem
 from app.models.delivery import DeliveryInfo
 from app.models.enums import DELIVERY_TYPE_VALUES, ORDER_STATUS_VALUES
@@ -33,15 +35,34 @@ router = APIRouter(tags=["orders", "profile"])
 @router.get("/profile/me", response_model=ProfileOut)
 async def get_profile(
     user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> ProfileOut:
     """Профиль текущего пользователя."""
     u = user.user
+
+    # Определяем текущий процент кешбэка по сумме покупок пользователя.
+    tiers_res = await session.execute(
+        select(BonusTier).order_by(BonusTier.min_amount.desc())
+    )
+    tiers = tiers_res.scalars().all()
+    sum_res = await session.execute(
+        select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.user_id == u.id)
+    )
+    total_spent = float(sum_res.scalar() or 0)
+    cashback_pct = 0.0
+    for t in tiers:
+        if total_spent >= float(t.min_amount):
+            cashback_pct = float(t.cashback_pct)
+            break
+
     return ProfileOut(
         telegram_id=u.telegram_id,
         first_name=u.first_name,
         last_name=u.last_name,
         username=u.username,
         phone=u.phone,
+        bonus_balance=float(u.bonus_balance),
+        cashback_pct=cashback_pct,
     )
 
 
@@ -181,10 +202,28 @@ async def create_order(
         total += unit_price * ci.quantity
         order_items_data.append((ci, variant, product_name))
 
+    # Загружаем настройки магазина для валидации бонусов.
+    settings_res = await session.execute(select(ShopSettings).where(ShopSettings.id == 1))
+    settings = settings_res.scalar_one_or_none()
+    max_bonus_pct = settings.bonus_max_payment_pct if settings else 0
+    no_cashback_on_redemption = settings.bonus_no_cashback_on_redemption if settings else False
+
+    use_bonus = round(float(body.use_bonus_amount or 0), 2)
+    u = user.user
+    if use_bonus > 0:
+        if max_bonus_pct == 0:
+            raise HTTPException(status_code=400, detail="Оплата баллами отключена")
+        max_allowed = round(total * max_bonus_pct / 100, 2)
+        if use_bonus > max_allowed:
+            use_bonus = max_allowed
+        if use_bonus > float(u.bonus_balance):
+            use_bonus = round(float(u.bonus_balance), 2)
+        use_bonus = round(use_bonus, 2)
+
     # Создаём заказ.
     number = await _generate_order_number(session)
     order = Order(
-        user_id=user.user.id,
+        user_id=u.id,
         number=number,
         total_amount=total,
         status="new",
@@ -214,6 +253,45 @@ async def create_order(
         contact_phone=body.contact_phone,
     )
     session.add(delivery)
+
+    # Списание баллов.
+    if use_bonus > 0:
+        u.bonus_balance = Decimal(str(float(u.bonus_balance) - use_bonus))
+        session.add(BonusTransaction(
+            user_id=u.id,
+            order_id=order.id,
+            delta=Decimal(str(-use_bonus)),
+            reason="order_redemption",
+            note=f"Списание по заказу {number}",
+        ))
+
+    # Начисление кешбэка (после списания, если не отключено настройкой).
+    accrue_cashback = not (use_bonus > 0 and no_cashback_on_redemption)
+    if accrue_cashback:
+        tiers_r = await session.execute(
+            select(BonusTier).order_by(BonusTier.min_amount.desc())
+        )
+        tiers_list = tiers_r.scalars().all()
+        sum_r = await session.execute(
+            select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.user_id == u.id)
+        )
+        total_spent = float(sum_r.scalar() or 0)
+        cashback_pct_val = 0.0
+        for t in tiers_list:
+            if total_spent >= float(t.min_amount):
+                cashback_pct_val = float(t.cashback_pct)
+                break
+        if cashback_pct_val > 0:
+            cashback_amount = round(total * cashback_pct_val / 100, 2)
+            u.bonus_balance = Decimal(str(float(u.bonus_balance) + cashback_amount))
+            session.add(BonusTransaction(
+                user_id=u.id,
+                order_id=order.id,
+                delta=Decimal(str(cashback_amount)),
+                reason="order_cashback",
+                note=f"Кешбэк {cashback_pct_val}% за заказ {number}",
+            ))
+            session.add(u)
 
     # Очищаем корзину.
     for ci in cart.items:

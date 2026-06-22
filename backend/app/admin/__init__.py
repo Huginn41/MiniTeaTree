@@ -845,8 +845,9 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             tiers = (await session.execute(_select(_BonusTier).order_by(_BonusTier.min_amount))).scalars().all()
             s = (await session.execute(_select(_ShopSettings).where(_ShopSettings.id == 1))).scalar_one_or_none()
             max_pct = s.bonus_max_payment_pct if s else 50
+            no_cashback = bool(s.bonus_no_cashback_on_redemption) if s else False
         from app.admin.bonus_settings import render_bonus_settings
-        return _HTMLResponse(render_bonus_settings(tiers, max_pct, admin_username=request.session.get("admin_username", "")))
+        return _HTMLResponse(render_bonus_settings(tiers, max_pct, no_cashback, admin_username=request.session.get("admin_username", "")))
 
     @app.get("/admin/import", include_in_schema=False)
     async def _admin_import_page(request: Request):
@@ -1133,7 +1134,10 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         async with get_session_factory()() as session:
             res = await session.execute(_sel(_ShopSettings).where(_ShopSettings.id == 1))
             s = res.scalar_one_or_none()
-        return _JSONResponse({"bonus_max_payment_pct": s.bonus_max_payment_pct if s else 50})
+        return _JSONResponse({
+            "bonus_max_payment_pct": s.bonus_max_payment_pct if s else 50,
+            "bonus_no_cashback_on_redemption": bool(s.bonus_no_cashback_on_redemption) if s else False,
+        })
 
     @app.patch("/admin-api/bonus/settings", include_in_schema=False)
     async def admin_bonus_settings_patch(request: Request):
@@ -1142,6 +1146,7 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         data = await request.json()
         pct = int(data.get("bonus_max_payment_pct", 50))
         pct = max(0, min(99, pct))
+        no_cashback = bool(data.get("bonus_no_cashback_on_redemption", False))
         from app.db import get_session_factory
         from app.models.bonus import ShopSettings as _ShopSettings
         from sqlalchemy import select as _sel
@@ -1150,10 +1155,11 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
             s = res.scalar_one_or_none()
             if s:
                 s.bonus_max_payment_pct = pct
+                s.bonus_no_cashback_on_redemption = no_cashback
             else:
-                session.add(_ShopSettings(id=1, bonus_max_payment_pct=pct))
+                session.add(_ShopSettings(id=1, bonus_max_payment_pct=pct, bonus_no_cashback_on_redemption=no_cashback))
             await session.commit()
-        return _JSONResponse({"ok": True, "bonus_max_payment_pct": pct})
+        return _JSONResponse({"ok": True, "bonus_max_payment_pct": pct, "bonus_no_cashback_on_redemption": no_cashback})
 
     @app.put("/admin-api/bonus/tiers", include_in_schema=False)
     async def admin_bonus_tiers_put(request: Request):

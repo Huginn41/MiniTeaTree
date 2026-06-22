@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-def render_bonus_settings(tiers: list, max_pct: int, admin_username: str = "") -> str:
+def render_bonus_settings(tiers: list, max_pct: int, no_cashback_on_redemption: bool = False, admin_username: str = "") -> str:
     from app.admin.dashboard import _topnav
 
     nav = _topnav("settings")
@@ -12,6 +12,7 @@ def render_bonus_settings(tiers: list, max_pct: int, admin_username: str = "") -
         f'{{"id":{t.id},"min_amount":{float(t.min_amount):.2f},"cashback_pct":{float(t.cashback_pct):.2f}}}'
         for t in tiers
     ) + "]"
+    no_cashback_checked = "checked" if no_cashback_on_redemption else ""
 
     return f"""<!DOCTYPE html>
 <html lang="ru">
@@ -48,6 +49,13 @@ body {{ background:var(--c-bg); font-family:-apple-system,BlinkMacSystemFont,'Se
 .toast {{ position:fixed; bottom:24px; right:24px; background:#1a6b3c; color:#fff; padding:12px 20px; border-radius:10px; font-weight:600; font-size:14px; display:none; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,.2); }}
 .toast.err {{ background:#dc2626; }}
 .empty-hint {{ color:#9ca3af; font-size:13px; text-align:center; padding:12px 0; }}
+.toggle-row {{ display:flex; align-items:flex-start; gap:14px; }}
+.toggle-switch {{ position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; margin-top:2px; }}
+.toggle-switch input {{ opacity:0; width:0; height:0; }}
+.toggle-knob {{ position:absolute; inset:0; background:#d1d5db; border-radius:24px; cursor:pointer; transition:.2s; }}
+.toggle-knob:before {{ content:""; position:absolute; width:18px; height:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }}
+.toggle-switch input:checked + .toggle-knob {{ background:var(--c-primary); }}
+.toggle-switch input:checked + .toggle-knob:before {{ transform:translateX(20px); }}
 </style>
 </head>
 <body>
@@ -76,6 +84,23 @@ body {{ background:var(--c-bg); font-family:-apple-system,BlinkMacSystemFont,'Se
         <div class="pct-badge" id="pct-val">{max_pct}%</div>
       </div>
       <div class="hint">0% — оплата баллами отключена. 99% — клиент может оплатить баллами почти весь заказ.</div>
+    </div>
+  </div>
+
+  <!-- Дополнительные правила -->
+  <div class="card">
+    <div class="card-hdr"><span class="icon">⚙️</span> Дополнительные правила</div>
+    <div class="card-body">
+      <div class="toggle-row">
+        <label class="toggle-switch">
+          <input type="checkbox" id="no-cashback-toggle" {no_cashback_checked}>
+          <span class="toggle-knob"></span>
+        </label>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#111827">Не начислять кешбэк при оплате баллами</div>
+          <div class="hint" style="margin-top:3px">Если клиент оплатил часть заказа баллами, кешбэк за этот заказ начислен не будет.</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -128,10 +153,11 @@ async function saveAll() {{
     }}
   }}
   var maxPct = +document.getElementById('max-pct-slider').value;
+  var noCashback = document.getElementById('no-cashback-toggle').checked;
   try {{
     var r1 = await fetch('/admin-api/bonus/settings', {{
       method:'PATCH', headers:{{'Content-Type':'application/json'}},
-      body: JSON.stringify({{bonus_max_payment_pct: maxPct}})
+      body: JSON.stringify({{bonus_max_payment_pct: maxPct, bonus_no_cashback_on_redemption: noCashback}})
     }});
     var r2 = await fetch('/admin-api/bonus/tiers', {{
       method:'PUT', headers:{{'Content-Type':'application/json'}},

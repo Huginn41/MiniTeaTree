@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models.banner import Banner
+from app.models.bonus import ShopSettings
 from app.models.content import FaqItem, PickupPoint, SiteAbout
 from app.schemas import BannerOut, FaqItemOut, PickupPointOut, SiteAboutOut
 
@@ -50,6 +51,15 @@ async def get_about(session: AsyncSession = Depends(get_db)) -> SiteAboutOut:
     if not about:
         return SiteAboutOut()
     return SiteAboutOut.model_validate(about)
+
+
+@router.get("/bonus-config")
+async def get_bonus_config(session: AsyncSession = Depends(get_db)) -> dict:
+    """Публичная конфигурация бонусной системы (макс. % оплаты баллами)."""
+    stmt = select(ShopSettings).where(ShopSettings.id == 1)
+    result = await session.execute(stmt)
+    s = result.scalar_one_or_none()
+    return {"max_payment_pct": s.bonus_max_payment_pct if s else 0}
 
 
 @router.get("/pickup-points", response_model=list[PickupPointOut])
