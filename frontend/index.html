@@ -392,17 +392,26 @@
       gap: 8px;
     }
     .category-tile {
-      position: relative;
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      aspect-ratio: 1 / 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
       cursor: pointer;
       border: none;
-      background: var(--md-surface-container);
+      background: none;
+      padding: 0;
       transition: transform 0.12s;
       -webkit-tap-highlight-color: transparent;
     }
     .category-tile:active { transform: scale(0.96); }
+    .category-tile-img {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--md-surface-container);
+      position: relative;
+    }
     .category-tile .cat-bg {
       position: absolute;
       inset: 0;
@@ -419,25 +428,13 @@
       justify-content: center;
       font-size: 28px;
     }
-    .category-tile::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.62) 100%);
-      border-radius: inherit;
-    }
     .category-tile span {
-      position: absolute;
-      bottom: 0;
-      left: 0; right: 0;
-      z-index: 1;
-      padding: 6px 6px 8px;
       font-size: 11px;
-      font-weight: 700;
-      color: #fff;
+      font-weight: 600;
+      color: var(--md-on-surface);
       text-align: center;
       line-height: 1.25;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+      width: 100%;
     }
     .cat-extra-grid {
       grid-column: 1 / -1;
@@ -1225,9 +1222,11 @@
       </div>`;
       const catTile = cat => `
         <button class="category-tile" onclick="App.navigate('catalog', '${cat.slug}')">
-          ${cat.image_path
-            ? `<img class="cat-bg" src="${cat.image_path}" alt="${esc(cat.name)}" loading="lazy"/>`
-            : `<div class="cat-emoji">${cat.icon || '🍃'}</div>`}
+          <div class="category-tile-img">
+            ${cat.image_path
+              ? `<img class="cat-bg" src="${cat.image_path}" alt="${esc(cat.name)}" loading="lazy"/>`
+              : `<div class="cat-emoji">${cat.icon || '🍃'}</div>`}
+          </div>
           <span>${esc(cat.name)}</span>
         </button>`;
       html += `<div class="category-grid">
