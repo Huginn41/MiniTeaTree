@@ -720,6 +720,7 @@ ABOUT_EDITOR_HTML = """<!DOCTYPE html>
       </button>
       <span id="banner-status" style="font-size:12px;color:#6c757d"></span>
     </div>
+    <div style="font-size:11px;color:#8c9aad;margin-top:6px;line-height:1.5;">📐 Рекомендуется <b>1200×500 px</b> (горизонтальная обложка) · JPG / PNG / WebP · до 5 МБ</div>
   </div>
 
   <!-- 2. Заголовок и описание -->
