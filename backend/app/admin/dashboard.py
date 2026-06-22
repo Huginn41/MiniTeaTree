@@ -874,7 +874,7 @@ function makeFaqRow(item) {
       '<span style="color:#adb5bd;font-size:18px;flex-shrink:0">☰</span>' +
       '<span style="flex:1;font-size:14px;font-weight:600;color:#212529">' + esc(item.question||'Новый вопрос') + '</span>' +
       '<button class="btn btn-sm btn-outline-danger" style="padding:2px 8px;font-size:11px;flex-shrink:0" ' +
-        'onclick="event.stopPropagation();delFaq(this.closest('.faq-row'))">✕ Удалить</button>' +
+        'onclick="event.stopPropagation();delFaq(this.closest(\x27.faq-row\x27))">✕ Удалить</button>' +
     '</div>' +
     '<div class="faq-body" id="fb-' + uid + '">' +
       '<label class="form-label mt-1">Вопрос</label>' +
@@ -887,8 +887,8 @@ function makeFaqRow(item) {
       '</div>' +
       '<div data-saved="' + esc(item.answer||'') + '" style="display:none" id="ans-' + uid + '"></div>' +
       '<div class="d-flex gap-2 mt-3">' +
-        '<button class="btn btn-sm btn-primary fsb" onclick="saveFaqRow(this.closest('.faq-row'))">Сохранить</button>' +
-        '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaq(this.closest('.faq-row').querySelector('.faq-head'))">Закрыть</button>' +
+        '<button class="btn btn-sm btn-primary fsb" onclick="saveFaqRow(this.closest(\x27.faq-row\x27))">Сохранить</button>' +
+        '<button class="btn btn-sm btn-outline-secondary" onclick="toggleFaq(this.closest(\x27.faq-row\x27).querySelector(\x27.faq-head\x27))">Закрыть</button>' +
       '</div>' +
     '</div>';
   return row;
