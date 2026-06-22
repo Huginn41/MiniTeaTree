@@ -67,11 +67,31 @@ def setup_bot(app: FastAPI) -> None:
         except Exception:
             return JSONResponse(status_code=400, content={"ok": False})
 
+        # Логируем тип входящего обновления — помогает диагностировать
+        # "бот не получает сообщения" vs "получает но не обрабатывает"
+        update_type = (
+            "message" if update.message else
+            "callback_query" if update.callback_query else
+            "edited_message" if update.edited_message else
+            "other"
+        )
+        update_text = None
+        if update.message:
+            update_text = (update.message.text or "")[:80]
+        log.info(
+            "bot_update_received",
+            update_id=update.update_id,
+            update_type=update_type,
+            chat_id=update.message.chat.id if update.message else None,
+            user_id=update.message.from_user.id if update.message and update.message.from_user else None,
+            text_preview=update_text,
+        )
+
         async def process() -> None:
             try:
                 await dp.feed_update(bot=bot, update=update)
             except Exception as e:
-                log.error("bot_update_error", error=str(e), update_id=update.update_id)
+                log.error("bot_update_error", error=str(e), update_id=update.update_id, exc_info=True)
 
         asyncio.create_task(process())
         return JSONResponse({"ok": True})

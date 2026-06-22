@@ -16,7 +16,7 @@ from aiogram import Dispatcher, F, Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, ForceReply, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, ErrorEvent, ForceReply, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from app.config import get_settings
 from app.logging import get_logger
@@ -233,11 +233,13 @@ async def cb_payment_link(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     # ForceReply: Telegram показывает интерфейс ответа на это сообщение.
     # Ответ на сообщение бота доходит боту даже в группе с Privacy Mode.
+    # ForceReply без selective=True — показываем всем пользователям чата.
+    # selective=True без @упоминания менеджера в тексте не работает в группах.
     prompt = await callback.message.answer(
         f"Введите ссылку на оплату для заказа <b>{order.number}</b>:\n"
-        "(или /cancel для отмены)",
+        "↩️ Ответьте на это сообщение (или /cancel для отмены)",
         parse_mode="HTML",
-        reply_markup=ForceReply(selective=True),
+        reply_markup=ForceReply(selective=False),
     )
     await state.set_state(AdminStates.waiting_payment_link)
     await state.update_data(
@@ -360,9 +362,9 @@ async def cb_tracking_link(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     prompt = await callback.message.answer(
         f"Введите ссылку для отслеживания заказа <b>{order.number}</b>:\n"
-        "(или /cancel для отмены)",
+        "↩️ Ответьте на это сообщение (или /cancel для отмены)",
         parse_mode="HTML",
-        reply_markup=ForceReply(selective=True),
+        reply_markup=ForceReply(selective=False),
     )
     await state.set_state(AdminStates.waiting_tracking_link)
     await state.update_data(
@@ -466,6 +468,44 @@ async def cmd_cancel(message: Message, state: FSMContext) -> None:
 # Dispatcher
 # ──────────────────────────────────────────────────────────────────────────────
 
+async def on_handler_error(event: ErrorEvent) -> None:
+    """Ловит все необработанные исключения в handlers и логирует их."""
+    exc = event.exception
+    update = event.update
+    update_type = (
+        "message" if update.message else
+        "callback_query" if update.callback_query else "other"
+    )
+    log.error(
+        "handler_exception",
+        exc_type=type(exc).__name__,
+        exc_msg=str(exc),
+        update_type=update_type,
+        update_id=update.update_id,
+        exc_info=exc,
+    )
+
+
+async def on_unhandled_message(message: Message) -> None:
+    """Ловит все сообщения, которые не обработал ни один handler.
+    Нужен для диагностики: если бот получает сообщение но ни один handler
+    не сработал — это видно в логах.
+    """
+    state_info = "unknown"
+    try:
+        # Не можем легко получить state здесь без DI, просто логируем факт
+        pass
+    except Exception:
+        pass
+    log.warning(
+        "unhandled_message",
+        chat_id=message.chat.id,
+        user_id=message.from_user.id if message.from_user else None,
+        text_preview=(message.text or "")[:80],
+        is_reply=message.reply_to_message is not None,
+    )
+
+
 def create_dispatcher() -> Dispatcher:
     router = Router(name="main")
 
@@ -477,7 +517,11 @@ def create_dispatcher() -> Dispatcher:
     router.callback_query.register(cb_tracking_link,    F.data.startswith("tracking:"))
     router.message.register(msg_payment_link,  AdminStates.waiting_payment_link)
     router.message.register(msg_tracking_link, AdminStates.waiting_tracking_link)
+    # Catch-all для диагностики — должен быть последним
+    router.message.register(on_unhandled_message)
 
     dp = Dispatcher()
     dp.include_router(router)
+    # Глобальный обработчик ошибок — ловит исключения из всех handlers
+    dp.errors.register(on_handler_error)
     return dp
