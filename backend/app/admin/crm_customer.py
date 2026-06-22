@@ -297,7 +297,7 @@ def render_crm_customer(user, admin_username: str = "") -> str:
         sub_items += f'<div class="profile-sub-item">📱 {_esc(user.phone)}</div>'
     sub_items += f'<div class="profile-sub-item" style="opacity:.7">ID {user.telegram_id}</div>'
 
-    nav = _topnav("crm", admin_username=admin_username)
+    nav = _topnav("crm")
 
     return f"""<!DOCTYPE html>
 <html lang="ru">

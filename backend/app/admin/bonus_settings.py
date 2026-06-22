@@ -6,7 +6,7 @@ from __future__ import annotations
 def render_bonus_settings(tiers: list, max_pct: int, admin_username: str = "") -> str:
     from app.admin.dashboard import _topnav
 
-    nav = _topnav("settings", admin_username=admin_username)
+    nav = _topnav("settings")
 
     tiers_json = "[" + ",".join(
         f'{{"id":{t.id},"min_amount":{float(t.min_amount):.2f},"cashback_pct":{float(t.cashback_pct):.2f}}}'
