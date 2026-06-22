@@ -1,4 +1,4 @@
-"""aiogram handlers: /start, FSM-флоу ссылки на оплату."""
+"""aiogram handlers: /start, FSM-флоу ссылки на оплату и трек-номера, смена статуса."""
 
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ log = get_logger("app.bot.handlers")
 
 
 class AdminStates(StatesGroup):
-    waiting_payment_link = State()  # data: order_id, order_number, customer_tg_id
+    waiting_payment_link = State()   # data: order_id, order_number, customer_tg_id
+    waiting_tracking_link = State()  # data: order_id, order_number
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -38,29 +39,102 @@ async def cmd_start(message: Message) -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Callback: кнопка «Ссылка на оплату» в уведомлении о заказе
+# Смена статуса
+# ──────────────────────────────────────────────────────────────────────────────
+
+_STATUS_LABELS = {
+    "new":              "🆕 Новый",
+    "assembling":       "📦 Собираем",
+    "ready":            "✅ Готов",
+    "awaiting_payment": "💳 Ожидает оплаты",
+    "in_delivery":      "🚚 В доставку",
+    "at_pvz":           "🏪 В ПВЗ",
+    "delivered":        "🎉 Доставлен",
+    "cancelled":        "❌ Отменён",
+}
+
+
+async def cb_set_status(callback: CallbackQuery) -> None:
+    """Менеджер нажал кнопку смены статуса."""
+    _, order_id_str, new_status = callback.data.split(":", 2)
+    order_id = int(order_id_str)
+
+    from datetime import UTC, datetime as _dt
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from app.db import get_session_factory
+    from app.models.order import Order
+    from app.models.enums import ORDER_STATUS_VALUES
+
+    if new_status not in ORDER_STATUS_VALUES:
+        await callback.answer("Неверный статус", show_alert=True)
+        return
+
+    user_telegram_id = None
+    order_number = None
+    old_status = None
+
+    async with get_session_factory()() as session:
+        result = await session.execute(
+            select(Order).options(selectinload(Order.user)).where(Order.id == order_id)
+        )
+        order = result.scalar_one_or_none()
+        if not order:
+            await callback.answer("Заказ не найден", show_alert=True)
+            return
+        old_status = order.status
+        order_number = order.number
+        order.status = new_status
+        if new_status == "delivered" and not order.delivered_at:
+            order.delivered_at = _dt.now(UTC)
+        if new_status == "in_delivery" and not order.paid_at:
+            order.paid_at = _dt.now(UTC)
+        if order.user:
+            user_telegram_id = order.user.telegram_id
+        await session.commit()
+
+    status_label = _STATUS_LABELS.get(new_status, new_status)
+    await callback.answer(f"Статус → {status_label}", show_alert=False)
+
+    # Обновить карточки у всех менеджеров
+    try:
+        from app.bot.notify import update_order_notifications
+        await update_order_notifications(order_id)
+    except Exception:
+        pass
+
+    # Уведомить клиента
+    if old_status != new_status and user_telegram_id:
+        try:
+            import asyncio as _aio
+            from app.bot.status_notify import notify_status_changed
+            _aio.create_task(notify_status_changed(
+                type("O", (), {"id": order_id, "number": order_number, "status": new_status})(),
+                new_status,
+                user_telegram_id,
+            ))
+        except Exception:
+            pass
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Callback: кнопка «Ссылка на оплату»
 # ──────────────────────────────────────────────────────────────────────────────
 
 async def cb_payment_link(callback: CallbackQuery, state: FSMContext) -> None:
-    """Менеджер нажал «Ссылка на оплату» — просим вставить ссылку."""
+    """Менеджер нажал «Ссылка на оплату»."""
     order_id = int(callback.data.split(":")[1])
 
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
     from app.db import get_session_factory
     from app.models.order import Order
-    from app.models.user import User
 
-    customer_tg_id = None
-    order_number = None
     async with get_session_factory()() as session:
         result = await session.execute(
             select(Order).options(selectinload(Order.user)).where(Order.id == order_id)
         )
         order = result.scalar_one_or_none()
-        if order:
-            order_number = order.number
-            customer_tg_id = order.user.telegram_id if order.user else None
 
     if not order:
         await callback.answer("Заказ не найден", show_alert=True)
@@ -69,25 +143,23 @@ async def cb_payment_link(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(AdminStates.waiting_payment_link)
     await state.update_data(
         order_id=order_id,
-        order_number=order_number,
-        customer_tg_id=customer_tg_id,
+        order_number=order.number,
+        customer_tg_id=order.user.telegram_id if order.user else None,
     )
-
     await callback.answer()
     await callback.message.answer(
-        f"Введите ссылку на оплату для заказа <b>{order_number}</b>:\n\n"
-        f"(Или напишите /cancel для отмены)",
+        f"Введите ссылку на оплату для заказа <b>{order.number}</b>:\n\n"
+        "(Или /cancel для отмены)",
         parse_mode="HTML",
     )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# FSM: получаем ссылку от менеджера → сохраняем + отправляем клиенту
+# FSM: получаем ссылку на оплату
 # ──────────────────────────────────────────────────────────────────────────────
 
 async def msg_payment_link(message: Message, state: FSMContext) -> None:
     link = (message.text or "").strip()
-
     if not link.startswith("http"):
         await message.answer("❌ Это не похоже на ссылку. Введите URL (начинается с http):")
         return
@@ -97,7 +169,6 @@ async def msg_payment_link(message: Message, state: FSMContext) -> None:
     order_number: str = data["order_number"]
     customer_tg_id: int | None = data.get("customer_tg_id")
 
-    # Сохраняем ссылку и меняем статус
     from sqlalchemy import select
     from app.db import get_session_factory
     from app.models.order import Order
@@ -110,7 +181,6 @@ async def msg_payment_link(message: Message, state: FSMContext) -> None:
             order.status = "awaiting_payment"
             await session.commit()
 
-    # Отправляем клиенту
     if customer_tg_id:
         from app.bot.notify import _send_message
         await _send_message(
@@ -119,14 +189,88 @@ async def msg_payment_link(message: Message, state: FSMContext) -> None:
             f"Для оформления перейдите по ссылке на оплату:\n{link}",
         )
 
+    try:
+        from app.bot.notify import update_order_notifications
+        await update_order_notifications(order_id)
+    except Exception:
+        pass
+
     await state.clear()
     await message.answer(
         f"✅ Ссылка отправлена покупателю. Статус заказа {order_number} → «Ожидает оплаты»."
     )
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Callback: кнопка «Трек-номер»
+# ──────────────────────────────────────────────────────────────────────────────
+
+async def cb_tracking_link(callback: CallbackQuery, state: FSMContext) -> None:
+    """Менеджер нажал «Трек-номер»."""
+    order_id = int(callback.data.split(":")[1])
+
+    from sqlalchemy import select
+    from app.db import get_session_factory
+    from app.models.order import Order
+
+    async with get_session_factory()() as session:
+        result = await session.execute(select(Order).where(Order.id == order_id))
+        order = result.scalar_one_or_none()
+
+    if not order:
+        await callback.answer("Заказ не найден", show_alert=True)
+        return
+
+    await state.set_state(AdminStates.waiting_tracking_link)
+    await state.update_data(order_id=order_id, order_number=order.number)
+    await callback.answer()
+    await callback.message.answer(
+        f"Введите ссылку для отслеживания заказа <b>{order.number}</b>:\n\n"
+        "(Или /cancel для отмены)",
+        parse_mode="HTML",
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FSM: получаем трек-номер
+# ──────────────────────────────────────────────────────────────────────────────
+
+async def msg_tracking_link(message: Message, state: FSMContext) -> None:
+    link = (message.text or "").strip()
+    if not link.startswith("http"):
+        await message.answer("❌ Это не похоже на ссылку. Введите URL (начинается с http):")
+        return
+
+    data = await state.get_data()
+    order_id: int = data["order_id"]
+    order_number: str = data["order_number"]
+
+    from sqlalchemy import select
+    from app.db import get_session_factory
+    from app.models.order import Order
+
+    async with get_session_factory()() as session:
+        result = await session.execute(select(Order).where(Order.id == order_id))
+        order = result.scalar_one_or_none()
+        if order:
+            order.tracking_link = link
+            await session.commit()
+
+    try:
+        from app.bot.notify import update_order_notifications
+        await update_order_notifications(order_id)
+    except Exception:
+        pass
+
+    await state.clear()
+    await message.answer(f"✅ Трек-номер сохранён для заказа {order_number}.")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# /cancel
+# ──────────────────────────────────────────────────────────────────────────────
+
 async def cmd_cancel(message: Message, state: FSMContext) -> None:
-    """Отменяет текущее FSM-действие."""
     current = await state.get_state()
     if current is None:
         await message.answer("Нечего отменять.")
@@ -144,8 +288,11 @@ def create_dispatcher() -> Dispatcher:
 
     router.message.register(cmd_start, CommandStart())
     router.message.register(cmd_cancel, F.text == "/cancel")
-    router.callback_query.register(cb_payment_link, F.data.startswith("pay_link:"))
-    router.message.register(msg_payment_link, AdminStates.waiting_payment_link)
+    router.callback_query.register(cb_set_status,      F.data.startswith("set_status:"))
+    router.callback_query.register(cb_payment_link,    F.data.startswith("pay_link:"))
+    router.callback_query.register(cb_tracking_link,   F.data.startswith("tracking:"))
+    router.message.register(msg_payment_link,  AdminStates.waiting_payment_link)
+    router.message.register(msg_tracking_link, AdminStates.waiting_tracking_link)
 
     dp = Dispatcher()
     dp.include_router(router)

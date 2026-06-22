@@ -936,16 +936,19 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
                 user_telegram_id = order.user.telegram_id
             order_number = order.number
             await session.commit()
-        # Уведомляем клиента если статус реально изменился
-        if old_status != value and user_telegram_id:
+        # Уведомляем клиента и обновляем карточки у менеджеров
+        if old_status != value:
             try:
                 import asyncio as _aio
-                from app.bot.status_notify import notify_status_changed as _notify
-                _aio.create_task(_notify(
-                    Order(id=order_id, number=order_number, status=value),
-                    value,
-                    user_telegram_id,
-                ))
+                if user_telegram_id:
+                    from app.bot.status_notify import notify_status_changed as _notify
+                    _aio.create_task(_notify(
+                        Order(id=order_id, number=order_number, status=value),
+                        value,
+                        user_telegram_id,
+                    ))
+                from app.bot.notify import update_order_notifications as _upd
+                _aio.create_task(_upd(order_id))
             except Exception:
                 pass
         return _JSONResponse({"ok": True})
