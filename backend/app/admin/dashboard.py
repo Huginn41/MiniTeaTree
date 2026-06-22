@@ -48,7 +48,7 @@ def _topnav(active: str = "") -> str:
       <a class="ct-dropdown-item" href="/admin/category/list">Категории</a>
       <a class="ct-dropdown-item" href="/admin/banner/list">Баннеры</a>
       <a class="{_item_cls('about')}" href="/crm/about">О нас</a>
-      <a class="ct-dropdown-item" href="/admin/faq-item/list">FAQ</a>
+
       <a class="ct-dropdown-item" href="/admin/pickup-point/list">Самовывоз</a>
     </div>
   </div>
