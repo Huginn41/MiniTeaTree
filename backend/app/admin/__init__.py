@@ -284,6 +284,20 @@ _ADMIN_JS = (r"""
     var preview = document.createElement('img');
     preview.style.cssText = 'display:none;width:120px;height:120px;object-fit:cover;border-radius:8px;margin-top:8px;border:2px solid #dee2e6;';
     btn.insertAdjacentElement('afterend', preview);
+
+    // Подсказка по размеру
+    var hint = document.createElement('div');
+    hint.style.cssText = 'font-size:11px;color:#8c9aad;margin-top:5px;line-height:1.5;';
+    var _p = window.location.pathname;
+    if(_p.indexOf('/banner/') !== -1){
+      hint.innerHTML = '&#x1F4D0; Рекомендуется <b>1200×500 px</b> (горизонтальный баннер) · JPG / PNG / WebP';
+    } else if(_p.indexOf('/category/') !== -1){
+      hint.innerHTML = '&#x1F4D0; Рекомендуется <b>600×400 px</b> (обложка категории) · JPG / PNG / WebP';
+    } else {
+      hint.innerHTML = '&#x1F4D0; JPG / PNG / WebP · до 5 МБ';
+    }
+    preview.insertAdjacentElement('afterend', hint);
+
     if(inp.value){ preview.src = inp.value; preview.style.display = 'block'; }
 
     btn.addEventListener('click', function(){ fi.click(); });
@@ -324,7 +338,8 @@ _ADMIN_JS = (r"""
       +   '📁 Загрузить фото (можно несколько)'
       +   '<input type="file" accept="image/*" multiple style="display:none" id="img-upload-input">'
       + '</label>'
-      + '<span id="img-upload-status" style="margin-left:12px;font-size:13px;color:#888"></span>';
+      + '<span id="img-upload-status" style="margin-left:12px;font-size:13px;color:#888"></span>'
+      + '<div style="font-size:11px;color:#8c9aad;margin-top:6px;line-height:1.5;">&#x1F4D0; Рекомендуется <b>800×800 px</b> (квадрат) &nbsp;·&nbsp; JPG / PNG / WebP &nbsp;·&nbsp; до 5 МБ на фото</div>';
 
     // Вставляем В НАЧАЛО формы, перед fieldset
     var fieldset = document.querySelector('form fieldset');
