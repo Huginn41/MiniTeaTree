@@ -36,16 +36,23 @@ _STATUS_LABELS = {
     "cancelled":        "❌ Отменён",
 }
 
-# Кнопки смены статуса (кроме «new» — его ставить не нужно)
-_STATUS_BTN_ORDER = [
-    ("assembling",       "📦 Собираем"),
-    ("ready",            "✅ Готов"),
-    ("awaiting_payment", "💳 Ожид. оплаты"),
-    ("in_delivery",      "🚚 В доставку"),
-    ("at_pvz",           "🏪 В ПВЗ"),
-    ("delivered",        "🎉 Доставлен"),
-    ("cancelled",        "❌ Отменить"),
-]
+# Следующие статусы для каждого текущего — логика пошаговой обработки
+_NEXT_STATUSES: dict[str, list[tuple[str, str]]] = {
+    "new":              [("assembling",       "📦 Собираем")],
+    "assembling":       [("ready",            "✅ Готов")],
+    "ready":            [("awaiting_payment", "💳 Ожид. оплаты"),
+                         ("in_delivery",      "🚚 В доставку"),
+                         ("at_pvz",           "🏪 В ПВЗ")],
+    "awaiting_payment": [("in_delivery",      "🚚 В доставку"),
+                         ("at_pvz",           "🏪 В ПВЗ")],
+    "in_delivery":      [("delivered",        "🎉 Доставлен")],
+    "at_pvz":           [("delivered",        "🎉 Доставлен")],
+    "delivered":        [],
+    "cancelled":        [],
+}
+
+_PRE_DELIVERY = {"new", "assembling", "ready", "awaiting_payment"}
+_IN_DELIVERY  = {"in_delivery", "at_pvz"}
 
 
 def _order_text(order: Order) -> str:
@@ -87,20 +94,29 @@ def _order_keyboard(order: Order) -> dict:
     settings = get_settings()
     base = settings.public_base_url.rstrip("/")
     current = order.status
+    rows: list[list[dict]] = []
 
-    # Кнопки статусов (все кроме текущего), по 2 в ряд
-    status_btns = [
-        {"text": label, "callback_data": f"set_status:{order.id}:{status}"}
-        for status, label in _STATUS_BTN_ORDER
-        if status != current
-    ]
-    rows = [status_btns[i:i+2] for i in range(0, len(status_btns), 2)]
+    # Кнопки следующих статусов по логике флоу
+    next_statuses = _NEXT_STATUSES.get(current, [])
+    if next_statuses:
+        status_btns = [
+            {"text": label, "callback_data": f"set_status:{order.id}:{status}"}
+            for status, label in next_statuses
+        ]
+        rows.extend([status_btns[i:i+2] for i in range(0, len(status_btns), 2)])
 
-    # Действия
-    rows.append([
-        {"text": "💳 Ссылка на оплату", "callback_data": f"pay_link:{order.id}"},
-        {"text": "🚚 Трек-номер",        "callback_data": f"tracking:{order.id}"},
-    ])
+    # Кнопка «Отменить» — для всех незавершённых статусов
+    if current not in ("delivered", "cancelled"):
+        rows.append([{"text": "❌ Отменить", "callback_data": f"set_status:{order.id}:cancelled"}])
+
+    # Действия — зависят от этапа
+    action_row = []
+    if current in _PRE_DELIVERY:
+        action_row.append({"text": "💳 Ссылка на оплату", "callback_data": f"pay_link:{order.id}"})
+    if current in _IN_DELIVERY:
+        action_row.append({"text": "🚚 Трек-номер", "callback_data": f"tracking:{order.id}"})
+    if action_row:
+        rows.append(action_row)
 
     # CRM
     rows.append([{"text": "🔍 Открыть в CRM", "url": f"{base}/crm/order/{order.id}"}])
