@@ -74,6 +74,8 @@ async def list_products(
                 category=CategoryBrief.model_validate(p.category),
                 main_image=main_image,
                 variants=[v for v in p.variants if v.in_stock],
+                is_unit=p.is_unit,
+                unit_label=p.unit_label,
             )
         )
     return items
@@ -106,4 +108,6 @@ async def get_product(
         category=CategoryBrief.model_validate(product.category),
         variants=product.variants,
         images=product.images,
+        is_unit=product.is_unit,
+        unit_label=product.unit_label,
     )

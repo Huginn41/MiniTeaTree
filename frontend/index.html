@@ -1328,7 +1328,7 @@
             <h2 style="font-size:20px;font-weight:700;color:var(--md-on-surface);line-height:1.3">${esc(p.name)}</h2>
             ${p.origin ? `<p style="font-size:13px;color:var(--md-on-surface-variant);margin-top:4px">📍 ${esc(p.origin)}</p>` : ''}
           </div>
-          <div style="font-size:18px;font-weight:800;color:var(--md-primary);white-space:nowrap;padding-top:2px">от ${fmtPrice(minPrice)} ₽</div>
+          <div style="font-size:18px;font-weight:800;color:var(--md-primary);white-space:nowrap;padding-top:2px">${p.is_unit ? `${fmtPrice(p.variants[0]?.price ?? p.base_price)} ₽ / ${p.unit_label || 'шт'}` : `от ${fmtPrice(minPrice)} ₽`}</div>
         </div>
 
         ${p.tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
@@ -1341,15 +1341,18 @@
           <div style="margin-top:20px">
             ${p.is_unit ? `
               <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase">Количество</p>
-              <div style="display:flex;align-items:center;gap:0;margin-top:12px">
-                <div style="font-size:20px;font-weight:800;color:var(--md-primary)">${fmtPrice(p.variants[0].price)} ₽ / ${p.unit_label || 'шт'}</div>
-              </div>
-              <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+              <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
                 <div style="display:flex;align-items:center;background:var(--md-surface-container);border-radius:12px;overflow:hidden">
                   <button id="unit-minus" style="width:44px;height:44px;border:none;background:none;font-size:22px;font-weight:300;color:var(--md-on-surface);cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
                   <span id="unit-qty" style="min-width:32px;text-align:center;font-size:17px;font-weight:700;color:var(--md-on-surface)">1</span>
                   <button id="unit-plus" style="width:44px;height:44px;border:none;background:none;font-size:22px;font-weight:300;color:var(--md-on-surface);cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
                 </div>
+                <div>
+                  <div id="unit-total-price" style="font-size:20px;font-weight:800;color:var(--md-primary)">${fmtPrice(p.variants[0].price)} ₽</div>
+                  <div style="font-size:12px;color:var(--md-on-surface-variant)">${fmtPrice(p.variants[0].price)} ₽ / ${p.unit_label || 'шт'}</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
                 <button class="btn-cart" id="btn-to-cart" style="flex:1">В корзину</button>
                 <button class="btn-buy" id="btn-buy">Купить</button>
               </div>
@@ -1392,19 +1395,24 @@
       const unitQty   = document.getElementById('unit-qty');
       if (unitMinus && unitPlus && unitQty && btnCart && btnBuy) {
         let qty = 1;
-        const variantId = this._currentProduct?.variants?.[0]?.id;
+        const variantId  = this._currentProduct?.variants?.[0]?.id;
+        const unitPrice  = parseFloat(this._currentProduct?.variants?.[0]?.price ?? 0);
+        const totalPriceEl = document.getElementById('unit-total-price');
+        const updatePrice = () => {
+          if (totalPriceEl) totalPriceEl.textContent = fmtPrice(unitPrice * qty) + ' ₽';
+        };
         unitMinus.addEventListener('click', () => {
-          if (qty > 1) { qty--; unitQty.textContent = qty; }
+          if (qty > 1) { qty--; unitQty.textContent = qty; updatePrice(); }
           tg?.HapticFeedback?.selectionChanged?.();
         });
         unitPlus.addEventListener('click', () => {
-          qty++; unitQty.textContent = qty;
+          qty++; unitQty.textContent = qty; updatePrice();
           tg?.HapticFeedback?.selectionChanged?.();
         });
         btnCart.addEventListener('click', async () => {
           if (!variantId) return;
           await App.addToCart(variantId, qty);
-          qty = 1; unitQty.textContent = 1;
+          qty = 1; unitQty.textContent = 1; updatePrice();
           tg?.HapticFeedback?.notificationOccurred?.('success');
         });
         btnBuy.addEventListener('click', async () => {
@@ -2183,6 +2191,9 @@
     // ─── Component Helpers ────────────────────────────────────────────────────
     _productCardSmall(p) {
       const minPrice = p.variants.length ? Math.min(...p.variants.map(v => v.price)) : p.base_price;
+      const priceLabel = p.is_unit
+        ? `${fmtPrice(p.variants[0]?.price ?? minPrice)} ₽ / ${p.unit_label || 'шт'}`
+        : `от ${fmtPrice(minPrice)} ₽`;
       return `
         <div class="product-card-small" onclick="App.navigate('product', '${p.slug}')">
           <div class="pcard-img">
@@ -2191,13 +2202,16 @@
           <div class="pcard-body">
             <div class="pcard-name">${esc(p.name)}</div>
             <div class="pcard-cat">${esc(p.category.name)}</div>
-            <div class="pcard-price">от ${fmtPrice(minPrice)} ₽</div>
+            <div class="pcard-price">${priceLabel}</div>
           </div>
         </div>`;
     },
 
     _productCardGrid(p) {
       const minPrice = p.variants.length ? Math.min(...p.variants.map(v => v.price)) : p.base_price;
+      const priceLabel = p.is_unit
+        ? `${fmtPrice(p.variants[0]?.price ?? minPrice)} ₽ / ${p.unit_label || 'шт'}`
+        : `от ${fmtPrice(minPrice)} ₽`;
       return `
         <div class="product-card-grid" onclick="App.navigate('product', '${p.slug}')">
           <div class="pcard-img">
@@ -2206,7 +2220,7 @@
           <div class="pcard-body">
             <div class="pcard-name" style="font-size:14px">${esc(p.name)}</div>
             <div class="pcard-cat" style="font-size:11px;margin-top:3px">${esc(p.category.name)}</div>
-            <div class="pcard-price" style="font-size:15px;margin-top:8px">от ${fmtPrice(minPrice)} ₽</div>
+            <div class="pcard-price" style="font-size:15px;margin-top:8px">${priceLabel}</div>
           </div>
         </div>`;
     },
