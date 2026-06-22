@@ -180,7 +180,9 @@ async def msg_payment_link(message: Message, state: FSMContext) -> None:
         order = result.scalar_one_or_none()
         if order:
             order.payment_link = link
-            order.status = "awaiting_payment"
+            # Переводим в awaiting_payment только если заказ ещё не отправлен
+            if order.status in {"new", "assembling", "ready"}:
+                order.status = "awaiting_payment"
             await session.commit()
 
     await state.clear()

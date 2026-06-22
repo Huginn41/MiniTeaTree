@@ -36,23 +36,34 @@ _STATUS_LABELS = {
     "cancelled":        "❌ Отменён",
 }
 
-# Следующие статусы для каждого текущего — логика пошаговой обработки
-_NEXT_STATUSES: dict[str, list[tuple[str, str]]] = {
-    "new":              [("assembling",       "📦 Собираем")],
-    "assembling":       [("ready",            "✅ Готов")],
-    "ready":            [("awaiting_payment", "💳 Ожид. оплаты"),
-                         ("in_delivery",      "🚚 В доставку"),
-                         ("at_pvz",           "🏪 В ПВЗ")],
-    "awaiting_payment": [("in_delivery",      "🚚 В доставку"),
-                         ("at_pvz",           "🏪 В ПВЗ")],
-    "in_delivery":      [("delivered",        "🎉 Доставлен")],
-    "at_pvz":           [("delivered",        "🎉 Доставлен")],
-    "delivered":        [],
-    "cancelled":        [],
+# Следующие статусы — по типу доставки
+_NEXT_STATUSES: dict[str, dict[str, list[tuple[str, str]]]] = {
+    "pickup": {
+        "new":        [("assembling", "📦 Собираем")],
+        "assembling": [("ready",      "✅ Готов")],
+        "ready":      [("delivered",  "🎉 Выдан")],
+        "delivered":  [],
+        "cancelled":  [],
+    },
+    "pvz": {
+        "new":        [("assembling", "📦 Собираем")],
+        "assembling": [("ready",      "✅ Готов")],
+        "ready":      [("at_pvz",     "🏪 Отправлен в ПВЗ")],
+        "at_pvz":     [("delivered",  "🎉 Доставлен")],
+        "delivered":  [],
+        "cancelled":  [],
+    },
+    "courier": {
+        "new":              [("assembling",       "📦 Собираем")],
+        "assembling":       [("ready",            "✅ Готов")],
+        "ready":            [("awaiting_payment", "💳 Ожид. оплаты"),
+                             ("in_delivery",      "🚚 В доставку")],
+        "awaiting_payment": [("in_delivery",      "🚚 В доставку")],
+        "in_delivery":      [("delivered",        "🎉 Доставлен")],
+        "delivered":        [],
+        "cancelled":        [],
+    },
 }
-
-_PRE_DELIVERY = {"new", "assembling", "ready", "awaiting_payment"}
-_IN_DELIVERY  = {"in_delivery", "at_pvz"}
 
 
 def _order_text(order: Order) -> str:
@@ -100,10 +111,12 @@ def _order_keyboard(order: Order) -> dict:
     settings = get_settings()
     base = settings.public_base_url.rstrip("/")
     current = order.status
+    delivery_type = (order.delivery_info.type if order.delivery_info else None) or "courier"
     rows: list[list[dict]] = []
 
-    # Кнопки следующих статусов по логике флоу
-    next_statuses = _NEXT_STATUSES.get(current, [])
+    # Кнопки следующих статусов — по типу доставки
+    flow = _NEXT_STATUSES.get(delivery_type, _NEXT_STATUSES["courier"])
+    next_statuses = flow.get(current, [])
     if next_statuses:
         status_btns = [
             {"text": label, "callback_data": f"set_status:{order.id}:{status}"}
@@ -115,18 +128,22 @@ def _order_keyboard(order: Order) -> dict:
     if current not in ("delivered", "cancelled"):
         rows.append([{"text": "❌ Отменить", "callback_data": f"set_status:{order.id}:cancelled"}])
 
-    # Действия — зависят от этапа
+    # Дополнительные действия — зависят от типа доставки и этапа
     action_row = []
-    if current in _PRE_DELIVERY:
-        action_row.append({"text": "💳 Ссылка на оплату", "callback_data": f"pay_link:{order.id}"})
-    if current in _IN_DELIVERY:
-        action_row.append({"text": "🚚 Трек-номер", "callback_data": f"tracking:{order.id}"})
+    if delivery_type == "courier":
+        if current in {"new", "assembling", "ready", "awaiting_payment"}:
+            action_row.append({"text": "💳 Ссылка на оплату", "callback_data": f"pay_link:{order.id}"})
+        if current == "in_delivery":
+            action_row.append({"text": "🚚 Трек-номер", "callback_data": f"tracking:{order.id}"})
+    elif delivery_type == "pvz":
+        if current in {"ready", "at_pvz"}:
+            action_row.append({"text": "🚚 Трек-номер", "callback_data": f"tracking:{order.id}"})
+    # pickup: никаких дополнительных действий
+
     if action_row:
         rows.append(action_row)
 
-    # CRM
     rows.append([{"text": "🔍 Открыть в CRM", "url": f"{base}/crm/order/{order.id}"}])
-
     return {"inline_keyboard": rows}
 
 
