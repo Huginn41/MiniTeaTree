@@ -1300,11 +1300,12 @@ def setup_dashboard(app: FastAPI) -> None:
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
         data = await request.json()
         ids = data.get("ids", [])
+        from sqlalchemy import select as _select
         from app.db import get_session_factory
         from app.models.content import FaqItem
         async with get_session_factory()() as s:
             for sort, faq_id in enumerate(ids):
-                res = await s.execute(select(FaqItem).where(FaqItem.id == faq_id))
+                res = await s.execute(_select(FaqItem).where(FaqItem.id == faq_id))
                 item = res.scalar_one_or_none()
                 if item:
                     item.sort = sort
