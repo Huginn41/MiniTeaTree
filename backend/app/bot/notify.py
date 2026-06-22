@@ -158,45 +158,62 @@ def _order_keyboard(order: Order) -> dict:
     delivery_type = (order.delivery_info.type if order.delivery_info else None) or "courier"
     rows: list[list[dict]] = []
 
-    # Кнопки следующих статусов — по типу доставки
-    flow = _NEXT_STATUSES.get(delivery_type, _NEXT_STATUSES["courier"])
-    next_statuses = flow.get(current, [])
+    crm_btn = {"text": "🔍 Открыть в CRM", "url": f"{base}/crm/order/{order.id}"}
+    cancel_btn = {"text": "❌ Отменить", "callback_data": f"set_status:{order.id}:cancelled"}
 
-    # Для курьера awaiting_payment: кнопки статуса показываем только после подтверждения оплаты
-    payment_confirmed = order.paid_at is not None
-    if delivery_type == "courier" and current == "awaiting_payment" and not payment_confirmed:
-        next_statuses = []
-
-    if next_statuses:
-        status_btns = [
-            {"text": label, "callback_data": f"set_status:{order.id}:{status}"}
-            for status, label in next_statuses
-        ]
-        rows.extend([status_btns[i:i+2] for i in range(0, len(status_btns), 2)])
-
-    # Кнопка «Отменить» — для всех незавершённых статусов
-    if current not in ("delivered", "cancelled"):
-        rows.append([{"text": "❌ Отменить", "callback_data": f"set_status:{order.id}:cancelled"}])
-
-    # Дополнительные действия — зависят от типа доставки и этапа
     if delivery_type == "courier":
-        if current in {"new", "awaiting_payment"}:
-            # Ссылка на оплату — всегда доступна пока не оплачено
-            rows.append([{"text": "💳 Ссылка на оплату", "callback_data": f"pay_link:{order.id}"}])
-        if current == "awaiting_payment" and not payment_confirmed:
-            # Оплата ещё не подтверждена — показываем кнопку подтверждения
-            rows.append([{"text": "✅ Подтвердить оплату", "callback_data": f"confirm_payment:{order.id}"}])
-        if current == "awaiting_payment" and payment_confirmed and order.user:
-            # Оплата подтверждена — кнопка связи с клиентом
-            rows.append([{"text": "💬 Написать клиенту", "url": f"tg://user?id={order.user.telegram_id}"}])
-        if current in {"in_delivery", "at_pvz"}:
-            rows.append([{"text": "🚚 Трек-номер", "callback_data": f"tracking:{order.id}"}])
-    elif delivery_type == "pvz":
-        if current in {"ready", "at_pvz"}:
-            rows.append([{"text": "🚚 Трек-номер", "callback_data": f"tracking:{order.id}"}])
-    # pickup: никаких дополнительных действий
+        payment_confirmed = order.paid_at is not None
 
-    rows.append([{"text": "🔍 Открыть в CRM", "url": f"{base}/crm/order/{order.id}"}])
+        if current == "new":
+            rows.append([{"text": "💳 Ссылка на оплату", "callback_data": f"pay_link:{order.id}"}])
+            rows.append([cancel_btn, crm_btn])
+
+        elif current == "awaiting_payment" and not payment_confirmed:
+            rows.append([{"text": "✅ Подтвердить оплату", "callback_data": f"confirm_payment:{order.id}"}])
+            rows.append([{"text": "💳 Ссылка на оплату", "callback_data": f"pay_link:{order.id}"}])
+            rows.append([cancel_btn, crm_btn])
+
+        elif current == "awaiting_payment" and payment_confirmed:
+            rows.append([{"text": "🚚 В доставку", "callback_data": f"set_status:{order.id}:in_delivery"}])
+            bottom = []
+            if order.user:
+                bottom.append({"text": "💬 Написать клиенту", "url": f"tg://user?id={order.user.telegram_id}"})
+            bottom.append(crm_btn)
+            rows.append(bottom)
+
+        elif current == "in_delivery":
+            rows.append([
+                {"text": "🏪 Пришло в ПВЗ", "callback_data": f"set_status:{order.id}:at_pvz"},
+                {"text": "🚚 Трек-номер", "callback_data": f"tracking:{order.id}"},
+            ])
+            rows.append([crm_btn])
+
+        elif current == "at_pvz":
+            rows.append([
+                {"text": "🎉 Доставлен", "callback_data": f"set_status:{order.id}:delivered"},
+                crm_btn,
+            ])
+
+        else:  # delivered, cancelled
+            rows.append([crm_btn])
+
+    else:
+        # pickup / pvz — общая логика
+        flow = _NEXT_STATUSES.get(delivery_type, _NEXT_STATUSES["pickup"])
+        next_statuses = flow.get(current, [])
+        if next_statuses:
+            status_btns = [
+                {"text": label, "callback_data": f"set_status:{order.id}:{status}"}
+                for status, label in next_statuses
+            ]
+            rows.extend([status_btns[i:i+2] for i in range(0, len(status_btns), 2)])
+        if delivery_type == "pvz" and current in {"ready", "at_pvz"}:
+            rows.append([{"text": "🚚 Трек-номер", "callback_data": f"tracking:{order.id}"}])
+        if current not in ("delivered", "cancelled"):
+            rows.append([cancel_btn, crm_btn])
+        else:
+            rows.append([crm_btn])
+
     return {"inline_keyboard": rows}
 
 
