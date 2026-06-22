@@ -12,6 +12,11 @@ import bcrypt as _bcrypt
 from markupsafe import Markup
 from fastapi import FastAPI
 from sqladmin import Admin, ModelView
+try:
+    from sqladmin import Link as _AdminLink
+    _HAS_LINK = True
+except ImportError:
+    _HAS_LINK = False
 from sqladmin import widgets as _sqladmin_widgets
 
 # wtforms 3.2+ добавил validation_attrs, sqladmin 0.27 этого не знает
@@ -1055,11 +1060,13 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
         from sqlalchemy.orm import selectinload
         from app.models.user import User as _User
         from app.models.order import Order as _Order, OrderItem as _OrderItem
+        from app.models.bonus import BonusTransaction as _BonusTx
         async with get_session_factory()() as session:
             result = await session.execute(
                 select(_User)
                 .options(
                     selectinload(_User.orders).selectinload(_Order.items),
+                    selectinload(_User.bonus_transactions),
                 )
                 .where(_User.id == user_id)
             )
@@ -1092,6 +1099,153 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
                 user.notes = data["notes"] or None
             await session.commit()
         return _JSONResponse({"ok": True})
+
+    # ── Бонусная система ────────────────────────────────────────────────────────
+
+    @app.get("/admin/bonus-settings", include_in_schema=False)
+    async def admin_bonus_settings_page(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            from starlette.responses import RedirectResponse
+            return RedirectResponse("/admin/login")
+        from app.db import get_session_factory
+        from app.models.bonus import BonusTier as _BonusTier, ShopSettings as _ShopSettings
+        from sqlalchemy import select as _sel
+        async with get_session_factory()() as session:
+            tiers_res = await session.execute(_sel(_BonusTier).order_by(_BonusTier.min_amount))
+            tiers = tiers_res.scalars().all()
+            settings_res = await session.execute(_sel(_ShopSettings).where(_ShopSettings.id == 1))
+            settings = settings_res.scalar_one_or_none()
+            max_pct = settings.bonus_max_payment_pct if settings else 50
+        from fastapi.responses import HTMLResponse as _HTMLResponse
+        from app.admin.bonus_settings import render_bonus_settings
+        admin_username = request.session.get("admin_username", "")
+        return _HTMLResponse(render_bonus_settings(tiers, max_pct, admin_username=admin_username))
+
+    @app.get("/admin-api/bonus/settings", include_in_schema=False)
+    async def admin_bonus_settings_get(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from app.models.bonus import ShopSettings as _ShopSettings
+        from sqlalchemy import select as _sel
+        async with get_session_factory()() as session:
+            res = await session.execute(_sel(_ShopSettings).where(_ShopSettings.id == 1))
+            s = res.scalar_one_or_none()
+        return _JSONResponse({"bonus_max_payment_pct": s.bonus_max_payment_pct if s else 50})
+
+    @app.patch("/admin-api/bonus/settings", include_in_schema=False)
+    async def admin_bonus_settings_patch(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        data = await request.json()
+        pct = int(data.get("bonus_max_payment_pct", 50))
+        pct = max(0, min(99, pct))
+        from app.db import get_session_factory
+        from app.models.bonus import ShopSettings as _ShopSettings
+        from sqlalchemy import select as _sel
+        async with get_session_factory()() as session:
+            res = await session.execute(_sel(_ShopSettings).where(_ShopSettings.id == 1))
+            s = res.scalar_one_or_none()
+            if s:
+                s.bonus_max_payment_pct = pct
+            else:
+                session.add(_ShopSettings(id=1, bonus_max_payment_pct=pct))
+            await session.commit()
+        return _JSONResponse({"ok": True, "bonus_max_payment_pct": pct})
+
+    @app.put("/admin-api/bonus/tiers", include_in_schema=False)
+    async def admin_bonus_tiers_put(request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        data = await request.json()
+        from decimal import Decimal as _Dec
+        from app.db import get_session_factory
+        from app.models.bonus import BonusTier as _BonusTier
+        from sqlalchemy import select as _sel, delete as _del
+        async with get_session_factory()() as session:
+            await session.execute(_del(_BonusTier))
+            for item in data:
+                session.add(_BonusTier(
+                    min_amount=_Dec(str(item["min_amount"])),
+                    cashback_pct=_Dec(str(item["cashback_pct"])),
+                ))
+            await session.commit()
+            res = await session.execute(_sel(_BonusTier).order_by(_BonusTier.min_amount))
+            tiers = res.scalars().all()
+        return _JSONResponse({"tiers": [
+            {"id": t.id, "min_amount": float(t.min_amount), "cashback_pct": float(t.cashback_pct)}
+            for t in tiers
+        ]})
+
+    @app.post("/admin-api/customer/{user_id}/bonus", include_in_schema=False)
+    async def admin_customer_bonus(user_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        if request.session.get("admin_readonly"):
+            return _JSONResponse(status_code=403, content={"error": "Readonly"})
+        data = await request.json()
+        delta = float(data.get("delta", 0))
+        if delta == 0:
+            return _JSONResponse(status_code=400, content={"error": "delta не может быть 0"})
+        note = data.get("note") or None
+        reason = "manual_add" if delta > 0 else "manual_deduct"
+        from decimal import Decimal as _Dec
+        from app.db import get_session_factory
+        from app.models.user import User as _User
+        from app.models.bonus import BonusTransaction as _BonusTx
+        from sqlalchemy import select as _sel
+        async with get_session_factory()() as session:
+            res = await session.execute(_sel(_User).where(_User.id == user_id))
+            user = res.scalar_one_or_none()
+            if not user:
+                return _JSONResponse(status_code=404, content={"error": "Not found"})
+            new_balance = float(user.bonus_balance or 0) + delta
+            if new_balance < 0:
+                return _JSONResponse(status_code=400, content={"error": "Недостаточно баллов"})
+            user.bonus_balance = _Dec(str(new_balance))
+            session.add(_BonusTx(user_id=user_id, delta=_Dec(str(delta)), reason=reason, note=note))
+            await session.commit()
+            await session.refresh(user)
+        return _JSONResponse({"ok": True, "bonus_balance": float(user.bonus_balance)})
+
+    @app.get("/admin-api/customer/{user_id}/bonus-history", include_in_schema=False)
+    async def admin_customer_bonus_history(user_id: int, request: Request):
+        if request.session.get("admin_token") != "authenticated":
+            return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        from app.db import get_session_factory
+        from app.models.bonus import BonusTransaction as _BonusTx
+        from sqlalchemy import select as _sel
+        async with get_session_factory()() as session:
+            res = await session.execute(
+                _sel(_BonusTx).where(_BonusTx.user_id == user_id)
+                .order_by(_BonusTx.created_at.desc()).limit(10)
+            )
+            txs = res.scalars().all()
+        _REASON_LABELS = {
+            "order_cashback": "Кешбэк за заказ", "order_payment": "Списание за заказ",
+            "manual_add": "Начислено вручную", "manual_deduct": "Списано вручную",
+        }
+        rows = []
+        for tx in txs:
+            d = float(tx.delta)
+            sign = "+" if d >= 0 else ""
+            cls = "pos" if d >= 0 else "neg"
+            rl = _REASON_LABELS.get(tx.reason, tx.reason)
+            note = f" · {tx.note}" if tx.note else ""
+            from datetime import timezone
+            import zoneinfo
+            msk = zoneinfo.ZoneInfo("Europe/Moscow")
+            dt = tx.created_at.replace(tzinfo=timezone.utc).astimezone(msk).strftime("%d.%m.%Y")
+            rows.append(
+                f'<div class="btx-row">'
+                f'<div class="btx-delta {cls}">{sign}{d:.0f} ₽</div>'
+                f'<div class="btx-reason">{rl}{note}</div>'
+                f'<div class="btx-date">{dt}</div>'
+                f'</div>'
+            )
+        html = "".join(rows) if rows else \
+            '<div style="font-size:12px;color:#9ca3af;text-align:center;padding:8px 0">История пуста</div>'
+        return _JSONResponse({"html": html})
 
     @app.post("/admin-api/order/{order_id}/payment-link", include_in_schema=False)
     async def admin_order_payment_link(order_id: int, request: Request):
@@ -1812,6 +1966,13 @@ def setup_admin(app: FastAPI, engine: Any) -> None:
     admin.add_view(CategoryAdmin)
     admin.add_view(BannerAdmin)
     admin.add_view(PickupPointAdmin)
+    if _HAS_LINK:
+        admin.add_link(_AdminLink(
+            label="Бонусная система",
+            icon="fa-solid fa-gift",
+            url="/admin/bonus-settings",
+            category="Настройки магазина",
+        ))
     # Система
     admin.add_view(AdminUserAdmin)
     admin.add_view(YmlImportAdmin)

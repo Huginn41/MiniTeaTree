@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, String, Text, text
+from decimal import Decimal
+
+from sqlalchemy import BigInteger, Boolean, DateTime, Numeric, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -51,9 +53,17 @@ class User(TimestampMixin, Base):
     # Время последнего входа в мини-апп (обновляется при авторизации).
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Бонусный баланс (в рублях).
+    bonus_balance: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, default=Decimal("0"), server_default="0"
+    )
+
     # Связи (lazy — загружаются по запросу, чтобы не тащить всё подряд).
     cart = relationship("Cart", back_populates="user", uselist=False, lazy="selectin")
     orders = relationship("Order", back_populates="user", lazy="selectin")
+    bonus_transactions = relationship(
+        "BonusTransaction", back_populates="user", lazy="select", order_by="BonusTransaction.created_at.desc()"
+    )
 
     @property
     def display_name(self) -> str:

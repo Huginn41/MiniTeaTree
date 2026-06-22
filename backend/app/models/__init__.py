@@ -6,6 +6,7 @@
 
 from app.models.admin import AdminUser
 from app.models.banner import Banner
+from app.models.bonus import BonusTransaction, BonusTier, ShopSettings
 from app.models.cart import Cart, CartItem
 from app.models.category import Category
 from app.models.content import FaqItem, PickupPoint
@@ -20,6 +21,9 @@ from app.models.yml_import import YmlImport
 __all__ = [
     "AdminUser",
     "Banner",
+    "BonusTransaction",
+    "BonusTier",
+    "ShopSettings",
     "Cart",
     "CartItem",
     "Category",
