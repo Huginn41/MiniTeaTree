@@ -18,6 +18,62 @@ from app.admin.upload import (
 
 router = APIRouter()
 
+# ── Кастомные HTML-страницы (должны быть до Admin.mount) ──────────────────
+
+@router.get("/admin/crm-customer/{user_id}", include_in_schema=False)
+async def _admin_crm_customer(user_id: int, request: Request):
+    if request.session.get("admin_token") != "authenticated":
+        from starlette.responses import RedirectResponse
+        return RedirectResponse("/admin/login")
+    from app.db import get_session_factory
+    from sqlalchemy import select as _select
+    from sqlalchemy.orm import selectinload
+    from app.models.user import User as _User
+    from app.models.order import Order as _Order
+    async with get_session_factory()() as session:
+        result = await session.execute(
+            _select(_User)
+            .options(
+                selectinload(_User.orders).selectinload(_Order.items),
+                selectinload(_User.bonus_transactions),
+            )
+            .where(_User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+    if not user:
+        return _HTMLResponse("<h3>Клиент не найден</h3>", status_code=404)
+    from app.admin.crm_customer import render_crm_customer
+    return _HTMLResponse(render_crm_customer(user, admin_username=request.session.get("admin_username", "")))
+
+
+@router.get("/admin/bonus-settings", include_in_schema=False)
+async def _admin_bonus_settings_page(request: Request):
+    if request.session.get("admin_token") != "authenticated":
+        from starlette.responses import RedirectResponse
+        return RedirectResponse("/admin/login")
+    from app.db import get_session_factory
+    from sqlalchemy import select as _select
+    from app.models.bonus import BonusTier as _BonusTier, ShopSettings as _ShopSettings
+    async with get_session_factory()() as session:
+        tiers = (await session.execute(_select(_BonusTier).order_by(_BonusTier.min_amount))).scalars().all()
+        s = (await session.execute(_select(_ShopSettings).where(_ShopSettings.id == 1))).scalar_one_or_none()
+        max_pct = s.bonus_max_payment_pct if s else 50
+        no_cashback = bool(s.bonus_no_cashback_on_redemption) if s else False
+    from app.admin.bonus_settings import render_bonus_settings
+    return _HTMLResponse(render_bonus_settings(tiers, max_pct, no_cashback, admin_username=request.session.get("admin_username", "")))
+
+
+@router.get("/admin/import", include_in_schema=False)
+async def _admin_import_page(request: Request):
+    if request.session.get("admin_token") != "authenticated":
+        from starlette.responses import RedirectResponse
+        return RedirectResponse("/admin/login")
+    from app.admin.import_page import IMPORT_PAGE_HTML
+    return _HTMLResponse(IMPORT_PAGE_HTML)
+
+
+# ── API роуты ─────────────────────────────────────────────────────────────
+
 @router.post("/admin-api/upload")
 async def admin_upload(request: Request):
     if request.session.get("admin_token") != "authenticated":
