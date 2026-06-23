@@ -41,7 +41,7 @@ def _build_init_data(
     pairs = sorted(urllib.parse.parse_qs(query, keep_blank_values=True).items())
     data_check = "\n".join(f"{k}={v[0]}" for k, v in pairs)
 
-    secret = hashlib.sha256(bot_token.encode()).digest()
+    secret = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
     h = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
     return f"{query}&hash={h}"
 
@@ -93,7 +93,7 @@ async def test_init_data_expired_fails(db_session) -> None:
 async def test_init_data_missing_user_fails(db_session) -> None:
     """initData без 'user' отклоняется."""
     auth_date = int(time.time())
-    secret = hashlib.sha256(BOT_TOKEN.encode()).digest()
+    secret = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
     data = f"auth_date={auth_date}"
     h = hmac.new(secret, data.encode(), hashlib.sha256).hexdigest()
 

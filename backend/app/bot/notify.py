@@ -269,6 +269,8 @@ async def delete_message(chat_id: int, message_id: int) -> None:
 
 async def notify_new_order(order: Order, session: AsyncSession) -> int:
     """Уведомляет всех активных менеджеров о новом заказе с кнопками."""
+    from sqlalchemy.orm import selectinload
+
     stmt = select(NotificationTarget).where(
         NotificationTarget.is_active.is_(True),
         NotificationTarget.role.in_(_NOTIFY_ROLES),
@@ -279,6 +281,18 @@ async def notify_new_order(order: Order, session: AsyncSession) -> int:
     if not targets:
         log.info("no_notification_targets", order_number=order.number)
         return 0
+
+    # Перезагружаем заказ с eager-загрузкой связей, чтобы избежать lazy-load в sync
+    order_result = await session.execute(
+        select(Order)
+        .options(
+            selectinload(Order.user),
+            selectinload(Order.items),
+            selectinload(Order.delivery_info),
+        )
+        .where(Order.id == order.id)
+    )
+    order = order_result.scalar_one()
 
     text = _order_text(order)
     keyboard = _order_keyboard(order)
