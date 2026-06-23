@@ -125,6 +125,7 @@ async def get_order(
         id=order.id,
         number=order.number,
         total_amount=float(order.total_amount),
+        bonus_used=float(order.bonus_used),
         delivery_cost=float(order.delivery_cost),
         status=order.status,
         payment_link=order.payment_link,
@@ -226,6 +227,7 @@ async def create_order(
         user_id=u.id,
         number=_uuid.uuid4().hex,  # уникальный placeholder до получения ID
         total_amount=total,
+        bonus_used=use_bonus,
         status="new",
         comment=body.comment,
     )
@@ -312,6 +314,7 @@ async def create_order(
         id=order.id,
         number=order.number,
         total_amount=float(order.total_amount),
+        bonus_used=float(order.bonus_used),
         delivery_cost=float(order.delivery_cost),
         status=order.status,
         payment_link=order.payment_link,
@@ -381,6 +384,7 @@ async def update_order_status(
         id=order.id,
         number=order.number,
         total_amount=float(order.total_amount),
+        bonus_used=float(order.bonus_used),
         delivery_cost=float(order.delivery_cost),
         status=order.status,
         payment_link=order.payment_link,

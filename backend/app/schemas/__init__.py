@@ -224,6 +224,7 @@ class OrderDetail(BaseModel):
     id: int
     number: str
     total_amount: float
+    bonus_used: float = 0.0
     delivery_cost: float
     status: str
     payment_link: str | None = None

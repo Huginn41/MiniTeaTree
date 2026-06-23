@@ -13,6 +13,7 @@ App.renderCheckout = async function(c) {
   let pickupPoints = [];
   let bonusBalance = 0;
   let maxBonusPct = 0;
+  let cartTotal = 0;
   try { pickupPoints = await api('/info/pickup-points'); } catch(_) {}
   try {
     const profile = await api('/profile/me');
@@ -22,11 +23,16 @@ App.renderCheckout = async function(c) {
     const bonusCfg = await api('/info/bonus-config');
     maxBonusPct = bonusCfg.max_payment_pct || 0;
   } catch(_) {}
+  try {
+    const cart = await api('/cart');
+    cartTotal = (cart.items || []).reduce((s, i) => s + i.unit_price * i.quantity, 0);
+  } catch(_) {}
 
   if (pickupPoints.length > 0) this._pickupPoint = pickupPoints[0];
   window._checkoutPickupPoints = pickupPoints;
   window._checkoutBonusBalance = bonusBalance;
   window._checkoutMaxBonusPct = maxBonusPct;
+  window._checkoutTotal = cartTotal;
 
   const pickupCard = (p, checked) => `
     <label class="radio-card" style="flex-direction:column;align-items:flex-start;gap:0;cursor:pointer">
@@ -114,6 +120,21 @@ App.renderCheckout = async function(c) {
         <div id="bonus-hint" style="display:none;margin-top:10px;font-size:13px;color:#1a6b3c;padding:10px;background:rgba(26,107,60,.08);border-radius:8px;line-height:1.5"></div>
       </div>` : ''}
 
+      <div id="order-summary" style="background:var(--md-surface-container);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:14px;color:var(--md-on-surface-variant)">Стоимость товаров</span>
+          <span style="font-size:14px;font-weight:600" id="summary-items">${fmtPrice(cartTotal)} ₽</span>
+        </div>
+        <div id="summary-bonus-row" style="display:none;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:14px;color:var(--md-primary)">Списано баллов</span>
+          <span style="font-size:14px;font-weight:600;color:var(--md-primary)" id="summary-bonus-val"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--md-outline-variant)">
+          <span style="font-size:16px;font-weight:700">К оплате</span>
+          <span style="font-size:20px;font-weight:800;color:var(--md-primary)" id="summary-payable">${fmtPrice(cartTotal)} ₽</span>
+        </div>
+      </div>
+
       <button type="submit" id="submit-order-btn" class="btn btn-filled ripple-container" style="width:100%">
         Подтвердить заказ
       </button>
@@ -157,13 +178,32 @@ App._updateBonusHint = function() {
   const val = Math.max(0, Math.floor(+inp.value || 0));
   const bal = Math.floor(window._checkoutBonusBalance || 0);
   const maxPct = window._checkoutMaxBonusPct || 0;
+  const total = window._checkoutTotal || 0;
   if (val > bal) { inp.value = bal; }
   if (val <= 0) {
     hint.style.display = 'none';
+    this._updateOrderSummary(0);
     return;
   }
   hint.style.display = 'block';
   hint.innerHTML = `Будет списано <b>${val}</b> баллов (≈ ${val} ₽). Фактическая сумма не превысит ${maxPct}% от итога заказа.`;
+  this._updateOrderSummary(val);
+};
+
+App._updateOrderSummary = function(bonusVal) {
+  const total = window._checkoutTotal || 0;
+  const payable = Math.max(0, total - bonusVal);
+  const bonusRow = document.getElementById('summary-bonus-row');
+  const bonusValEl = document.getElementById('summary-bonus-val');
+  const payableEl = document.getElementById('summary-payable');
+  if (!payableEl) return;
+  if (bonusVal > 0 && bonusRow && bonusValEl) {
+    bonusRow.style.display = 'flex';
+    bonusValEl.textContent = `−${fmtPrice(bonusVal)} ₽`;
+  } else if (bonusRow) {
+    bonusRow.style.display = 'none';
+  }
+  payableEl.textContent = `${fmtPrice(payable)} ₽`;
 };
 
 App.submitOrder = async function(e) {

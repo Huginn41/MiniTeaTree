@@ -114,16 +114,29 @@ def _order_text(order: Order) -> str:
     if order.user:
         lines.append(f"👤 {order.user.display_name}")
 
+    bonus_used = float(getattr(order, "bonus_used", 0) or 0)
+    payable = float(order.total_amount) - bonus_used
+
     if order.delivery_info:
         di = order.delivery_info
         type_label = {"pickup": "Самовывоз", "courier": "Курьер", "pvz": "ПВЗ"}.get(di.type, di.type)
-        lines.append(f"💰 <b>{float(order.total_amount):.0f} ₽</b>  ·  {type_label}")
+        lines.append(f"🛍 Товары: {float(order.total_amount):.0f} ₽  ·  {type_label}")
+        if bonus_used > 0:
+            lines.append(f"🎁 Баллов списано: -{bonus_used:.0f} ₽")
+            lines.append(f"💰 <b>К оплате: {payable:.0f} ₽</b>")
+        else:
+            lines.append(f"💰 <b>{float(order.total_amount):.0f} ₽</b>")
         if di.address:
             lines.append(f"📍 {di.address}")
         if di.contact_phone:
             lines.append(f"📞 {di.contact_phone}")
     else:
-        lines.append(f"💰 <b>{float(order.total_amount):.0f} ₽</b>")
+        if bonus_used > 0:
+            lines.append(f"🛍 Товары: {float(order.total_amount):.0f} ₽")
+            lines.append(f"🎁 Баллов списано: -{bonus_used:.0f} ₽")
+            lines.append(f"💰 <b>К оплате: {payable:.0f} ₽</b>")
+        else:
+            lines.append(f"💰 <b>{float(order.total_amount):.0f} ₽</b>")
 
     if order.items:
         lines.append("")

@@ -54,6 +54,10 @@ class Order(TimestampMixin, Base):
     delivery_cost: Mapped[float] = mapped_column(
         Numeric(10, 2), server_default=text("0"), nullable=False, default=0
     )
+    # Списано бонусных баллов при оформлении (1 балл = 1 ₽).
+    bonus_used: Mapped[float] = mapped_column(
+        Numeric(10, 2), server_default=text("0"), nullable=False, default=0
+    )
 
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")
     # Ссылка на оплату (заполняется менеджером, отправляется клиенту ботом).

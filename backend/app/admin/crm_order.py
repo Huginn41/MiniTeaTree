@@ -561,9 +561,17 @@ body {{ background:#f4f6fb; font-family:-apple-system,BlinkMacSystemFont,'Segoe 
       <div class="crm-card">
         <p class="crm-card-title">Состав заказа</p>
         <ul class="crm-items">{items_rows}</ul>
-        <div class="crm-total">
-          <span>Итого</span>
+        {f'''<div class="crm-total" style="font-weight:400;font-size:13px;color:#666;margin-bottom:4px">
+          <span>Стоимость товаров</span>
           <span>{float(order.total_amount):.0f} ₽</span>
+        </div>
+        <div class="crm-total" style="font-weight:400;font-size:13px;color:#2D6A4F;margin-bottom:4px">
+          <span>🎁 Списано баллов</span>
+          <span>−{float(order.bonus_used):.0f} ₽</span>
+        </div>''' if float(getattr(order, 'bonus_used', 0) or 0) > 0 else ''}
+        <div class="crm-total">
+          <span>К оплате</span>
+          <span>{float(order.total_amount) - float(getattr(order, 'bonus_used', 0) or 0):.0f} ₽</span>
         </div>
       </div>
 

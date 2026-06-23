@@ -148,10 +148,23 @@ App.renderOrderDetail = async function(c, orderNumber) {
           <span style="font-size:14px;font-weight:700;color:var(--md-primary)">${fmtPrice(item.unit_price * item.quantity)} ₽</span>
         </div>
       `).join('')}
+      ${o.bonus_used > 0 ? `
+      <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:1px solid var(--md-outline-variant);margin-top:4px">
+        <span style="font-size:13px;color:var(--md-on-surface-variant)">Стоимость товаров</span>
+        <span style="font-size:13px;color:var(--md-on-surface-variant)">${fmtPrice(o.total_amount)} ₽</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0 0">
+        <span style="font-size:13px;color:var(--md-primary)">Списано баллов</span>
+        <span style="font-size:13px;font-weight:600;color:var(--md-primary)">−${fmtPrice(o.bonus_used)} ₽</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0 12px">
+        <span style="font-size:15px;font-weight:700">К оплате</span>
+        <span style="font-size:18px;font-weight:800;color:var(--md-primary)">${fmtPrice(o.total_amount - o.bonus_used)} ₽</span>
+      </div>` : `
       <div style="display:flex;justify-content:space-between;padding:14px 0 12px">
         <span style="font-size:15px;font-weight:700">Итого</span>
         <span style="font-size:18px;font-weight:800;color:var(--md-primary)">${fmtPrice(o.total_amount)} ₽</span>
-      </div>
+      </div>`}
     </div>
 
     ${o.comment ? `
