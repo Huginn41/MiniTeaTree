@@ -240,6 +240,35 @@ async def admin_update_order_status(order_id: int, request: Request):
         if order.user:
             user_telegram_id = order.user.telegram_id
         order_number = order.number
+
+        # При отмене — возвращаем списанные баллы (если были)
+        if value == "cancelled" and old_status != "cancelled":
+            from decimal import Decimal as _Decimal
+            from app.models.bonus import BonusTransaction as _BT
+            from app.models.user import User as _User
+            from sqlalchemy import select as _sel
+            redemptions = await session.execute(
+                _sel(_BT).where(
+                    _BT.order_id == order_id,
+                    _BT.reason == "order_redemption",
+                )
+            )
+            total_refund = sum(abs(t.delta) for t in redemptions.scalars().all())
+            if total_refund > 0:
+                user_res = await session.execute(
+                    _sel(_User).where(_User.id == order.user_id).with_for_update()
+                )
+                u = user_res.scalar_one_or_none()
+                if u:
+                    u.bonus_balance = _Decimal(str(float(u.bonus_balance) + float(total_refund)))
+                    session.add(_BT(
+                        user_id=u.id,
+                        order_id=order_id,
+                        delta=_Decimal(str(float(total_refund))),
+                        reason="order_cancel_refund",
+                        note=f"Возврат баллов при отмене заказа {order_number}",
+                    ))
+
         await session.commit()
     # Уведомляем клиента и обновляем карточки у менеджеров
     if old_status != value:
