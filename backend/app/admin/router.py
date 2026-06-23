@@ -247,24 +247,23 @@ async def admin_update_order_status(order_id: int, request: Request):
             from app.models.bonus import BonusTransaction as _BT
             from app.models.user import User as _User
             from sqlalchemy import select as _sel
-            redemptions = await session.execute(
-                _sel(_BT).where(
-                    _BT.order_id == order_id,
-                    _BT.reason == "order_redemption",
-                )
-            )
-            total_refund = sum(abs(t.delta) for t in redemptions.scalars().all())
-            if total_refund > 0:
+            bonus_to_refund = float(getattr(order, "bonus_used", 0) or 0)
+            if bonus_to_refund > 0:
+                # populate_existing=True — принудительно читаем из БД,
+                # минуя identity map (пользователь мог быть загружен раньше через selectinload)
                 user_res = await session.execute(
-                    _sel(_User).where(_User.id == order.user_id).with_for_update()
+                    _sel(_User).where(_User.id == order.user_id)
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
                 )
                 u = user_res.scalar_one_or_none()
                 if u:
-                    u.bonus_balance = _Decimal(str(float(u.bonus_balance) + float(total_refund)))
+                    u.bonus_balance = _Decimal(str(float(u.bonus_balance) + bonus_to_refund))
+                    session.add(u)
                     session.add(_BT(
                         user_id=u.id,
                         order_id=order_id,
-                        delta=_Decimal(str(float(total_refund))),
+                        delta=_Decimal(str(bonus_to_refund)),
                         reason="order_cancel_refund",
                         note=f"Возврат баллов при отмене заказа {order_number}",
                     ))
