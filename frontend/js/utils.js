@@ -13,7 +13,9 @@ function imgUrl(path) {
 }
 
 function fmtPrice(n) {
-  return Number(n).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const num = Number(n);
+  if (isNaN(num)) return '0';
+  return num.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function fmtDate(iso) {

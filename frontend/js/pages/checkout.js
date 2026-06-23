@@ -25,7 +25,7 @@ App.renderCheckout = async function(c) {
   } catch(_) {}
   try {
     const cart = await api('/cart');
-    cartTotal = (cart.items || []).reduce((s, i) => s + i.unit_price * i.quantity, 0);
+    cartTotal = cart.total_amount || 0;
   } catch(_) {}
 
   if (pickupPoints.length > 0) this._pickupPoint = pickupPoints[0];
@@ -96,19 +96,25 @@ App.renderCheckout = async function(c) {
       <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">КОММЕНТАРИЙ</p>
       <textarea class="md-input" name="comment" rows="3" placeholder="Пожелания к заказу..." style="resize:none;margin-bottom:20px"></textarea>
 
-      ${bonusBalance > 0 && maxBonusPct > 0 ? `
+      ${bonusBalance > 0 && maxBonusPct > 0 ? (() => {
+        const maxAllowed = Math.min(Math.floor(bonusBalance), Math.floor(cartTotal * maxBonusPct / 100));
+        return `
       <p style="font-size:12px;font-weight:600;color:var(--md-on-surface-variant);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">ОПЛАТА БАЛЛАМИ</p>
       <div class="md-card" style="padding:16px;margin-bottom:20px;background:var(--md-surface-variant)">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <span style="font-size:14px;color:var(--md-on-surface-variant)">Доступно баллов</span>
           <span style="font-size:16px;font-weight:700;color:var(--md-primary)">${Math.floor(bonusBalance)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <span style="font-size:13px;color:var(--md-on-surface-variant)">Можно использовать</span>
+          <span style="font-size:14px;font-weight:600;color:var(--md-secondary,#6b5c00)">${maxAllowed} баллов</span>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <input
             id="bonus-amount-input"
             type="number"
             min="0"
-            max="${Math.floor(bonusBalance)}"
+            max="${maxAllowed}"
             step="1"
             placeholder="0"
             class="md-input"
@@ -118,7 +124,8 @@ App.renderCheckout = async function(c) {
           <button type="button" class="btn btn-tonal" style="white-space:nowrap;padding:10px 14px;font-size:13px" onclick="App._setBonusMax()">Максимум</button>
         </div>
         <div id="bonus-hint" style="display:none;margin-top:10px;font-size:13px;color:#1a6b3c;padding:10px;background:rgba(26,107,60,.08);border-radius:8px;line-height:1.5"></div>
-      </div>` : ''}
+      </div>`;
+      })() : ''}
 
       <div id="order-summary" style="background:var(--md-surface-container);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -164,10 +171,17 @@ App._selectPickup = function(id) {
   }
 };
 
+App._bonusMaxAllowed = function() {
+  const bal = Math.floor(window._checkoutBonusBalance || 0);
+  const total = window._checkoutTotal || 0;
+  const maxPct = window._checkoutMaxBonusPct || 0;
+  return Math.min(bal, Math.floor(total * maxPct / 100));
+};
+
 App._setBonusMax = function() {
   const inp = document.getElementById('bonus-amount-input');
   if (!inp) return;
-  inp.value = Math.floor(window._checkoutBonusBalance || 0);
+  inp.value = this._bonusMaxAllowed();
   this._updateBonusHint();
 };
 
@@ -175,18 +189,16 @@ App._updateBonusHint = function() {
   const inp = document.getElementById('bonus-amount-input');
   const hint = document.getElementById('bonus-hint');
   if (!inp || !hint) return;
-  const val = Math.max(0, Math.floor(+inp.value || 0));
-  const bal = Math.floor(window._checkoutBonusBalance || 0);
-  const maxPct = window._checkoutMaxBonusPct || 0;
-  const total = window._checkoutTotal || 0;
-  if (val > bal) { inp.value = bal; }
+  let val = Math.max(0, Math.floor(+inp.value || 0));
+  const maxAllowed = this._bonusMaxAllowed();
+  if (val > maxAllowed) { val = maxAllowed; inp.value = maxAllowed; }
   if (val <= 0) {
     hint.style.display = 'none';
     this._updateOrderSummary(0);
     return;
   }
   hint.style.display = 'block';
-  hint.innerHTML = `Будет списано <b>${val}</b> баллов (≈ ${val} ₽). Фактическая сумма не превысит ${maxPct}% от итога заказа.`;
+  hint.innerHTML = `Будет списано <b>${val}</b> баллов (≈ ${val} ₽). К оплате: ${fmtPrice((window._checkoutTotal || 0) - val)} ₽.`;
   this._updateOrderSummary(val);
 };
 
