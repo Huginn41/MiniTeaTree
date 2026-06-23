@@ -14,6 +14,7 @@ from app.deps import CurrentUser, get_current_user
 from app.models.bonus import BonusTransaction, BonusTier, ShopSettings
 from app.models.cart import Cart, CartItem
 from app.models.delivery import DeliveryInfo
+from app.models.user import User
 from app.models.enums import DELIVERY_TYPE_VALUES, ORDER_STATUS_VALUES
 from app.models.order import Order, OrderItem
 from app.models.product import Product, ProductVariant
@@ -68,14 +69,9 @@ async def get_profile(
 
 # ---------- Orders ----------
 
-async def _generate_order_number(session: AsyncSession) -> str:
-    """Генерирует номер заказа: ЧД-000001, ЧД-000002 ..."""
-    from sqlalchemy import func
-
-    stmt = select(func.count()).select_from(Order)
-    result = await session.execute(stmt)
-    count = result.scalar() or 0
-    return f"ЧД-{count + 1:06d}"
+def _order_number_from_id(order_id: int) -> str:
+    """Генерирует номер заказа на основе ID — без race condition."""
+    return f"ЧД-{order_id:06d}"
 
 
 @router.get("/orders", response_model=list[OrderBrief])
@@ -209,7 +205,11 @@ async def create_order(
     no_cashback_on_redemption = settings.bonus_no_cashback_on_redemption if settings else False
 
     use_bonus = round(float(body.use_bonus_amount or 0), 2)
-    u = user.user
+    # Блокируем строку пользователя, чтобы исключить race condition при списании бонусов
+    u_result = await session.execute(
+        select(User).where(User.id == user.user.id).with_for_update()
+    )
+    u = u_result.scalar_one()
     if use_bonus > 0:
         if max_bonus_pct == 0:
             raise HTTPException(status_code=400, detail="Оплата баллами отключена")
@@ -220,17 +220,18 @@ async def create_order(
             use_bonus = round(float(u.bonus_balance), 2)
         use_bonus = round(use_bonus, 2)
 
-    # Создаём заказ.
-    number = await _generate_order_number(session)
+    # Создаём заказ. number присваивается после flush() — на основе order.id без гонки.
+    import uuid as _uuid
     order = Order(
         user_id=u.id,
-        number=number,
+        number=_uuid.uuid4().hex,  # уникальный placeholder до получения ID
         total_amount=total,
         status="new",
         comment=body.comment,
     )
     session.add(order)
     await session.flush()
+    order.number = _order_number_from_id(order.id)
 
     # Создаём позиции заказа (снапшот).
     for ci, variant, product_name in order_items_data:
@@ -262,7 +263,7 @@ async def create_order(
             order_id=order.id,
             delta=Decimal(str(-use_bonus)),
             reason="order_redemption",
-            note=f"Списание по заказу {number}",
+            note=f"Списание по заказу {order.number}",
         ))
 
     # Начисление кешбэка (после списания, если не отключено настройкой).
@@ -289,7 +290,7 @@ async def create_order(
                 order_id=order.id,
                 delta=Decimal(str(cashback_amount)),
                 reason="order_cashback",
-                note=f"Кешбэк {cashback_pct_val}% за заказ {number}",
+                note=f"Кешбэк {cashback_pct_val}% за заказ {order.number}",
             ))
             session.add(u)
 

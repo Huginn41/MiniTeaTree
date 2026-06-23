@@ -538,22 +538,23 @@ def setup_about_routes(app: FastAPI) -> None:
     async def upload_image(request: Request):
         if request.session.get("admin_token") != "authenticated":
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-        import shutil
         import uuid
         from pathlib import Path
         from fastapi import UploadFile
+        from app.admin.upload import to_webp, UPLOADS_DIR
         form = await request.form()
         file: UploadFile = form.get("file")
         if not file:
             return JSONResponse(status_code=400, content={"error": "no file"})
-        ext = Path(file.filename).suffix.lower() or ".jpg"
-        media_dir = Path("/app/app/static/media")
-        media_dir.mkdir(parents=True, exist_ok=True)
-        fname = f"{uuid.uuid4().hex}{ext}"
-        dest = media_dir / fname
-        with dest.open("wb") as out:
-            shutil.copyfileobj(file.file, out)
-        return JSONResponse({"path": f"/static/media/{fname}"})
+        data = await file.read(16 * 1024 * 1024)
+        fname = f"{uuid.uuid4().hex}.webp"
+        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+        dest = UPLOADS_DIR / fname
+        try:
+            to_webp(data, dest)
+        except ValueError as exc:
+            return JSONResponse(status_code=400, content={"error": str(exc)})
+        return JSONResponse({"path": f"/static/media/uploads/{fname}"})
 
     @app.get("/admin-api/faq", include_in_schema=False)
     async def faq_list_api(request: Request):

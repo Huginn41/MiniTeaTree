@@ -39,7 +39,9 @@ def delete_upload_file(path: str | None) -> None:
         return
     if not path.startswith("/static/media/uploads/"):
         return
-    file = Path(__file__).parent.parent.parent / path.lstrip("/")
+    file = (Path(__file__).parent.parent.parent / path.lstrip("/")).resolve()
+    if not str(file).startswith(str(UPLOADS_DIR.resolve())):
+        return
     try:
         file.unlink(missing_ok=True)
     except Exception:

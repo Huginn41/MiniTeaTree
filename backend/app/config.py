@@ -47,6 +47,7 @@ class Settings(BaseSettings):
 
     # ---------- Telegram ----------
     bot_token: SecretStr = SecretStr("")
+    bot_webhook_secret: SecretStr = SecretStr("")  # X-Telegram-Bot-Api-Secret-Token
     admin_telegram_ids: str = ""  # "111,222" → парсим в список
     telegram_api_base_url: str = ""  # прокси для Telegram API (напр. Cloudflare Worker)
 
@@ -55,7 +56,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_ttl_minutes: int = 15
     jwt_refresh_ttl_days: int = 30
-    telegram_initdata_max_age_seconds: int = 86400
+    telegram_initdata_max_age_seconds: int = 3600
 
     # ---------- Безопасность ----------
     max_upload_bytes: int = 5 * 1024 * 1024  # 5 МБ
@@ -99,8 +100,8 @@ class Settings(BaseSettings):
         # В test-режиме допускаем короткий секрет (для быстрых тестов).
         # В проде требуем минимум 32 символа.
         value = v.get_secret_value()
-        if len(value) < 16:
-            raise ValueError("JWT_SECRET должен быть не короче 16 символов")
+        if len(value) < 32:
+            raise ValueError("JWT_SECRET должен быть не короче 32 символов")
         return v
 
 

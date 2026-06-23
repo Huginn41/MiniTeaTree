@@ -20,7 +20,7 @@ from httpx import ASGITransport, AsyncClient
 # реальный .env из корня проекта не мог повлиять на тесты.
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
-os.environ["JWT_SECRET"] = "test-secret-at-least-16-chars"
+os.environ["JWT_SECRET"] = "test-secret-that-is-at-least-32-chars-long"
 os.environ["BOT_TOKEN"] = "0:fake"
 os.environ["DEBUG"] = "true"
 os.environ["CORS_ORIGINS"] = ""

@@ -51,11 +51,18 @@ def setup_bot(app: FastAPI) -> None:
     )
     dp = create_dispatcher()
 
+    webhook_secret = settings.bot_webhook_secret.get_secret_value()
+
     @app.post("/bot/webhook", include_in_schema=False)
     async def bot_webhook(request: Request) -> JSONResponse:
         """Принимает Update от Telegram, сразу отвечает 200, обрабатывает в фоне."""
         import asyncio
         from aiogram.types import Update
+
+        if webhook_secret:
+            incoming = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+            if incoming != webhook_secret:
+                return JSONResponse(status_code=403, content={"ok": False})
 
         try:
             body = await request.json()

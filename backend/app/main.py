@@ -150,12 +150,15 @@ def create_app() -> FastAPI:
     from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
     from app.admin.inject import _AdminCollapseMiddleware
 
-    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+    # В docker-compose nginx → app в сети "internal"; доверяем только RFC1918
+    trusted = ["127.0.0.1", "::1", "172.16.0.0/12", "10.0.0.0/8", "192.168.0.0/16"]
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted)
     app.add_middleware(_AdminCollapseMiddleware)
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.jwt_secret.get_secret_value(),
         https_only=settings.is_production,
+        same_site="strict",
         max_age=86400 * 7,  # 7 дней
     )
 
@@ -222,9 +225,11 @@ def create_app() -> FastAPI:
                 await session.execute(text("SELECT 1"))
             return JSONResponse({"status": "ready"})
         except Exception as exc:
+            log = get_logger("app.health")
+            log.error("health_ready_db_error", error=str(exc))
             return JSONResponse(
                 status_code=503,
-                content={"status": "not_ready", "detail": str(exc)},
+                content={"status": "not_ready", "detail": "database unavailable"},
             )
 
     # ---------- Глобальный обработчик ошибок ----------

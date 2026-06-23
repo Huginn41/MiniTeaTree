@@ -52,7 +52,7 @@ App.renderAbout = async function(c) {
       </div>
       ${p.map_embed_src ? `
       <div style="margin-top:12px;border-radius:12px;overflow:hidden">
-        <iframe src="${p.map_embed_src}" width="100%" height="260" frameborder="0" allowfullscreen style="border:0;display:block"></iframe>
+        <iframe src="${esc(p.map_embed_src)}" width="100%" height="260" frameborder="0" allowfullscreen style="border:0;display:block"></iframe>
         <a href="https://yandex.ru/maps/?text=${encodeURIComponent(fullAddr(p))}" target="_blank"
           style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;font-size:13px;font-weight:600;color:var(--md-primary);text-decoration:none;border-top:1px solid var(--md-outline-variant);background:var(--md-surface)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -61,8 +61,10 @@ App.renderAbout = async function(c) {
       </div>` : ''}
     </div>`;
 
-  const bannerStyle = about.banner_image_path
-    ? `background:url('${about.banner_image_path}') center/cover no-repeat;`
+  const safeBannerPath = (about.banner_image_path || '').startsWith('/static/media/')
+    ? esc(about.banner_image_path) : '';
+  const bannerStyle = safeBannerPath
+    ? `background:url('${safeBannerPath}') center/cover no-repeat;`
     : `background:linear-gradient(135deg,#1a6b3c 0%,#2d9e5f 100%);`;
 
   const title = about.title || 'Чайное Дерево';
@@ -94,7 +96,7 @@ App.renderAbout = async function(c) {
       <div style="margin-bottom:20px">
         <h2 style="font-size:22px;font-weight:800;color:var(--md-on-surface);margin:0 0 12px;letter-spacing:-.3px">${esc(title)}</h2>
         ${about.description_html && about.description_html.replace(/<[^>]+>/g,'').trim() ? `
-        <div class="about-rich">${about.description_html}</div>
+        <div class="about-rich" id="about-desc-html"></div>
         ` : ''}
       </div>
 
@@ -143,4 +145,11 @@ App.renderAbout = async function(c) {
       ` : ''}
 
     </div>`;
+
+  const descEl = c.querySelector('#about-desc-html');
+  if (descEl && about.description_html) {
+    descEl.innerHTML = typeof DOMPurify !== 'undefined'
+      ? DOMPurify.sanitize(about.description_html)
+      : about.description_html.replace(/<script[\s\S]*?<\/script>/gi, '');
+  }
 };

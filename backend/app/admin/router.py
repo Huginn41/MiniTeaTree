@@ -18,6 +18,29 @@ from app.admin.upload import (
 
 router = APIRouter()
 
+
+def _validate_safe_url(url: str) -> None:
+    """Блокирует SSRF: разрешает только http/https на публичные хосты."""
+    import ipaddress
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("URL должен начинаться с http:// или https://")
+    host = parsed.hostname
+    if not host:
+        raise ValueError("Некорректный URL: не указан хост")
+    blocked_hosts = {"localhost", "::1", "0.0.0.0"}
+    if host.lower() in blocked_hosts:
+        raise ValueError("URL указывает на запрещённый хост")
+    try:
+        addr = ipaddress.ip_address(host)
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            raise ValueError("URL указывает на внутреннюю или зарезервированную сеть")
+    except ValueError as exc:
+        if "URL указывает" in str(exc):
+            raise
+
 # ── Кастомные HTML-страницы (должны быть до Admin.mount) ──────────────────
 
 @router.get("/admin/crm-customer/{user_id}", include_in_schema=False)
@@ -185,6 +208,8 @@ async def admin_set_main_image(image_id: int, request: Request):
 async def admin_update_order_status(order_id: int, request: Request):
     if request.session.get("admin_token") != "authenticated":
         return _JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    if request.session.get("admin_readonly"):
+        return _JSONResponse(status_code=403, content={"error": "Readonly"})
     data = await request.json()
     field = data.get("field")
     value = data.get("value")
@@ -574,6 +599,10 @@ async def admin_import_yml(request: Request):
     url = (data.get("url") or "").strip()
     if not url:
         return _JSONResponse(status_code=400, content={"error": "URL обязателен"})
+    try:
+        _validate_safe_url(url)
+    except ValueError as exc:
+        return _JSONResponse(status_code=400, content={"error": str(exc)})
     from app.db import get_session_factory
     from app.models.yml_import import YmlImport
     from app.admin.import_worker import run_yml_import
