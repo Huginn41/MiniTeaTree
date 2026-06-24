@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     # Максимальное кол-во покупок реципиента, с которых донор получает вознаграждение.
     referral_max_rewarded_purchases: int = 3
 
+    # ---------- T Bank Acquiring ----------
+    tbank_terminal_key: str = ""
+    tbank_secret_key: SecretStr = SecretStr("")
+
     # ---------- Безопасность ----------
     max_upload_bytes: int = 5 * 1024 * 1024  # 5 МБ
 

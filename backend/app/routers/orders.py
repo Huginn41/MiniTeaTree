@@ -9,8 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db
+from app.db import get_db, get_session_factory
 from app.deps import CurrentUser, get_current_user
+from app.logging import get_logger
+
+log = get_logger("app.routers.orders")
 from app.models.bonus import BonusTransaction, BonusTier, ShopSettings
 from app.models.referral import ReferralLink
 from app.models.cart import Cart, CartItem
@@ -345,12 +348,53 @@ async def create_order(
     await session.commit()
     await session.refresh(order, ["items", "delivery_info"])
 
+    # Генерируем ссылку на оплату через T Bank (только курьер).
+    if body.delivery_type == "courier":
+        try:
+            from app.tbank import init_payment, is_configured
+            if is_configured():
+                payable = float(order.total_amount) - float(order.bonus_used)
+                result_tb = await init_payment(
+                    order_id=order.id,
+                    order_number=order.number,
+                    amount_rub=max(payable, 1.0),
+                    description=f"Заказ {order.number} — Чайное Дерево",
+                    customer_phone=body.contact_phone or None,
+                )
+                if result_tb.get("Success") and result_tb.get("PaymentURL"):
+                    async with get_session_factory()() as s2:
+                        from sqlalchemy import select as _sel
+                        from app.models.order import Order as _Order
+                        o2 = (await s2.execute(_sel(_Order).where(_Order.id == order.id))).scalar_one()
+                        o2.payment_link = result_tb["PaymentURL"]
+                        o2.tbank_payment_id = str(result_tb.get("PaymentId", ""))
+                        o2.status = "awaiting_payment"
+                        await s2.commit()
+                    order.payment_link = result_tb["PaymentURL"]
+                    order.tbank_payment_id = str(result_tb.get("PaymentId", ""))
+                    order.status = "awaiting_payment"
+        except Exception as exc:
+            log.warning("tbank_init_failed", order_id=order.id, error=str(exc))
+
     # Уведомляем менеджеров в фоне (ошибка не ломает ответ клиенту).
     try:
         from app.bot.notify import notify_new_order
         await notify_new_order(order, session)
     except Exception:
         pass
+
+    # Если есть ссылка на оплату — отправляем клиенту в Telegram.
+    if order.payment_link and order.user:
+        try:
+            from app.bot.notify import _send_message
+            await _send_message(
+                order.user.telegram_id,
+                f"🛒 Ваш заказ <b>{order.number}</b> принят!\n\n"
+                f"💰 К оплате: <b>{max(float(order.total_amount) - float(order.bonus_used), 1.0):.0f} ₽</b>\n\n"
+                f"Для оплаты перейдите по ссылке:\n{order.payment_link}",
+            )
+        except Exception:
+            pass
 
     return OrderDetail(
         id=order.id,

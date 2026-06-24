@@ -294,13 +294,14 @@ def _register_routers(app: FastAPI) -> None:
         return JSONResponse(content={"access_token": access, "refresh_token": refresh})
 
     # --- Catalog + Info + Cart + Orders + Referral ---
-    from app.routers import cart, catalog, info, orders, referral
+    from app.routers import cart, catalog, info, orders, referral, payments
 
     api.include_router(catalog.router)
     api.include_router(info.router)
     api.include_router(cart.router)
     api.include_router(orders.router)
     api.include_router(referral.router)
+    api.include_router(payments.router)
 
     app.include_router(api)
 
