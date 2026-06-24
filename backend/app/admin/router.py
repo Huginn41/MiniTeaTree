@@ -483,7 +483,9 @@ async def admin_order_payment_link(order_id: int, request: Request):
     if not link.startswith("http"):
         return _JSONResponse(status_code=400, content={"error": "Invalid link"})
     from app.db import get_session_factory
+    from sqlalchemy import select
     from sqlalchemy.orm import selectinload
+    from app.models.order import Order
     async with get_session_factory()() as session:
         result = await session.execute(
             select(Order)
@@ -519,6 +521,8 @@ async def admin_order_tracking(order_id: int, request: Request):
     data = await request.json()
     link = (data.get("link") or "").strip()
     from app.db import get_session_factory
+    from sqlalchemy import select
+    from app.models.order import Order
     async with get_session_factory()() as session:
         result = await session.execute(select(Order).where(Order.id == order_id))
         order = result.scalar_one_or_none()
