@@ -18,7 +18,7 @@ App.renderOnboardingBlock = function(ref) {
           <div style="flex:1">
             <span style="font-size:14px;color:#374151;font-weight:600">Подписаться на канал</span>
             <div style="margin-top:4px">
-              <a href="https://t.me/teatree96" target="_blank"
+              <a href="https://t.me/tea_ekb" target="_blank"
                  style="font-size:13px;color:#2563eb;text-decoration:none;font-weight:600">→ Перейти в канал</a>
             </div>
           </div>
