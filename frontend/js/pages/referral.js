@@ -29,35 +29,62 @@ App.renderOnboardingBlock = function(ref) {
         id="claim-btn"
         onclick="App.claimReferralBonus()"
         style="width:100%;padding:12px;background:#22c55e;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">
-        Я подписался
+        Готово
       </button>
       <div id="claim-msg" style="display:none;margin-top:10px;font-size:13px;text-align:center;color:#166534"></div>
     </div>`;
 };
 
-// Реферальная секция для участников (подписаны, слоты есть).
+// Реферальная секция для участников (подписаны на канал).
 App.renderReferralSection = function(ref) {
-  if (!ref || !ref.is_channel_member) return '';
-  // Ссылка доступна только после первой покупки (slots_total > 0)
-  if (!ref.referral_code) return '';
+  if (!ref || !ref.is_channel_member || !ref.referral_code) return '';
 
-  const slotsLeft = ref.slots_total - ref.slots_used;
-  const slotsInfo = ref.slots_total > 0
-    ? `<div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:6px">
-         Приглашений с бонусом: <b>${ref.slots_used}/${ref.slots_total}</b>
-         ${slotsLeft > 0 ? `· осталось <b>${slotsLeft}</b>` : '· лимит исчерпан'}
-       </div>`
-    : '';
-
+  const hasPurchase = ref.slots_total > 0;
   const link = ref.referral_link || '';
+
+  if (!hasPurchase) {
+    // Нет покупок — показываем чеклист вместо ссылки
+    return `
+      <div class="md-card" style="padding:20px;margin-bottom:16px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">🔗 Реферальная программа</div>
+        <div style="font-size:13px;color:var(--md-on-surface-variant);margin-bottom:14px">
+          Приглашай друзей и получай бонусы с их покупок
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--md-surface-container);border-radius:12px">
+          <span style="font-size:18px;flex-shrink:0">🎁</span>
+          <div style="font-size:13px;color:var(--md-on-surface-variant);line-height:1.5">
+            После первой покупки вам будет доступно <b>2 подарка для друзей</b> —
+            каждый получит 250 баллов при вступлении по вашей ссылке
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Есть покупки — показываем ссылку и счётчик слотов
+  const slotsLeft = ref.slots_total - ref.slots_used;
+  const slotsHtml = Array.from({ length: ref.slots_total }, (_, i) => {
+    const used = i < ref.slots_used;
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--md-surface-container);border-radius:10px">
+        <span style="font-size:16px">${used ? '✅' : '🎁'}</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--md-on-surface)">Подарок 250 баллов для друга</div>
+          <div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${used ? 'Использован' : 'Доступен'}</div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:${used ? '#6b7280' : 'var(--md-primary)'}">
+          ${i + 1}/${ref.slots_total}
+        </div>
+      </div>`;
+  }).join('');
 
   return `
     <div class="md-card" style="padding:20px;margin-bottom:16px">
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">🔗 Пригласи друзей</div>
       <div style="font-size:13px;color:var(--md-on-surface-variant);margin-bottom:14px">
-        Друг получит <b>250 баллов</b>, а ты — <b>5% с его первых 3 покупок</b>
+        Ты получаешь <b>5% с первых 3 покупок</b> каждого друга
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
+
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
         <div style="flex:1;background:var(--md-surface-container);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;color:var(--md-on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
           ${esc(link)}
         </div>
@@ -67,7 +94,10 @@ App.renderReferralSection = function(ref) {
           Скопировать
         </button>
       </div>
-      ${slotsInfo}
+
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${slotsHtml}
+      </div>
     </div>`;
 };
 
@@ -75,7 +105,6 @@ App.copyReferralLink = function(link) {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(link).then(() => showToast('Ссылка скопирована'));
   } else {
-    // fallback для старых браузеров
     const el = document.createElement('textarea');
     el.value = link;
     document.body.appendChild(el);
@@ -98,27 +127,20 @@ App.claimReferralBonus = async function() {
     const res = await api('/referral/claim', { method: 'POST' });
     if (res.success) {
       if (res.bonus_awarded > 0) {
-        // Успех с бонусом — перерисовываем профиль
         showToast(`+${res.bonus_awarded} баллов зачислено!`);
         tg?.HapticFeedback?.notificationOccurred('success');
-        App.navigate('profile');
-      } else {
-        // Уже участник
-        msg.style.display = 'block';
-        msg.textContent = 'Ты уже участник бонусной программы!';
-        btn.style.display = 'none';
       }
+      App.navigate('profile');
     } else {
-      // Не подписан
       btn.disabled = false;
-      btn.textContent = 'Я подписался';
+      btn.textContent = 'Готово';
       msg.style.display = 'block';
       msg.style.color = '#dc2626';
       msg.textContent = 'Подписка не найдена. Подпишись на канал и попробуй ещё раз.';
     }
   } catch (err) {
     btn.disabled = false;
-    btn.textContent = 'Я подписался';
+    btn.textContent = 'Готово';
     msg.style.display = 'block';
     msg.style.color = '#dc2626';
     msg.textContent = err.message;

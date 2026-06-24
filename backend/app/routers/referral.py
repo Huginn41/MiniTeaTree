@@ -130,9 +130,9 @@ async def register_referrer(
     if donor.id == u.id:
         return {"ok": False, "message": "self_referral"}
 
-    # У донора должны быть доступные слоты
-    if donor.referral_slots_used >= donor.referral_slots:
-        return {"ok": False, "message": "no_slots"}
+    # Привязываем реципиента к донору даже если слотов нет сейчас —
+    # слоты могут появиться после первой покупки донора.
+    # Бонус выдаётся в /claim только если у донора есть свободные слоты.
 
     # Блокируем строку пользователя
     u_locked = await session.execute(

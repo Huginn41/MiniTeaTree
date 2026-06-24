@@ -304,8 +304,9 @@ async def create_order(
         select(func.count()).select_from(Order).where(Order.user_id == u.id)
     )
     orders_count = orders_count_r.scalar() or 0
-    # orders_count включает текущий заказ (flush уже выполнен выше)
-    if orders_count == 1 and u.referral_slots == 0:
+    # Активируем слоты при первом заказе (orders_count >= 1 чтобы покрыть
+    # пользователей с историей заказов до появления реферальной системы).
+    if orders_count >= 1 and u.referral_slots == 0:
         from app.config import get_settings as _get_settings
         _s = _get_settings()
         u.referral_slots = _s.referral_slots_per_donor
