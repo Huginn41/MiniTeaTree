@@ -109,7 +109,7 @@ body { background:#f4f6fb !important; }
 
 /* ── Мобильная адаптивность ── */
 @media (max-width: 768px) {
-  .ct-topnav { padding:0 12px !important; gap:0 !important; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .ct-topnav { padding:0 12px !important; gap:0 !important; flex-wrap:wrap !important; height:auto !important; min-height:48px !important; }
   .ct-brand { font-size:14px !important; margin-right:8px !important; }
   .ct-nav-link { padding:0 8px !important; font-size:12px !important; height:48px !important; }
   .ct-nav-link i { display:none !important; }

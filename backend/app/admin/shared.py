@@ -101,8 +101,7 @@ body { background:#f4f6fb; min-height:100vh; }
 
 /* Navbar */
 .ct-topnav { background:#fff; border-bottom:1px solid #e9ecef; box-shadow:0 1px 8px rgba(0,0,0,.06);
-  height:56px; display:flex; align-items:center; padding:0 24px; gap:4px; position:sticky; top:0; z-index:1000;
-  overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  height:56px; display:flex; align-items:center; padding:0 24px; gap:4px; position:sticky; top:0; z-index:1000; }
 .ct-brand { font-weight:800; font-size:16px; color:#212529; text-decoration:none; margin-right:16px; white-space:nowrap; }
 .ct-brand:hover { color:#3d5afe; text-decoration:none; }
 .ct-nav-item { position:relative; }

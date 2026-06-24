@@ -237,10 +237,10 @@ form > .card > .card-body { max-width: 760px !important; }
 
 /* ─── Мобильная адаптивность ─── */
 @media (max-width: 768px) {
-  /* Навбар: скрыть текстовые пункты, оставить только лого и кнопки */
-  .ct-topnav { padding: 0 12px; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .ct-brand { font-size: 14px; margin-right: 8px; flex-shrink: 0; }
-  .ct-nav-link { padding: 0 8px; font-size: 12px; height: 48px; }
+  /* Навбар: компактный, без overflow (иначе дропдауны обрезаются) */
+  .ct-topnav { padding: 0 12px; gap: 0; flex-wrap: wrap; height: auto; min-height: 48px; }
+  .ct-brand { font-size: 13px; margin-right: 6px; flex-shrink: 0; }
+  .ct-nav-link { padding: 0 7px; font-size: 12px; height: 48px; }
   .ct-nav-link i { display: none; }
   .ct-sep { display: none; }
   .ct-logout a { font-size: 11px; padding: 4px 8px; }
