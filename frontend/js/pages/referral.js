@@ -50,30 +50,30 @@ App.renderReferralSection = function(ref) {
       ? 'Все подарки розданы ✨'
       : `${slotsUsed} из ${slotsTotal} подарков отправлено`;
 
-  const cups = Array.from({ length: slotsTotal }, (_, i) => {
+  const cupCols = Array.from({ length: slotsTotal }, (_, i) => {
     const received = i < slotsUsed;
     return `
-      <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
-        <span style="font-size:38px;line-height:1.1;display:inline-block;${received ? '' : 'filter:grayscale(1) opacity(0.35)'}">🍵</span>
-        <div style="font-size:10px;font-weight:${received ? '600' : '400'};color:${received ? '#16a34a' : 'var(--md-on-surface-variant)'}">
-          ${received ? '✅ Получен' : '⬜ Доступен'}
+      <div style="width:1px;flex-shrink:0;background:var(--md-outline-variant)"></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px 8px">
+        <span style="font-size:40px;line-height:1;display:inline-block;${received ? '' : 'filter:grayscale(1) opacity(0.35)'}">🍵</span>
+        <div style="font-size:11px;font-weight:${received ? '600' : '400'};color:${received ? '#16a34a' : 'var(--md-on-surface-variant)'};text-align:center;line-height:1.4">
+          ${received ? '✅ Получен' : '🎁 Доступен'}
         </div>
       </div>`;
   }).join('');
 
   const slotsBlock = ref.has_purchased ? `
     <div style="padding-top:16px;margin-top:16px;border-top:1px solid var(--md-outline-variant)">
-      <div style="font-size:12px;color:var(--md-on-surface-variant);text-align:center;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--md-on-surface-variant);text-align:center;margin-bottom:14px">
         Первые <b>${slotsTotal}</b> друга получат <b>250 баллов</b> при подписке по твоей ссылке
       </div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-          <span style="font-size:52px;line-height:1.1;display:inline-block">🫖</span>
-          <div style="font-size:20px;font-weight:800;color:var(--md-on-surface);line-height:1;letter-spacing:-0.5px">${slotsLeft}/${slotsTotal}</div>
-          <div style="font-size:10px;color:var(--md-on-surface-variant)">осталось</div>
+      <div style="display:flex;background:var(--md-surface-container);border-radius:16px;overflow:hidden">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px 8px">
+          <span style="font-size:40px;line-height:1">🫖</span>
+          <div style="font-size:18px;font-weight:800;color:var(--md-on-surface);line-height:1">${slotsLeft}/${slotsTotal}</div>
+          <div style="font-size:11px;color:var(--md-on-surface-variant);text-align:center;line-height:1.4">подарков<br>осталось</div>
         </div>
-        <div style="display:flex;align-items:center;gap:4px;color:var(--md-on-surface-variant);font-size:18px;margin-bottom:28px">›</div>
-        <div style="display:flex;gap:14px">${cups}</div>
+        ${cupCols}
       </div>
       <div style="font-size:12px;color:var(--md-on-surface-variant);text-align:center;margin-top:10px">${statusText}</div>
     </div>` : '';
