@@ -30,7 +30,6 @@ def _topnav(active: str = "") -> str:
     <span class="ct-nav-link"><i class="fa-solid fa-users"></i>CRM <span class="ct-dropdown-arrow">▾</span></span>
     <div class="ct-dropdown-menu">
       <a class="ct-dropdown-item" href="/admin/user/list">Клиенты</a>
-      <a class="ct-dropdown-item" href="/admin/notification-target/list">Уведомления</a>
     </div>
   </div>
   <div class="ct-nav-item ct-dropdown">
@@ -40,8 +39,8 @@ def _topnav(active: str = "") -> str:
       <a class="ct-dropdown-item" href="/admin/category/list">Категории</a>
       <a class="ct-dropdown-item" href="/admin/banner/list">Баннеры</a>
       <a class="{_item_cls('about')}" href="/crm/about">О нас</a>
-
       <a class="ct-dropdown-item" href="/admin/pickup-point/list">Самовывоз</a>
+      <a class="ct-dropdown-item" href="/admin/notification-target/list">Уведомления</a>
       <a class="{_item_cls('bonus')}" href="/admin/bonus-settings">🎁 Бонусная система</a>
     </div>
   </div>
@@ -102,7 +101,8 @@ body { background:#f4f6fb; min-height:100vh; }
 
 /* Navbar */
 .ct-topnav { background:#fff; border-bottom:1px solid #e9ecef; box-shadow:0 1px 8px rgba(0,0,0,.06);
-  height:56px; display:flex; align-items:center; padding:0 24px; gap:4px; position:sticky; top:0; z-index:1000; }
+  height:56px; display:flex; align-items:center; padding:0 24px; gap:4px; position:sticky; top:0; z-index:1000;
+  overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .ct-brand { font-weight:800; font-size:16px; color:#212529; text-decoration:none; margin-right:16px; white-space:nowrap; }
 .ct-brand:hover { color:#3d5afe; text-decoration:none; }
 .ct-nav-item { position:relative; }
@@ -125,6 +125,20 @@ body { background:#f4f6fb; min-height:100vh; }
 .ct-dropdown-item { display:block; padding:9px 16px; font-size:13px; color:#495057; text-decoration:none; transition:all .1s; }
 .ct-dropdown-item:hover,.ct-dropdown-item.active { background:#f0f4ff; color:#3d5afe; text-decoration:none; }
 .ct-dropdown-arrow { font-size:10px; opacity:.5; margin-left:2px; }
+
+@media (max-width: 768px) {
+  .ct-topnav { padding:0 12px; gap:0; }
+  .ct-brand { font-size:14px; margin-right:8px; flex-shrink:0; }
+  .ct-nav-link { padding:0 8px; font-size:12px; height:48px; }
+  .ct-nav-link i { display:none; }
+  .ct-sep { display:none; }
+  .ct-logout a { font-size:11px; padding:4px 8px; }
+  .ct-dropdown-menu { min-width:160px; }
+  .container-fluid { padding-left:12px !important; padding-right:12px !important; }
+  .stat-value { font-size:1.4rem !important; }
+  .table th, .table td { font-size:11px !important; padding:6px 8px !important; }
+  .card { border-radius:10px !important; }
+}
 </style>
 """
 

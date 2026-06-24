@@ -25,6 +25,23 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 {TOPNAV}
 <div class="container-fluid px-4 py-4" style="max-width:1400px">
 
+  <!-- ⏳ Текущие заказы — вверху -->
+  <div class="card chart-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div class="section-title">⏳ Текущие заказы (требуют обработки)</div>
+      <div class="d-flex gap-2">
+        <a href="/crm/orders/active" class="btn btn-sm btn-outline-primary">Все текущие →</a>
+        <button class="btn btn-sm btn-outline-secondary" onclick="load()"><i class="fa-solid fa-rotate-right me-1"></i>Обновить</button>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Номер</th><th>Клиент</th><th>Сумма</th><th>Статус</th><th>Ожидает</th><th>Создан</th><th></th></tr></thead>
+        <tbody id="pending-body"><tr><td colspan="7" class="text-center text-muted py-3">Загрузка...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="row g-3 mb-4">
     <div class="col-6 col-sm-3">
       <div class="card stat-card p-3">
@@ -65,10 +82,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <div class="card chart-card p-4">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
           <div class="section-title">📈 Динамика заказов</div>
-          <div class="btn-group btn-group-sm" id="period-btns">
-            <button class="btn btn-outline-secondary period-btn" onclick="setPeriod(this,7)">7 дней</button>
-            <button class="btn btn-outline-secondary period-btn active" onclick="setPeriod(this,30)">30 дней</button>
-            <button class="btn btn-outline-secondary period-btn" onclick="setPeriod(this,90)">90 дней</button>
+          <div style="display:flex;gap:6px" id="period-btns">
+            <button class="btn btn-sm btn-outline-secondary period-btn" onclick="setPeriod(this,7)">7 дней</button>
+            <button class="btn btn-sm btn-outline-secondary period-btn active" onclick="setPeriod(this,30)">30 дней</button>
+            <button class="btn btn-sm btn-outline-secondary period-btn" onclick="setPeriod(this,90)">90 дней</button>
           </div>
         </div>
         <div style="position:relative;height:260px"><canvas id="ordersChart"></canvas></div>
@@ -85,21 +102,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  <div class="card chart-card p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-      <div class="section-title">⏳ Текущие заказы (требуют обработки)</div>
-      <div class="d-flex gap-2">
-        <a href="/crm/orders/active" class="btn btn-sm btn-outline-primary">Все текущие →</a>
-        <button class="btn btn-sm btn-outline-secondary" onclick="load()"><i class="fa-solid fa-rotate-right me-1"></i>Обновить</button>
-      </div>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-hover mb-0">
-        <thead><tr><th>Номер</th><th>Клиент</th><th>Сумма</th><th>Статус</th><th>Ожидает</th><th>Создан</th><th></th></tr></thead>
-        <tbody id="pending-body"><tr><td colspan="7" class="text-center text-muted py-3">Загрузка...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
 
 </div>
 <script>

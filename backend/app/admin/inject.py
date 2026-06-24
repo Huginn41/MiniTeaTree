@@ -106,6 +106,27 @@ body { background:#f4f6fb !important; }
 .pagination .page-link { border-radius:8px !important; color:#3d5afe !important; }
 .pagination .page-item.active .page-link { background:#3d5afe !important; border-color:#3d5afe !important; color:#fff !important; }
 .badge { border-radius:6px !important; font-weight:600 !important; }
+
+/* ── Мобильная адаптивность ── */
+@media (max-width: 768px) {
+  .ct-topnav { padding:0 12px !important; gap:0 !important; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .ct-brand { font-size:14px !important; margin-right:8px !important; }
+  .ct-nav-link { padding:0 8px !important; font-size:12px !important; height:48px !important; }
+  .ct-nav-link i { display:none !important; }
+  .ct-sep { display:none !important; }
+  .ct-logout a { font-size:11px !important; padding:4px 8px !important; }
+  .ct-dropdown-menu { min-width:160px !important; }
+  .page-wrapper { padding:0 !important; }
+  .container-fluid { padding-left:12px !important; padding-right:12px !important; }
+  .table th, .table td { font-size:11px !important; padding:6px 6px !important; }
+  .card { border-radius:10px !important; }
+  .col-sm-2, .col-sm-10 { padding-left:0 !important; padding-right:0 !important; }
+}
+@media (max-width: 576px) {
+  .card-header { padding:12px 16px !important; }
+  .card-body { padding:14px 16px !important; }
+  .table .d-none-xs { display:none !important; }
+}
 </style>
 </head>""").encode("utf-8")
 

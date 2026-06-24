@@ -2,7 +2,7 @@
 {% from 'sqladmin/_macros.html' import render_form_fields %}
 
 {% block content %}
-<div class="col-12">
+<div style="padding:20px 24px;max-width:900px">
   <form action="{{ model_view._build_url_for('admin:edit', request, obj) }}{% if request.url.query %}?{{ request.url.query }}{% endif %}"
         method="POST" enctype="multipart/form-data">
 

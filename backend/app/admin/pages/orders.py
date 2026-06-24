@@ -102,11 +102,11 @@ HISTORY_HTML = """<!DOCTYPE html>
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h5 class="section-title mb-0">📦 История заказов</h5>
     <div class="d-flex gap-2 align-items-center">
-      <div class="btn-group btn-group-sm" id="period-btns">
-        <button class="btn btn-outline-secondary period-btn" onclick="setPeriod(this,7)">7 дней</button>
-        <button class="btn btn-outline-secondary period-btn active" onclick="setPeriod(this,30)">30 дней</button>
-        <button class="btn btn-outline-secondary period-btn" onclick="setPeriod(this,90)">90 дней</button>
-        <button class="btn btn-outline-secondary period-btn" onclick="setPeriod(this,365)">Год</button>
+      <div style="display:flex;gap:6px" id="period-btns">
+        <button class="btn btn-sm btn-outline-secondary period-btn" onclick="setPeriod(this,7)">7 дней</button>
+        <button class="btn btn-sm btn-outline-secondary period-btn active" onclick="setPeriod(this,30)">30 дней</button>
+        <button class="btn btn-sm btn-outline-secondary period-btn" onclick="setPeriod(this,90)">90 дней</button>
+        <button class="btn btn-sm btn-outline-secondary period-btn" onclick="setPeriod(this,365)">Год</button>
       </div>
       <button class="btn btn-sm btn-outline-secondary" onclick="load()"><i class="fa-solid fa-rotate-right me-1"></i>Обновить</button>
     </div>
