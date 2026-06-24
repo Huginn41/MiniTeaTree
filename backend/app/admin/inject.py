@@ -102,6 +102,32 @@ body { background:#f4f6fb !important; }
 .form-control:focus,.form-select:focus { border-color:#3d5afe !important; box-shadow:0 0 0 3px rgba(61,90,254,.12) !important; }
 .form-label { font-size:13px !important; font-weight:600 !important; color:#495057 !important; }
 
+/* ── Toggle switch для чекбоксов ── */
+.form-group.row input[type="checkbox"],
+.form-check-input[type="checkbox"] {
+  -webkit-appearance:none !important; appearance:none !important;
+  width:44px !important; height:24px !important;
+  background:#dee2e6 !important; border:none !important;
+  border-radius:12px !important; position:relative !important;
+  cursor:pointer !important; transition:background .2s !important;
+  margin-top:4px !important; flex-shrink:0 !important; padding:0 !important;
+  display:inline-block !important; vertical-align:middle !important;
+}
+.form-group.row input[type="checkbox"]::before,
+.form-check-input[type="checkbox"]::before {
+  content:'' !important; position:absolute !important;
+  width:18px !important; height:18px !important;
+  background:#fff !important; border-radius:50% !important;
+  top:3px !important; left:3px !important;
+  transition:left .2s !important; box-shadow:0 1px 4px rgba(0,0,0,.25) !important;
+}
+.form-group.row input[type="checkbox"]:checked,
+.form-check-input[type="checkbox"]:checked { background:#3d5afe !important; }
+.form-group.row input[type="checkbox"]:checked::before,
+.form-check-input[type="checkbox"]:checked::before { left:23px !important; }
+.form-group.row input[type="checkbox"]:focus,
+.form-check-input[type="checkbox"]:focus { box-shadow:0 0 0 3px rgba(61,90,254,.2) !important; outline:none !important; }
+
 /* ── Пагинация / бейджи ── */
 .pagination .page-link { border-radius:8px !important; color:#3d5afe !important; }
 .pagination .page-item.active .page-link { background:#3d5afe !important; border-color:#3d5afe !important; color:#fff !important; }
