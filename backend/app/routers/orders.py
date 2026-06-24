@@ -301,12 +301,6 @@ async def create_order(
     from app.config import get_settings as _get_settings
     _s = _get_settings()
 
-    orders_count_r = await session.execute(
-        select(func.count()).select_from(Order).where(Order.user_id == u.id)
-    )
-    orders_count = orders_count_r.scalar() or 0
-    is_first_order = (orders_count == 1)
-
     if u.referrer_id:
         ref_link_r = await session.execute(
             select(ReferralLink)
@@ -321,23 +315,7 @@ async def create_order(
             )
             donor = donor_r.scalar_one_or_none()
 
-            # Блок А: велком-бонус реципиенту при первой покупке.
-            if is_first_order and not ref_link.welcome_paid and donor:
-                if donor.referral_slots_used < donor.referral_slots:
-                    welcome = _s.referral_welcome_bonus
-                    u.bonus_balance = Decimal(str(float(u.bonus_balance) + welcome))
-                    session.add(BonusTransaction(
-                        user_id=u.id,
-                        order_id=order.id,
-                        delta=Decimal(str(welcome)),
-                        reason="referral_welcome",
-                        note=f"Велком-бонус за первую покупку по ссылке донора #{donor.id}",
-                    ))
-                    ref_link.welcome_paid = True
-                    donor.referral_slots_used += 1
-                    session.add(donor)
-
-            # Блок Б: вознаграждение донора (5% от покупки, до 3 покупок).
+            # Вознаграждение донора (5% от покупки, до 3 покупок).
             max_purchases = _s.referral_max_rewarded_purchases
             reward_pct = _s.referral_donor_reward_pct
             if ref_link.purchases_rewarded < max_purchases and donor:

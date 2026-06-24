@@ -98,11 +98,12 @@ App.renderBonusChecklist = function(ref) {
           ${done ? '✓' : ''}
         </div>
         <div>
-          <div style="font-size:14px;font-weight:600;color:${done ? 'var(--md-on-surface)' : '#374151'};
-               text-decoration:${done ? 'none' : 'none'}">
+          <div style="font-size:14px;font-weight:600;color:var(--md-on-surface)">
             Соверши покупку и подари 250 баллов друзьям, которые ещё не с нами
           </div>
-          ${done ? `<div style="font-size:12px;color:#22c55e;margin-top:3px;font-weight:600">Выполнено ✓</div>` : `<div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:3px">После покупки откроется возможность дарить подарки</div>`}
+          ${done
+            ? `<div style="font-size:12px;color:#22c55e;margin-top:3px;font-weight:600">Выполнено ✓</div>`
+            : `<div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:3px">После покупки активируются подарки для друзей</div>`}
         </div>
       </div>
     </div>`;

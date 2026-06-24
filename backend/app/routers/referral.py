@@ -186,27 +186,47 @@ async def claim_referral_bonus(
     if not is_subscribed:
         return ReferralClaimResult(success=False, message="not_subscribed", bonus_awarded=0)
 
+    settings = get_settings()
+    welcome_bonus = settings.referral_welcome_bonus
+
     # Помечаем участником, генерируем реф. код, активируем 2 слота сразу.
     u.is_channel_member = True
     if not u.referral_code:
         u.referral_code = secrets.token_hex(4).upper()
-    u.referral_slots = get_settings().referral_slots_per_donor  # 2
+    u.referral_slots = settings.referral_slots_per_donor  # 2
 
-    # Если пришёл по реф. ссылке — создаём связь донор→реципиент.
-    # Бонус 250 баллов реципиент получит при первой покупке (в create_order).
+    bonus_awarded = 0
+
+    # Если пришёл по реф. ссылке — начисляем 250 баллов сразу при подписке.
     if u.referrer_id:
         existing_r = await session.execute(
             select(ReferralLink).where(ReferralLink.recipient_id == u.id)
         )
         if existing_r.scalar_one_or_none() is None:
-            session.add(ReferralLink(
-                donor_id=u.referrer_id,
-                recipient_id=u.id,
-                welcome_paid=False,
-                purchases_rewarded=0,
-            ))
+            donor_r = await session.execute(
+                select(User).where(User.id == u.referrer_id).with_for_update()
+            )
+            donor = donor_r.scalar_one_or_none()
+
+            if donor and donor.referral_slots_used < donor.referral_slots:
+                session.add(ReferralLink(
+                    donor_id=donor.id,
+                    recipient_id=u.id,
+                    welcome_paid=True,
+                    purchases_rewarded=0,
+                ))
+                u.bonus_balance = Decimal(str(float(u.bonus_balance) + welcome_bonus))
+                session.add(BonusTransaction(
+                    user_id=u.id,
+                    delta=Decimal(str(welcome_bonus)),
+                    reason="referral_welcome",
+                    note=f"Велком-бонус по реферальной ссылке донора #{donor.id}",
+                ))
+                donor.referral_slots_used += 1
+                session.add(donor)
+                bonus_awarded = welcome_bonus
 
     session.add(u)
     await session.commit()
 
-    return ReferralClaimResult(success=True, message="subscribed", bonus_awarded=0)
+    return ReferralClaimResult(success=True, message="subscribed", bonus_awarded=bonus_awarded)
