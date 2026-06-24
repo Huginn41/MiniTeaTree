@@ -7,7 +7,7 @@
         method="POST" enctype="multipart/form-data">
 
     <!-- Шапка с навигацией и кнопками -->
-    <div class="card mb-3">
+    <div class="card mb-3" style="max-width:820px">
       <div class="card-body" style="padding:14px 20px">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <a href="{{ url_for('admin:list', identity=model_view.identity) }}"
@@ -46,7 +46,7 @@
     </div>
 
     <!-- Форма -->
-    <div class="card">
+    <div class="card" style="max-width:820px">
       <div class="card-body" style="padding:24px 28px">
         {% block create_form %}
         {% if error %}

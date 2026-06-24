@@ -153,59 +153,87 @@ body { background: #f4f6fb !important; margin: 0; }
 /* ─── Бейджи ─── */
 .badge { border-radius: 6px !important; font-weight: 600 !important; }
 
-/* ─── Формы: поля ─── */
+/* ─── Формы: стекованный layout (лейбл сверху, поле снизу) ─── */
 .form-fieldset { border: none !important; padding: 0 !important; }
-.form-group.row { margin-bottom: 20px !important; align-items: flex-start !important; }
-.form-group.row .col-sm-2.form-label {
-  padding-top: 9px !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  color: #495057 !important;
-  text-align: right !important;
+
+/* Ограничение ширины формы на десктопе */
+.form-fieldset,
+.card-body > form,
+form > .card > .card-body { max-width: 760px !important; }
+
+/* Перестраиваем двухколоночный row → вертикальный стек */
+.form-group.row {
+  display: flex !important;
+  flex-direction: column !important;
+  margin-bottom: 18px !important;
+  gap: 0 !important;
 }
-.form-group.row .col-sm-10 .form-control,
-.form-group.row .col-sm-10 .form-select {
+.form-group.row > .col-sm-2,
+.form-group.row > .col-sm-10 {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+/* Лейбл */
+.form-group.row > .col-sm-2.form-label,
+.form-group.row > label.form-label {
+  padding: 0 0 5px 0 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #6c757d !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  text-align: left !important;
+}
+/* Поля ввода */
+.form-group.row .form-control,
+.form-group.row .form-select {
   border-radius: 10px !important;
   border: 1.5px solid #e2e8f0 !important;
   padding: 9px 13px !important;
   font-size: 13.5px !important;
   line-height: 1.5 !important;
-  transition: border-color .15s, box-shadow .15s !important;
+  width: 100% !important;
   background: #fff !important;
+  transition: border-color .15s, box-shadow .15s !important;
 }
-.form-group.row .col-sm-10 .form-control:focus,
-.form-group.row .col-sm-10 .form-select:focus {
+.form-group.row .form-control:focus,
+.form-group.row .form-select:focus {
   border-color: #3d5afe !important;
   box-shadow: 0 0 0 3px rgba(61,90,254,.1) !important;
+  outline: none !important;
 }
-.form-group.row .col-sm-10 textarea.form-control {
-  min-height: 110px !important;
+.form-group.row textarea.form-control {
+  min-height: 120px !important;
   resize: vertical !important;
 }
-.form-group.row .col-sm-10 input[type="checkbox"] {
+.form-group.row input[type="checkbox"] {
   width: 18px !important;
   height: 18px !important;
-  margin-top: 10px !important;
   cursor: pointer !important;
   accent-color: #3d5afe !important;
+  margin-top: 2px !important;
+}
+.form-group.row input[type="file"] {
+  border-radius: 10px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  border: 1.5px dashed #c5ceff !important;
+  background: #f8faff !important;
+  width: 100% !important;
+  cursor: pointer !important;
+}
+.form-group.row input[type="file"]:hover {
+  border-color: #3d5afe !important;
+  background: #f0f4ff !important;
 }
 .required-label::after {
   content: " *" !important;
   color: #dc3545 !important;
 }
-/* Кнопки загрузки файла */
-.form-group.row .col-sm-10 input[type="file"] {
-  border-radius: 10px !important;
-  padding: 7px 12px !important;
-  font-size: 13px !important;
-  border: 1.5px dashed #c5ceff !important;
-  background: #f8faff !important;
-  width: 100% !important;
-}
-.form-group.row .col-sm-10 input[type="file"]:hover {
-  border-color: #3d5afe !important;
-  background: #f0f4ff !important;
-}
+.text-muted { font-size: 12px !important; margin-top: 4px !important; display: block !important; }
 </style>
 {% endblock %}
 
