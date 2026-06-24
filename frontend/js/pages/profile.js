@@ -2,7 +2,10 @@ App.renderProfile = async function(c) {
   this.setHeader('Профиль');
   let html = '';
   try {
-    const user = await api('/profile/me');
+    const [user, ref] = await Promise.all([
+      api('/profile/me'),
+      api('/referral/info').catch(() => null),
+    ]);
     const name = [user.first_name, user.last_name].filter(Boolean).join(' ');
     html = `
       <div class="md-card" style="padding:20px;margin-bottom:16px">
@@ -29,6 +32,12 @@ App.renderProfile = async function(c) {
           </div>` : ''}
         </div>` : ''}
       </div>`;
+
+    // Реферальные блоки — онбординг для новых, ссылка для участников
+    if (ref) {
+      html += App.renderOnboardingBlock(ref);
+      html += App.renderReferralSection(ref);
+    }
 
     try {
       const orders = await api('/orders');

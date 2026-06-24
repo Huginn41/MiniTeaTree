@@ -6,7 +6,7 @@ from datetime import datetime
 
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Numeric, String, Text, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -57,6 +57,22 @@ class User(TimestampMixin, Base):
     bonus_balance: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False, default=Decimal("0"), server_default="0"
     )
+
+    # ── Реферальная программа ─────────────────────────────────────────────────
+    # Персональный код (8 символов, генерируется при вступлении в бонус. программу).
+    referral_code: Mapped[str | None] = mapped_column(String(16), unique=True, nullable=True)
+    # Кто пригласил этого пользователя.
+    referrer_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    # Подписан ли на Telegram-канал (проверяется через бота).
+    is_channel_member: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    # Кол-во доступных велком-слотов (0 до первой покупки, 2 после).
+    referral_slots: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Кол-во использованных велком-слотов (реципиентов получивших 250 баллов).
+    referral_slots_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     # Связи (lazy — загружаются по запросу, чтобы не тащить всё подряд).
     cart = relationship("Cart", back_populates="user", uselist=False, lazy="selectin")

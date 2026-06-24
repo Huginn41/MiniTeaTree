@@ -269,3 +269,25 @@ class ProfileOut(BaseModel):
     cashback_pct: float = 0.0
 
     model_config = {"from_attributes": True}
+
+
+# ===================== Реферальная программа =====================
+
+class ReferralInfo(BaseModel):
+    """Информация о реферальной программе для текущего пользователя."""
+
+    is_channel_member: bool
+    referral_code: str | None = None
+    referral_link: str | None = None
+    slots_total: int = 0
+    slots_used: int = 0
+    # Кол-во реципиентов, которых пользователь привёл
+    recipients_count: int = 0
+
+
+class ReferralClaimResult(BaseModel):
+    """Результат проверки подписки и начисления велком-бонуса."""
+
+    success: bool
+    message: str
+    bonus_awarded: int = 0

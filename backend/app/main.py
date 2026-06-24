@@ -293,13 +293,14 @@ def _register_routers(app: FastAPI) -> None:
         access, refresh = create_token_pair(telegram_id)
         return JSONResponse(content={"access_token": access, "refresh_token": refresh})
 
-    # --- Catalog + Info + Cart + Orders ---
-    from app.routers import cart, catalog, info, orders
+    # --- Catalog + Info + Cart + Orders + Referral ---
+    from app.routers import cart, catalog, info, orders, referral
 
     api.include_router(catalog.router)
     api.include_router(info.router)
     api.include_router(cart.router)
     api.include_router(orders.router)
+    api.include_router(referral.router)
 
     app.include_router(api)
 

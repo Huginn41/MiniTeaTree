@@ -15,6 +15,7 @@ from app.models.notification import NotificationTarget
 from app.models.order import Order, OrderItem
 from app.models.payment import PaymentEvent
 from app.models.product import Product, ProductImage, ProductVariant
+from app.models.referral import ReferralLink
 from app.models.user import User
 from app.models.yml_import import YmlImport
 
@@ -37,6 +38,7 @@ __all__ = [
     "Product",
     "ProductImage",
     "ProductVariant",
+    "ReferralLink",
     "User",
     "YmlImport",
 ]

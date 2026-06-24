@@ -58,6 +58,18 @@ class Settings(BaseSettings):
     jwt_refresh_ttl_days: int = 30
     telegram_initdata_max_age_seconds: int = 3600
 
+    # ---------- Реферальная программа ----------
+    # ID или @username Telegram-канала для проверки подписки (напр. "@teatree96" или "-1001234567890").
+    telegram_channel_id: str = ""
+    # Баллы за вступление по реферальной ссылке.
+    referral_welcome_bonus: int = 250
+    # Велком-слоты, активируемые после первой покупки донора.
+    referral_slots_per_donor: int = 2
+    # Процент от покупки реципиента, начисляемый донору.
+    referral_donor_reward_pct: float = 5.0
+    # Максимальное кол-во покупок реципиента, с которых донор получает вознаграждение.
+    referral_max_rewarded_purchases: int = 3
+
     # ---------- Безопасность ----------
     max_upload_bytes: int = 5 * 1024 * 1024  # 5 МБ
 

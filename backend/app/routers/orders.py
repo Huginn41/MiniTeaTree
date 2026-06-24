@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.deps import CurrentUser, get_current_user
 from app.models.bonus import BonusTransaction, BonusTier, ShopSettings
+from app.models.referral import ReferralLink
 from app.models.cart import Cart, CartItem
 from app.models.delivery import DeliveryInfo
 from app.models.user import User
@@ -295,6 +296,59 @@ async def create_order(
                 note=f"Кешбэк {cashback_pct_val}% за заказ {order.number}",
             ))
             session.add(u)
+
+    # ── Реферальные хуки ──────────────────────────────────────────────────────
+
+    # Блок А: активируем велком-слоты при первой покупке донора.
+    orders_count_r = await session.execute(
+        select(func.count()).select_from(Order).where(Order.user_id == u.id)
+    )
+    orders_count = orders_count_r.scalar() or 0
+    # orders_count включает текущий заказ (flush уже выполнен выше)
+    if orders_count == 1 and u.referral_slots == 0:
+        from app.config import get_settings as _get_settings
+        _s = _get_settings()
+        u.referral_slots = _s.referral_slots_per_donor
+        session.add(u)
+
+    # Блок Б: вознаграждение донора (5% от покупки реципиента, до 3 покупок).
+    if u.referrer_id:
+        ref_link_r = await session.execute(
+            select(ReferralLink)
+            .where(ReferralLink.recipient_id == u.id)
+            .with_for_update()
+        )
+        ref_link = ref_link_r.scalar_one_or_none()
+        if ref_link and ref_link.welcome_paid:
+            from app.config import get_settings as _get_settings
+            _s = _get_settings()
+            max_purchases = _s.referral_max_rewarded_purchases
+            reward_pct = _s.referral_donor_reward_pct
+            if ref_link.purchases_rewarded < max_purchases:
+                reward = round(total * reward_pct / 100, 2)
+                if reward > 0:
+                    donor_r = await session.execute(
+                        select(User).where(User.id == u.referrer_id).with_for_update()
+                    )
+                    donor = donor_r.scalar_one_or_none()
+                    if donor:
+                        donor.bonus_balance = Decimal(
+                            str(float(donor.bonus_balance) + reward)
+                        )
+                        session.add(BonusTransaction(
+                            user_id=donor.id,
+                            order_id=order.id,
+                            delta=Decimal(str(reward)),
+                            reason="referral_purchase_reward",
+                            note=(
+                                f"{reward_pct}% с покупки реципиента "
+                                f"#{u.id} (заказ {order.number}), "
+                                f"покупка {ref_link.purchases_rewarded + 1}/{max_purchases}"
+                            ),
+                        ))
+                        session.add(donor)
+                ref_link.purchases_rewarded += 1
+                session.add(ref_link)
 
     # Очищаем корзину.
     for ci in cart.items:

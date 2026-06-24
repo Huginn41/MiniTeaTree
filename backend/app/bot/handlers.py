@@ -66,17 +66,33 @@ async def _refresh_card(order_id: int, chat_id: int, message_id: int) -> None:
 
 async def cmd_start(message: Message) -> None:
     settings = get_settings()
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🌿 Открыть магазин", web_app={"url": settings.public_base_url}),
-    ]])
     name = message.from_user.first_name if message.from_user else "друг"
-    await message.answer(
-        f"Привет, {name}! 👋\n\n"
-        "🌿 <b>Чайное Дерево</b> — магазин качественного чая.\n\n"
-        "Нажми кнопку ниже, чтобы открыть каталог и сделать заказ:",
-        reply_markup=keyboard,
-        parse_mode="HTML",
-    )
+
+    # Извлекаем реферальный код из параметра /start REF_xxxx
+    text = message.text or ""
+    parts = text.split(maxsplit=1)
+    ref_param = parts[1] if len(parts) > 1 else ""
+
+    # Передаём реф. код в URL мини-апп как query-параметр
+    app_url = settings.public_base_url
+    if ref_param.startswith("REF_"):
+        app_url = f"{app_url}?ref={ref_param}"
+        greeting = (
+            f"Привет, {name}! 👋\n\n"
+            "🎁 Тебя пригласили в <b>Чайное Дерево</b>!\n\n"
+            "Открой магазин, подпишись на наш канал и получи <b>250 бонусных баллов</b> на первую покупку:"
+        )
+    else:
+        greeting = (
+            f"Привет, {name}! 👋\n\n"
+            "🌿 <b>Чайное Дерево</b> — магазин качественного чая.\n\n"
+            "Нажми кнопку ниже, чтобы открыть каталог и сделать заказ:"
+        )
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🌿 Открыть магазин", web_app={"url": app_url}),
+    ]])
+    await message.answer(greeting, reply_markup=keyboard, parse_mode="HTML")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

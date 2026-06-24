@@ -157,4 +157,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     App.cartCount = cart.items?.reduce((s, i) => s + i.quantity, 0) || 0;
     App.updateCartBadge();
   } catch (_) {}
+
+  // Реферальная ссылка: считываем ref из URL (?ref=REF_xxxx) и регистрируем донора.
+  const refParam = new URLSearchParams(location.search).get('ref')
+    || tg?.initDataUnsafe?.start_param;
+  if (refParam && refParam.startsWith('REF_')) {
+    api('/referral/register?ref_code=' + encodeURIComponent(refParam), { method: 'POST' })
+      .catch(() => {});
+  }
 });
