@@ -10,58 +10,106 @@ def _topnav(active: str = "") -> str:
     def _item_cls(key: str) -> str:
         return "ct-dropdown-item active" if active == key else "ct-dropdown-item"
 
+    ord_cls = 'ct-nav-link active' if active in ('orders-active', 'orders-history', 'order') else 'ct-nav-link'
     return f"""
 <div class="ct-topnav">
   <a class="ct-brand" href="/admin/dashboard">🍵 Чайное Дерево</a>
-  <div class="ct-nav-item">
-    <a class="{_cls('dashboard')}" href="/admin/dashboard"><i class="fa-solid fa-chart-line"></i>Дашборд</a>
-  </div>
-  <div class="ct-sep"></div>
-  <div class="ct-nav-item ct-dropdown">
-    <span class="{'ct-nav-link active' if active in ('orders-active','orders-history','order') else 'ct-nav-link'}">
-      <i class="fa-solid fa-box"></i>Заказы <span class="ct-dropdown-arrow">▾</span>
-    </span>
-    <div class="ct-dropdown-menu">
-      <a class="{_item_cls('orders-active')}" href="/crm/orders/active">Текущие заказы</a>
-      <a class="{_item_cls('orders-history')}" href="/crm/orders/history">История заказов</a>
+  <div class="ct-desktop-nav" style="display:flex;align-items:center;gap:4px;flex:1">
+    <div class="ct-nav-item">
+      <a class="{_cls('dashboard')}" href="/admin/dashboard"><i class="fa-solid fa-chart-line"></i>Дашборд</a>
+    </div>
+    <div class="ct-sep"></div>
+    <div class="ct-nav-item ct-dropdown">
+      <span class="{ord_cls}"><i class="fa-solid fa-box"></i>Заказы <span class="ct-dropdown-arrow">▾</span></span>
+      <div class="ct-dropdown-menu">
+        <a class="{_item_cls('orders-active')}" href="/crm/orders/active">Текущие заказы</a>
+        <a class="{_item_cls('orders-history')}" href="/crm/orders/history">История заказов</a>
+      </div>
+    </div>
+    <div class="ct-nav-item ct-dropdown">
+      <span class="ct-nav-link"><i class="fa-solid fa-users"></i>CRM <span class="ct-dropdown-arrow">▾</span></span>
+      <div class="ct-dropdown-menu">
+        <a class="ct-dropdown-item" href="/admin/user/list">Клиенты</a>
+      </div>
+    </div>
+    <div class="ct-nav-item ct-dropdown">
+      <span class="ct-nav-link"><i class="fa-solid fa-store"></i>Настройки <span class="ct-dropdown-arrow">▾</span></span>
+      <div class="ct-dropdown-menu">
+        <a class="ct-dropdown-item" href="/admin/product/list">Товары</a>
+        <a class="ct-dropdown-item" href="/admin/category/list">Категории</a>
+        <a class="ct-dropdown-item" href="/admin/banner/list">Баннеры</a>
+        <a class="{_item_cls('about')}" href="/crm/about">О нас</a>
+        <a class="ct-dropdown-item" href="/admin/pickup-point/list">Самовывоз</a>
+        <a class="ct-dropdown-item" href="/admin/notification-target/list">Уведомления</a>
+        <a class="{_item_cls('bonus')}" href="/admin/bonus-settings">🎁 Бонусная система</a>
+      </div>
+    </div>
+    <div class="ct-nav-item ct-dropdown">
+      <span class="ct-nav-link"><i class="fa-solid fa-gear"></i>Система <span class="ct-dropdown-arrow">▾</span></span>
+      <div class="ct-dropdown-menu">
+        <a class="ct-dropdown-item" href="/admin/admin-user/list">Администраторы</a>
+        <a class="ct-dropdown-item" href="/admin/yml-import/list">YML-импорты</a>
+        <a class="ct-dropdown-item" href="/admin/payment-event/list">Платежи</a>
+      </div>
+    </div>
+    <div class="ct-logout">
+      <span id="dash-user" style="font-size:13px;color:#6c757d;display:flex;align-items:center;gap:6px"></span>
+      <a href="/admin/logout" title="Выйти"><i class="fa-solid fa-right-from-bracket me-1"></i>Выйти</a>
     </div>
   </div>
-  <div class="ct-nav-item ct-dropdown">
-    <span class="ct-nav-link"><i class="fa-solid fa-users"></i>CRM <span class="ct-dropdown-arrow">▾</span></span>
-    <div class="ct-dropdown-menu">
-      <a class="ct-dropdown-item" href="/admin/user/list">Клиенты</a>
-    </div>
-  </div>
-  <div class="ct-nav-item ct-dropdown">
-    <span class="ct-nav-link"><i class="fa-solid fa-store"></i>Настройки <span class="ct-dropdown-arrow">▾</span></span>
-    <div class="ct-dropdown-menu">
-      <a class="ct-dropdown-item" href="/admin/product/list">Товары</a>
-      <a class="ct-dropdown-item" href="/admin/category/list">Категории</a>
-      <a class="ct-dropdown-item" href="/admin/banner/list">Баннеры</a>
-      <a class="{_item_cls('about')}" href="/crm/about">О нас</a>
-      <a class="ct-dropdown-item" href="/admin/pickup-point/list">Самовывоз</a>
-      <a class="ct-dropdown-item" href="/admin/notification-target/list">Уведомления</a>
-      <a class="{_item_cls('bonus')}" href="/admin/bonus-settings">🎁 Бонусная система</a>
-    </div>
-  </div>
-  <div class="ct-nav-item ct-dropdown">
-    <span class="ct-nav-link"><i class="fa-solid fa-gear"></i>Система <span class="ct-dropdown-arrow">▾</span></span>
-    <div class="ct-dropdown-menu">
-      <a class="ct-dropdown-item" href="/admin/admin-user/list">Администраторы</a>
-      <a class="ct-dropdown-item" href="/admin/yml-import/list">YML-импорты</a>
-      <a class="ct-dropdown-item" href="/admin/payment-event/list">Платежи</a>
-    </div>
-  </div>
-  <div class="ct-logout">
-    <span id="dash-user" style="font-size:13px;color:#6c757d;display:flex;align-items:center;gap:6px"></span>
-    <a href="/admin/logout" title="Выйти"><i class="fa-solid fa-right-from-bracket me-1"></i>Выйти</a>
-  </div>
+  <button class="ct-burger" id="ct-burger" onclick="ctToggleMobileMenu()" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
 </div>
+
+<div class="ct-mobile-menu" id="ct-mobile-menu">
+  <a class="ct-mobile-link{' active' if active == 'dashboard' else ''}" href="/admin/dashboard"><i class="fa-solid fa-chart-line"></i>Дашборд</a>
+  <div class="ct-mobile-divider"></div>
+  <div class="ct-mobile-section">Заказы</div>
+  <a class="ct-mobile-link{' active' if active == 'orders-active' else ''}" href="/crm/orders/active"><i class="fa-solid fa-hourglass-half"></i>Текущие заказы</a>
+  <a class="ct-mobile-link{' active' if active == 'orders-history' else ''}" href="/crm/orders/history"><i class="fa-solid fa-clock-rotate-left"></i>История заказов</a>
+  <div class="ct-mobile-divider"></div>
+  <div class="ct-mobile-section">CRM</div>
+  <a class="ct-mobile-link" href="/admin/user/list"><i class="fa-solid fa-users"></i>Клиенты</a>
+  <div class="ct-mobile-divider"></div>
+  <div class="ct-mobile-section">Настройки</div>
+  <a class="ct-mobile-link" href="/admin/product/list"><i class="fa-solid fa-box-open"></i>Товары</a>
+  <a class="ct-mobile-link" href="/admin/category/list"><i class="fa-solid fa-tags"></i>Категории</a>
+  <a class="ct-mobile-link" href="/admin/banner/list"><i class="fa-solid fa-image"></i>Баннеры</a>
+  <a class="ct-mobile-link{' active' if active == 'about' else ''}" href="/crm/about"><i class="fa-solid fa-circle-info"></i>О нас</a>
+  <a class="ct-mobile-link" href="/admin/pickup-point/list"><i class="fa-solid fa-location-dot"></i>Самовывоз</a>
+  <a class="ct-mobile-link" href="/admin/notification-target/list"><i class="fa-solid fa-bell"></i>Уведомления</a>
+  <a class="ct-mobile-link{' active' if active == 'bonus' else ''}" href="/admin/bonus-settings"><i class="fa-solid fa-gift"></i>Бонусная система</a>
+  <div class="ct-mobile-divider"></div>
+  <div class="ct-mobile-section">Система</div>
+  <a class="ct-mobile-link" href="/admin/admin-user/list"><i class="fa-solid fa-shield-halved"></i>Администраторы</a>
+  <a class="ct-mobile-link" href="/admin/yml-import/list"><i class="fa-solid fa-file-import"></i>YML-импорты</a>
+  <a class="ct-mobile-link" href="/admin/payment-event/list"><i class="fa-solid fa-credit-card"></i>Платежи</a>
+  <div class="ct-mobile-divider"></div>
+  <a class="ct-mobile-logout" href="/admin/logout"><i class="fa-solid fa-right-from-bracket"></i>Выйти</a>
+</div>
+
 <script>
 fetch('/admin-api/me',{{credentials:'include'}}).then(function(r){{return r.ok?r.json():null;}}).then(function(d){{
   if(!d) return;
   var el=document.getElementById('dash-user');
   if(el) el.innerHTML='<i class="fa-solid fa-circle-user" style="color:#1a6b3c"></i>'+d.username;
+}});
+function ctToggleMobileMenu(){{
+  var menu=document.getElementById('ct-mobile-menu');
+  var burger=document.getElementById('ct-burger');
+  var open=menu.classList.toggle('open');
+  burger.classList.toggle('open',open);
+  document.body.style.overflow=open?'hidden':'';
+}}
+document.addEventListener('DOMContentLoaded',function(){{
+  document.querySelectorAll('.ct-mobile-link,.ct-mobile-logout').forEach(function(a){{
+    a.addEventListener('click',function(){{
+      document.getElementById('ct-mobile-menu').classList.remove('open');
+      document.getElementById('ct-burger').classList.remove('open');
+      document.body.style.overflow='';
+    }});
+  }});
 }});
 </script>"""
 
@@ -125,14 +173,37 @@ body { background:#f4f6fb; min-height:100vh; }
 .ct-dropdown-item:hover,.ct-dropdown-item.active { background:#f0f4ff; color:#3d5afe; text-decoration:none; }
 .ct-dropdown-arrow { font-size:10px; opacity:.5; margin-left:2px; }
 
+/* Бургер */
+.ct-burger { display:none; margin-left:auto; background:none; border:none; cursor:pointer;
+  padding:8px; flex-direction:column; gap:5px; border-radius:8px; transition:background .15s; }
+.ct-burger:hover { background:#f0f4ff; }
+.ct-burger span { display:block; width:22px; height:2px; background:#495057; border-radius:2px; transition:all .25s; }
+.ct-burger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.ct-burger.open span:nth-child(2) { opacity:0; }
+.ct-burger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+/* Мобильное меню */
+.ct-mobile-menu { display:none; position:fixed; top:56px; left:0; right:0; bottom:0;
+  background:#fff; z-index:999; overflow-y:auto; padding:8px 0 24px;
+  border-top:1px solid #e9ecef; box-shadow:0 8px 24px rgba(0,0,0,.1); }
+.ct-mobile-menu.open { display:block; }
+.ct-mobile-link { display:flex; align-items:center; gap:12px; padding:14px 20px;
+  font-size:15px; font-weight:500; color:#212529; text-decoration:none;
+  border-bottom:1px solid #f5f6fa; transition:background .1s; }
+.ct-mobile-link:hover,.ct-mobile-link.active { background:#f0f4ff; color:#3d5afe; text-decoration:none; }
+.ct-mobile-link i { width:20px; text-align:center; color:#1a6b3c; font-size:15px; }
+.ct-mobile-link.active i { color:#3d5afe; }
+.ct-mobile-section { padding:16px 20px 6px; font-size:10px; font-weight:700;
+  color:#8c9aad; text-transform:uppercase; letter-spacing:.6px; }
+.ct-mobile-divider { height:1px; background:#f0f2f5; margin:8px 0; }
+.ct-mobile-logout { display:flex; align-items:center; gap:12px; padding:14px 20px;
+  font-size:15px; color:#dc3545; text-decoration:none; font-weight:500; }
+.ct-mobile-logout i { width:20px; text-align:center; }
 @media (max-width: 768px) {
-  .ct-topnav { padding:0 12px; gap:0; }
-  .ct-brand { font-size:14px; margin-right:8px; flex-shrink:0; }
-  .ct-nav-link { padding:0 8px; font-size:12px; height:48px; }
-  .ct-nav-link i { display:none; }
-  .ct-sep { display:none; }
-  .ct-logout a { font-size:11px; padding:4px 8px; }
-  .ct-dropdown-menu { min-width:160px; }
+  .ct-topnav { padding:0 16px; height:56px; }
+  .ct-desktop-nav { display:none !important; }
+  .ct-sep { display:none !important; }
+  .ct-logout { display:none !important; }
+  .ct-burger { display:flex !important; }
   .container-fluid { padding-left:12px !important; padding-right:12px !important; }
   .stat-value { font-size:1.4rem !important; }
   .table th, .table td { font-size:11px !important; padding:6px 8px !important; }
