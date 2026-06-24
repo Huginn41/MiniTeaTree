@@ -45,7 +45,15 @@ async def _check_channel_subscription(telegram_id: int) -> bool:
         return False
 
     try:
-        bot = Bot(token=token)
+        from aiogram.client.session.aiohttp import AiohttpSession
+        from aiogram.client.telegram import TelegramAPIServer
+
+        session_kwargs = {}
+        if settings.telegram_api_base_url:
+            api_server = TelegramAPIServer.from_base(settings.telegram_api_base_url)
+            session_kwargs["session"] = AiohttpSession(api=api_server)
+
+        bot = Bot(token=token, **session_kwargs)
         member = await bot.get_chat_member(chat_id=channel_id, user_id=telegram_id)
         await bot.session.close()
         return member.status not in ("left", "kicked", "banned")
