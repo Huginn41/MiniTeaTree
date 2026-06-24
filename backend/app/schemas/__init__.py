@@ -281,8 +281,8 @@ class ReferralInfo(BaseModel):
     referral_link: str | None = None
     slots_total: int = 0
     slots_used: int = 0
-    # Кол-во реципиентов, которых пользователь привёл
     recipients_count: int = 0
+    has_purchased: bool = False
 
 
 class ReferralClaimResult(BaseModel):

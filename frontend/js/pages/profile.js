@@ -37,6 +37,7 @@ App.renderProfile = async function(c) {
     if (ref) {
       html += App.renderOnboardingBlock(ref);
       html += App.renderReferralSection(ref);
+      html += App.renderBonusChecklist(ref);
     }
 
     try {

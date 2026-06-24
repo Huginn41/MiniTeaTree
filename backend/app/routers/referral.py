@@ -75,11 +75,18 @@ async def get_referral_info(
     if u.referral_code:
         referral_link = _make_referral_link(u.referral_code, settings)
 
-    # Считаем кол-во реципиентов
+    from app.models.order import Order as _Order
+
+    # Считаем реципиентов и проверяем наличие хотя бы одного заказа
     count_r = await session.execute(
         select(func.count()).select_from(ReferralLink).where(ReferralLink.donor_id == u.id)
     )
     recipients_count = count_r.scalar() or 0
+
+    orders_r = await session.execute(
+        select(func.count()).select_from(_Order).where(_Order.user_id == u.id)
+    )
+    has_purchased = (orders_r.scalar() or 0) > 0
 
     return ReferralInfo(
         is_channel_member=u.is_channel_member,
@@ -88,6 +95,7 @@ async def get_referral_info(
         slots_total=u.referral_slots,
         slots_used=u.referral_slots_used,
         recipients_count=recipients_count,
+        has_purchased=has_purchased,
     )
 
 

@@ -6,7 +6,7 @@ App.renderOnboardingBlock = function(ref) {
   return `
     <div class="md-card" id="onboarding-block" style="padding:20px;margin-bottom:16px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac">
       <div style="font-size:16px;font-weight:700;color:#166534;margin-bottom:4px">🎁 Добро пожаловать!</div>
-      <div style="font-size:13px;color:#166534;margin-bottom:16px">Выполни шаги и получи <b>250 бонусных баллов</b></div>
+      <div style="font-size:13px;color:#166534;margin-bottom:16px">Выполни шаги и стань участником бонусной программы</div>
 
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
         <div style="display:flex;align-items:center;gap:10px">
@@ -35,7 +35,7 @@ App.renderOnboardingBlock = function(ref) {
     </div>`;
 };
 
-// Реферальная секция для участников (подписаны на канал).
+// Карточка с реферальной ссылкой (для участников).
 App.renderReferralSection = function(ref) {
   if (!ref || !ref.is_channel_member || !ref.referral_code) return '';
 
@@ -43,29 +43,32 @@ App.renderReferralSection = function(ref) {
   const slotsTotal = ref.slots_total || 2;
   const slotsUsed = ref.slots_used || 0;
 
-  const slotsHtml = Array.from({ length: slotsTotal }, (_, i) => {
-    const used = i < slotsUsed;
-    return `
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--md-surface-container);border-radius:10px">
-        <span style="font-size:16px">${used ? '✅' : '🎁'}</span>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--md-on-surface)">Подарок 250 баллов для друга</div>
-          <div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${used ? 'Использован' : 'Доступен — другу начислится при первой покупке'}</div>
-        </div>
-        <div style="font-size:12px;font-weight:700;color:${used ? '#6b7280' : 'var(--md-primary)'}">
-          ${i + 1}/${slotsTotal}
-        </div>
-      </div>`;
-  }).join('');
+  // Слоты и описание показываем только если есть хотя бы одна покупка
+  const slotsBlock = ref.has_purchased ? `
+    <div style="font-size:13px;color:var(--md-on-surface-variant);margin:12px 0 10px">
+      Первые <b>${slotsTotal} человека</b> по ссылке получат <b>250 бонусных баллов</b> при первой покупке
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${Array.from({ length: slotsTotal }, (_, i) => {
+        const used = i < slotsUsed;
+        return `
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--md-surface-container);border-radius:10px">
+            <span style="font-size:16px">${used ? '✅' : '🎁'}</span>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--md-on-surface)">Подарок для друга</div>
+              <div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${used ? 'Использован' : 'Доступен'}</div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:${used ? '#9ca3af' : 'var(--md-primary)'}">
+              ${i + 1}/${slotsTotal}
+            </div>
+          </div>`;
+      }).join('')}
+    </div>` : '';
 
   return `
     <div class="md-card" style="padding:20px;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px">🔗 Пригласи друзей</div>
-      <div style="font-size:13px;color:var(--md-on-surface-variant);margin-bottom:14px">
-        Друг получит <b>250 баллов</b> при первой покупке · ты получаешь <b>5% с первых 3 покупок</b>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">🔗 Реферальная ссылка</div>
+      <div style="display:flex;gap:8px;align-items:center">
         <div style="flex:1;background:var(--md-surface-container);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;color:var(--md-on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
           ${esc(link)}
         </div>
@@ -75,9 +78,32 @@ App.renderReferralSection = function(ref) {
           Скопировать
         </button>
       </div>
+      ${slotsBlock}
+    </div>`;
+};
 
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${slotsHtml}
+// Бонусный чеклист (под карточкой с ссылкой).
+App.renderBonusChecklist = function(ref) {
+  if (!ref || !ref.is_channel_member || !ref.referral_code) return '';
+
+  const done = ref.has_purchased;
+  return `
+    <div class="md-card" style="padding:20px;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">📋 Бонусный чеклист</div>
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="width:22px;height:22px;border-radius:6px;flex-shrink:0;margin-top:1px;
+             background:${done ? '#22c55e' : 'var(--md-surface-container)'};
+             border:${done ? 'none' : '2px solid #d1d5db'};
+             display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">
+          ${done ? '✓' : ''}
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:${done ? 'var(--md-on-surface)' : '#374151'};
+               text-decoration:${done ? 'none' : 'none'}">
+            Соверши покупку и подари 250 баллов друзьям, которые ещё не с нами
+          </div>
+          ${done ? `<div style="font-size:12px;color:#22c55e;margin-top:3px;font-weight:600">Выполнено ✓</div>` : `<div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:3px">После покупки откроется возможность дарить подарки</div>`}
+        </div>
       </div>
     </div>`;
 };
@@ -107,10 +133,7 @@ App.claimReferralBonus = async function() {
   try {
     const res = await api('/referral/claim', { method: 'POST' });
     if (res.success) {
-      if (res.bonus_awarded > 0) {
-        showToast(`+${res.bonus_awarded} баллов зачислено!`);
-        tg?.HapticFeedback?.notificationOccurred('success');
-      }
+      tg?.HapticFeedback?.notificationOccurred('success');
       App.navigate('profile');
     } else {
       btn.disabled = false;
