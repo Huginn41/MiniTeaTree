@@ -39,40 +39,21 @@ App.renderOnboardingBlock = function(ref) {
 App.renderReferralSection = function(ref) {
   if (!ref || !ref.is_channel_member || !ref.referral_code) return '';
 
-  const hasPurchase = ref.slots_total > 0;
   const link = ref.referral_link || '';
+  const slotsTotal = ref.slots_total || 2;
+  const slotsUsed = ref.slots_used || 0;
 
-  if (!hasPurchase) {
-    // Нет покупок — показываем чеклист вместо ссылки
-    return `
-      <div class="md-card" style="padding:20px;margin-bottom:16px">
-        <div style="font-size:15px;font-weight:700;margin-bottom:4px">🔗 Реферальная программа</div>
-        <div style="font-size:13px;color:var(--md-on-surface-variant);margin-bottom:14px">
-          Приглашай друзей и получай бонусы с их покупок
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--md-surface-container);border-radius:12px">
-          <span style="font-size:18px;flex-shrink:0">🎁</span>
-          <div style="font-size:13px;color:var(--md-on-surface-variant);line-height:1.5">
-            После первой покупки вам будет доступно <b>2 подарка для друзей</b> —
-            каждый получит 250 баллов при вступлении по вашей ссылке
-          </div>
-        </div>
-      </div>`;
-  }
-
-  // Есть покупки — показываем ссылку и счётчик слотов
-  const slotsLeft = ref.slots_total - ref.slots_used;
-  const slotsHtml = Array.from({ length: ref.slots_total }, (_, i) => {
-    const used = i < ref.slots_used;
+  const slotsHtml = Array.from({ length: slotsTotal }, (_, i) => {
+    const used = i < slotsUsed;
     return `
       <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--md-surface-container);border-radius:10px">
         <span style="font-size:16px">${used ? '✅' : '🎁'}</span>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--md-on-surface)">Подарок 250 баллов для друга</div>
-          <div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${used ? 'Использован' : 'Доступен'}</div>
+          <div style="font-size:12px;color:var(--md-on-surface-variant);margin-top:2px">${used ? 'Использован' : 'Доступен — другу начислится при первой покупке'}</div>
         </div>
         <div style="font-size:12px;font-weight:700;color:${used ? '#6b7280' : 'var(--md-primary)'}">
-          ${i + 1}/${ref.slots_total}
+          ${i + 1}/${slotsTotal}
         </div>
       </div>`;
   }).join('');
@@ -81,7 +62,7 @@ App.renderReferralSection = function(ref) {
     <div class="md-card" style="padding:20px;margin-bottom:16px">
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">🔗 Пригласи друзей</div>
       <div style="font-size:13px;color:var(--md-on-surface-variant);margin-bottom:14px">
-        Ты получаешь <b>5% с первых 3 покупок</b> каждого друга
+        Друг получит <b>250 баллов</b> при первой покупке · ты получаешь <b>5% с первых 3 покупок</b>
       </div>
 
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
