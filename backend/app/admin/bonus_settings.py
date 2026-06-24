@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 def render_bonus_settings(tiers: list, max_pct: int, no_cashback_on_redemption: bool = False, admin_username: str = "") -> str:
-    from app.admin.dashboard import _topnav
+    from app.admin.dashboard import _topnav, _BASE_CSS
 
     nav = _topnav("settings")
 
@@ -22,6 +22,7 @@ def render_bonus_settings(tiers: list, max_pct: int, no_cashback_on_redemption: 
 <title>Бонусная система — настройки</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<style>{_BASE_CSS}</style>
 <style>
 :root {{ --c-primary:#1a6b3c; --c-primary-light:#e8f5ee; --c-bg:#f0f2f7; --c-card:#fff; --c-border:#e5e7eb; }}
 body {{ background:var(--c-bg); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }}

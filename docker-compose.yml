@@ -53,8 +53,6 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:-}
       TELEGRAM_CHANNEL_ID: ${TELEGRAM_CHANNEL_ID:-}
-      TBANK_TERMINAL_KEY: ${TBANK_TERMINAL_KEY:-}
-      TBANK_SECRET_KEY: ${TBANK_SECRET_KEY:-}
     volumes:
       # Загруженные фото и статика Mini App
       - media_data:/app/static/media

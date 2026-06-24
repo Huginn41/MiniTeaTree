@@ -182,7 +182,7 @@ body {
 
 
 def render_crm_customer(user, admin_username: str = "") -> str:
-    from app.admin.dashboard import _topnav
+    from app.admin.dashboard import _topnav, _BASE_CSS
 
     parts = [user.first_name or "", user.last_name or ""]
     words = [p for p in parts if p]
@@ -307,6 +307,7 @@ def render_crm_customer(user, admin_username: str = "") -> str:
 <title>{_esc(user.display_name)} — CRM</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<style>{_BASE_CSS}</style>
 {_CSS}
 </head>
 <body>

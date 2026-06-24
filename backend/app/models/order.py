@@ -60,10 +60,8 @@ class Order(TimestampMixin, Base):
     )
 
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")
-    # Ссылка на оплату (генерируется T Bank или задаётся вручную).
+    # Ссылка на оплату (задаётся вручную менеджером).
     payment_link: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    # ID платежа в T Bank (для отмены/возврата).
-    tbank_payment_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Трек-номер или ссылка для отслеживания доставки.
     tracking_link: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
