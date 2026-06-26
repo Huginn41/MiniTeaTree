@@ -183,7 +183,9 @@ async def _get_dashboard_data(period_days: int, demo: bool = False) -> dict:
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     def _demo(stmt):
-        return stmt.where(Order.number.like("DEMO-%")) if demo else stmt
+        if demo:
+            return stmt.where(Order.number.like("DEMO-%"))
+        return stmt.where(~Order.number.like("DEMO-%"))
 
     async with get_session_factory()() as s:
         pr = await s.execute(_demo(
@@ -205,7 +207,7 @@ async def _get_dashboard_data(period_days: int, demo: bool = False) -> dict:
         top_r = await s.execute(
             select(User.first_name, User.last_name, User.username, func.count(Order.id).label("order_count"), func.coalesce(func.sum(Order.total_amount), 0).label("total_spent"))
             .join(Order, Order.user_id == User.id)
-            .where(Order.status == "delivered", *([] if not demo else [Order.number.like("DEMO-%")]))
+            .where(Order.status == "delivered", Order.number.like("DEMO-%") if demo else ~Order.number.like("DEMO-%"))
             .group_by(User.id, User.first_name, User.last_name, User.username)
             .order_by(func.sum(Order.total_amount).desc()).limit(10)
         )
