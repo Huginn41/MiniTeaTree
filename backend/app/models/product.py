@@ -48,6 +48,10 @@ class Product(TimestampMixin, Base):
     )
     # Единица измерения для штучных товаров (шт / блин / упак).
     unit_label: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Демо-товар: виден только demo-пользователю, скрыт от admin и фронтенда.
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False, default=False
+    )
 
     category = relationship("Category", back_populates="products", lazy="selectin")
     variants = relationship(

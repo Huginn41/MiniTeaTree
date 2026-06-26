@@ -33,6 +33,9 @@ class Category(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, server_default=text("true"), nullable=False, default=True
     )
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False, default=False
+    )
 
     products = relationship("Product", back_populates="category", lazy="selectin")
 

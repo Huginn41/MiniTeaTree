@@ -28,6 +28,9 @@ class Banner(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, server_default=text("true"), nullable=False, default=True
     )
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False, default=False
+    )
 
     def __repr__(self) -> str:
         return f"<Banner id={self.id} title={self.title!r}>"

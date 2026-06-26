@@ -298,6 +298,15 @@ class PickupPointAdmin(ModelView, model=PickupPoint):
     name_plural = "Пункты самовывоза"
     category = "Настройки магазина"
 
+    def list_query(self, request):
+        from sqlalchemy import select
+        stmt = select(PickupPoint)
+        if request.session.get("admin_username") == "demo":
+            stmt = stmt.where(PickupPoint.is_demo.is_(True))
+        else:
+            stmt = stmt.where(PickupPoint.is_demo.is_(False))
+        return stmt
+
     column_list = ["name", "city", "street", "building", "work_hours", "is_active"]
     column_labels = {
         "name": "Название",
@@ -326,6 +335,15 @@ class CategoryAdmin(ModelView, model=Category):
     name_plural = "Категории"
     category = "Настройки магазина"
 
+    def list_query(self, request):
+        from sqlalchemy import select
+        stmt = select(Category)
+        if request.session.get("admin_username") == "demo":
+            stmt = stmt.where(Category.is_demo.is_(True))
+        else:
+            stmt = stmt.where(Category.is_demo.is_(False))
+        return stmt
+
     column_list = ["sort_order", "name", "slug", "image_path", "created_at"]
     column_searchable_list = ["name", "slug"]
     column_sortable_list = ["sort_order", "name"]
@@ -353,6 +371,15 @@ class ProductAdmin(ModelView, model=Product):
     icon = "fa-solid fa-leaf"
     category = "Настройки магазина"
     category_icon = "fa-solid fa-store"
+
+    def list_query(self, request):
+        from sqlalchemy import select
+        stmt = select(Product)
+        if request.session.get("admin_username") == "demo":
+            stmt = stmt.where(Product.is_demo.is_(True))
+        else:
+            stmt = stmt.where(Product.is_demo.is_(False))
+        return stmt
 
     column_list = ["sort_order", "name", "category", "base_price", "slug"]
     column_searchable_list = ["name", "slug"]
@@ -452,6 +479,15 @@ class BannerAdmin(ModelView, model=Banner):
     name = "↳ Баннеры"
     name_plural = "Баннеры"
     category = "Настройки магазина"
+
+    def list_query(self, request):
+        from sqlalchemy import select
+        stmt = select(Banner)
+        if request.session.get("admin_username") == "demo":
+            stmt = stmt.where(Banner.is_demo.is_(True))
+        else:
+            stmt = stmt.where(Banner.is_demo.is_(False))
+        return stmt
 
     column_list = ["sort", "image_path", "title", "is_active", "link"]
     column_sortable_list = ["sort"]

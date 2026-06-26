@@ -36,13 +36,13 @@ _rng = random.Random(42)
 # ---------------------------------------------------------------------------
 
 _CATEGORIES = [
-    {"name": "Зелёный чай",   "slug": "green",     "icon": "🍃", "sort_order": 1},
-    {"name": "Чёрный чай",    "slug": "black",      "icon": "🫖", "sort_order": 2},
-    {"name": "Улун",          "slug": "oolong",     "icon": "🍵", "sort_order": 3},
-    {"name": "Пуэр",          "slug": "puerh",      "icon": "🏔",  "sort_order": 4},
-    {"name": "Белый чай",     "slug": "white",      "icon": "🤍", "sort_order": 5},
-    {"name": "Травяные сборы","slug": "herbal",     "icon": "🌿", "sort_order": 6},
-    {"name": "Чайные наборы", "slug": "gift-sets",  "icon": "🎁", "sort_order": 7},
+    {"name": "Зелёный чай",   "slug": "demo-green",     "icon": "🍃", "sort_order": 1},
+    {"name": "Чёрный чай",    "slug": "demo-black",      "icon": "🫖", "sort_order": 2},
+    {"name": "Улун",          "slug": "demo-oolong",     "icon": "🍵", "sort_order": 3},
+    {"name": "Пуэр",          "slug": "demo-puerh",      "icon": "🏔",  "sort_order": 4},
+    {"name": "Белый чай",     "slug": "demo-white",      "icon": "🤍", "sort_order": 5},
+    {"name": "Травяные сборы","slug": "demo-herbal",     "icon": "🌿", "sort_order": 6},
+    {"name": "Чайные наборы", "slug": "demo-gift-sets",  "icon": "🎁", "sort_order": 7},
 ]
 
 # is_unit=False — весовой (варианты 25/50/75/100 г)
@@ -51,8 +51,8 @@ _PRODUCTS = [
     # ── Зелёный ──────────────────────────────────────────────────────
     {
         "name": "Сенча premiers cru",
-        "slug": "sencha-premier",
-        "category_slug": "green",
+        "slug": "demo-sencha-premier",
+        "category_slug": "demo-green",
         "description": "Японский зелёный чай высшего сорта. Свежий травянистый вкус с нотами умами. "
                        "Обладает мощным антиоксидантным действием. Сбор апрель 2026.",
         "origin": "Япония, префектура Сидзуока",
@@ -63,8 +63,8 @@ _PRODUCTS = [
     },
     {
         "name": "Лунцзин «Колодец Дракона»",
-        "slug": "longjing-dragon-well",
-        "category_slug": "green",
+        "slug": "demo-longjing-dragon-well",
+        "category_slug": "demo-green",
         "description": "Один из Десяти Великих Чаёв Китая. Жареный каштановый аромат, нежное сладкое "
                        "послевкусие. Плоские листья характерной формы.",
         "origin": "Китай, провинция Чжэцзян",
@@ -75,8 +75,8 @@ _PRODUCTS = [
     },
     {
         "name": "Жасминовый жемчуг",
-        "slug": "jasmine-pearl",
-        "category_slug": "green",
+        "slug": "demo-jasmine-pearl",
+        "category_slug": "demo-green",
         "description": "Зелёный чай, скрученный в жемчужины и ароматизированный свежим жасмином. "
                        "Нежный цветочный аромат, мягкий сладковатый вкус.",
         "origin": "Китай, провинция Фуцзянь",
@@ -88,8 +88,8 @@ _PRODUCTS = [
     # ── Чёрный ───────────────────────────────────────────────────────
     {
         "name": "Ассам TGFOP",
-        "slug": "assam-tgfop",
-        "category_slug": "black",
+        "slug": "demo-assam-tgfop",
+        "category_slug": "demo-black",
         "description": "Классический индийский чёрный чай. Насыщенный солодовый вкус с лёгкой "
                        "терпкостью. Отличная основа для масала-чая.",
         "origin": "Индия, Ассам",
@@ -100,8 +100,8 @@ _PRODUCTS = [
     },
     {
         "name": "Дарджилинг FTGFOP1",
-        "slug": "darjeeling-first-flush",
-        "category_slug": "black",
+        "slug": "demo-darjeeling-first-flush",
+        "category_slug": "demo-black",
         "description": "«Шампанское среди чаёв». Лёгкий цветочно-фруктовый аромат, первый урожай. "
                        "Ограниченная партия 2026 года.",
         "origin": "Индия, Дарджилинг",
@@ -112,8 +112,8 @@ _PRODUCTS = [
     },
     {
         "name": "Лапсанг Сушонг «Дымный»",
-        "slug": "lapsang-souchong",
-        "category_slug": "black",
+        "slug": "demo-lapsang-souchong",
+        "category_slug": "demo-black",
         "description": "Китайский копчёный чай из провинции Фуцзянь. Листья подсушиваются над "
                        "огнём сосновых дров. Насыщенный дымный аромат — на любителя.",
         "origin": "Китай, провинция Фуцзянь",
@@ -125,8 +125,8 @@ _PRODUCTS = [
     # ── Улун ─────────────────────────────────────────────────────────
     {
         "name": "Те Гуань Инь «Железная Богиня»",
-        "slug": "tie-guan-yin",
-        "category_slug": "oolong",
+        "slug": "demo-tie-guan-yin",
+        "category_slug": "demo-oolong",
         "description": "Тёмный улун с насыщенным орхидейным ароматом. Многослойный вкус: "
                        "от цветочного до сливочно-орехового. Один из самых известных улунов.",
         "origin": "Китай, провинция Фуцзянь",
@@ -137,8 +137,8 @@ _PRODUCTS = [
     },
     {
         "name": "Дун Дин «Пик Зимы»",
-        "slug": "dong-ding",
-        "category_slug": "oolong",
+        "slug": "demo-dong-ding",
+        "category_slug": "demo-oolong",
         "description": "Светлый тайваньский улун. Нежный сливочно-цветочный аромат, маслянистая "
                        "текстура, долгое сладкое послевкусие.",
         "origin": "Тайвань, уезд Наньтоу",
@@ -150,8 +150,8 @@ _PRODUCTS = [
     # ── Пуэр ─────────────────────────────────────────────────────────
     {
         "name": "Пуэр Шу «Чайный Шедевр»",
-        "slug": "puerh-shu-shedevr",
-        "category_slug": "puerh",
+        "slug": "demo-puerh-shu-shedevr",
+        "category_slug": "demo-puerh",
         "description": "Постферментированный тёмный чай. Глубокий землистый вкус с нотками "
                        "шоколада и сухофруктов. Улучшает пищеварение.",
         "origin": "Китай, провинция Юньнань",
@@ -162,8 +162,8 @@ _PRODUCTS = [
     },
     {
         "name": "Пуэр Шэн (сырой) 2018",
-        "slug": "puerh-sheng-2018",
-        "category_slug": "puerh",
+        "slug": "demo-puerh-sheng-2018",
+        "category_slug": "demo-puerh",
         "description": "Выдержанный сырой пуэр. Свежий, с лёгкой терпкостью и цитрусовыми "
                        "нотами. С годами становится мягче и глубже.",
         "origin": "Китай, провинция Юньнань, гора Айлао",
@@ -174,8 +174,8 @@ _PRODUCTS = [
     },
     {
         "name": "Блин пуэра 2015",
-        "slug": "puerh-cake-2015",
-        "category_slug": "puerh",
+        "slug": "demo-puerh-cake-2015",
+        "category_slug": "demo-puerh",
         "description": "Прессованный сырой пуэр в форме классического блина 357 г. "
                        "Выдержан 9 лет — мягкий, с нотами сухофруктов и осенних листьев. "
                        "Коллекционный экземпляр.",
@@ -190,8 +190,8 @@ _PRODUCTS = [
     # ── Белый ────────────────────────────────────────────────────────
     {
         "name": "Бай Хао Инь Чжэнь «Серебряные Иголки»",
-        "slug": "bai-hao-yinzhen",
-        "category_slug": "white",
+        "slug": "demo-bai-hao-yinzhen",
+        "category_slug": "demo-white",
         "description": "Белый чай из нежнейших чайных почек. Деликатный цветочный аромат, "
                        "сладковатый медовый вкус. Минимум обработки.",
         "origin": "Китай, провинция Фуцзянь",
@@ -203,8 +203,8 @@ _PRODUCTS = [
     # ── Травяные ─────────────────────────────────────────────────────
     {
         "name": "Иван-чай ферментированный",
-        "slug": "ivan-chai-fermented",
-        "category_slug": "herbal",
+        "slug": "demo-ivan-chai-fermented",
+        "category_slug": "demo-herbal",
         "description": "Русский травяной чай из ферментированных листьев иван-чая. "
                        "Мягкий, слегка сладковатый, с карамельным ароматом. Без кофеина.",
         "origin": "Россия, Алтай",
@@ -215,8 +215,8 @@ _PRODUCTS = [
     },
     {
         "name": "Ромашка «Уютный вечер»",
-        "slug": "chamomile-cozy",
-        "category_slug": "herbal",
+        "slug": "demo-chamomile-cozy",
+        "category_slug": "demo-herbal",
         "description": "Цветки ромашки аптечной премиум-качества. Успокаивающий аромат, "
                        "мягкий вкус с медовыми нотками. Идеален перед сном.",
         "origin": "Россия, Краснодарский край",
@@ -228,8 +228,8 @@ _PRODUCTS = [
     # ── Наборы ───────────────────────────────────────────────────────
     {
         "name": "Подарочный набор «Чайная церемония»",
-        "slug": "gift-set-ceremony",
-        "category_slug": "gift-sets",
+        "slug": "demo-gift-set-ceremony",
+        "category_slug": "demo-gift-sets",
         "description": "5 сортов элитного чая по 25 г + чайник из красной глины 150 мл. "
                        "Красивая подарочная коробка. Идеально для ценителей чая.",
         "origin": "Ассорти",
@@ -423,7 +423,7 @@ async def _seed_categories(factory) -> dict[str, int]:
             if cat is not None:
                 slug_to_id[cat.slug] = cat.id
                 continue
-            cat = Category(**{k: v for k, v in cat_data.items()})
+            cat = Category(**{k: v for k, v in cat_data.items()}, is_demo=True)
             session.add(cat)
             await session.commit()
             await session.refresh(cat)
@@ -457,6 +457,7 @@ async def _seed_products(slug_to_id: dict[str, int], factory) -> list[tuple]:
                 category_id=cat_id,
                 is_unit=is_unit,
                 unit_label=prod_data.get("unit_label"),
+                is_demo=True,
             )
             session.add(product)
             await session.commit()
@@ -493,7 +494,7 @@ async def _seed_banners(factory) -> None:
             res = await session.execute(select(Banner).where(Banner.image_path == b["image_path"]))
             if res.scalar_one_or_none() is not None:
                 continue
-            session.add(Banner(**b))
+            session.add(Banner(**b, is_demo=True))
         await session.commit()
 
 
@@ -503,7 +504,7 @@ async def _seed_faq(factory) -> None:
             res = await session.execute(select(FaqItem).where(FaqItem.question == f["question"]))
             if res.scalar_one_or_none() is not None:
                 continue
-            session.add(FaqItem(**f))
+            session.add(FaqItem(**f, is_demo=True))
         await session.commit()
 
 
@@ -517,6 +518,7 @@ async def _seed_pickup(factory) -> None:
                 work_hours="Пн-Сб 10:00-20:00, Вс 11:00-18:00",
                 phone="+7 (999) 123-45-67",
                 sort_order=1,
+                is_demo=True,
             ))
             await session.commit()
 

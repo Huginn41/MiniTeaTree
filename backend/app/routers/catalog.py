@@ -21,7 +21,7 @@ async def list_categories(
     """Список активных категорий (упорядочен по sort_order)."""
     stmt = (
         select(Category)
-        .where(Category.is_active.is_(True))
+        .where(Category.is_active.is_(True), Category.is_demo.is_(False))
         .order_by(Category.sort_order, Category.id)
     )
     result = await session.execute(stmt)
@@ -37,7 +37,7 @@ async def list_products(
     """Список активных товаров с фильтрацией и поиском."""
     stmt = (
         select(Product)
-        .where(Product.is_active.is_(True))
+        .where(Product.is_active.is_(True), Product.is_demo.is_(False))
         .order_by(Product.sort_order, Product.id)
     )
 
@@ -55,7 +55,6 @@ async def list_products(
 
     items: list[ProductListItem] = []
     for p in products:
-        # Главное фото.
         main_image = None
         for img in p.images:
             if img.is_main:
@@ -87,7 +86,11 @@ async def get_product(
     session: AsyncSession = Depends(get_db),
 ) -> ProductDetail:
     """Детали товара по slug."""
-    stmt = select(Product).where(Product.slug == slug, Product.is_active.is_(True))
+    stmt = select(Product).where(
+        Product.slug == slug,
+        Product.is_active.is_(True),
+        Product.is_demo.is_(False),
+    )
     result = await session.execute(stmt)
     product = result.scalar_one_or_none()
     if product is None:

@@ -38,6 +38,9 @@ class PickupPoint(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, server_default=text("true"), nullable=False, default=True
     )
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False, default=False
+    )
 
     def __repr__(self) -> str:
         return f"<PickupPoint id={self.id} name={self.name!r}>"
@@ -70,6 +73,9 @@ class FaqItem(TimestampMixin, Base):
     sort: Mapped[int] = mapped_column(Integer, server_default=text("0"), nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(
         Boolean, server_default=text("true"), nullable=False, default=True
+    )
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False, default=False
     )
 
     def __repr__(self) -> str:

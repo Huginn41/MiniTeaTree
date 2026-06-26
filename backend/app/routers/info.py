@@ -22,7 +22,7 @@ async def list_banners(
     """Активные баннеры для главной (по sort)."""
     stmt = (
         select(Banner)
-        .where(Banner.is_active.is_(True))
+        .where(Banner.is_active.is_(True), Banner.is_demo.is_(False))
         .order_by(Banner.sort, Banner.id)
     )
     result = await session.execute(stmt)
@@ -36,7 +36,7 @@ async def list_faq(
     """FAQ — вопросы и ответы."""
     stmt = (
         select(FaqItem)
-        .where(FaqItem.is_active.is_(True))
+        .where(FaqItem.is_active.is_(True), FaqItem.is_demo.is_(False))
         .order_by(FaqItem.sort, FaqItem.id)
     )
     result = await session.execute(stmt)
@@ -69,7 +69,7 @@ async def list_pickup_points(
     """Список активных ПВЗ."""
     stmt = (
         select(PickupPoint)
-        .where(PickupPoint.is_active.is_(True))
+        .where(PickupPoint.is_active.is_(True), PickupPoint.is_demo.is_(False))
         .order_by(PickupPoint.sort_order, PickupPoint.id)
     )
     result = await session.execute(stmt)
