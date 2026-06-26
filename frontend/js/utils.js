@@ -12,6 +12,14 @@ function imgUrl(path) {
   return '/static/' + path;
 }
 
+// Возвращает HTML для изображения товара.
+// Если path = "emoji:🍵" — рендерит эмодзи вместо <img>.
+function productImgHtml(path, alt) {
+  if (!path) return '';
+  if (path.startsWith('emoji:')) return `<span aria-label="${esc(alt||'')}">${path.slice(6)}</span>`;
+  return `<img src="${imgUrl(path)}" alt="${esc(alt||'')}" loading="lazy"/>`;
+}
+
 function fmtPrice(n) {
   const num = Number(n);
   if (isNaN(num)) return '0';

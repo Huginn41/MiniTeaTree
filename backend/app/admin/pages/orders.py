@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', load);
 </html>"""
 
 
-async def _get_active_orders() -> dict:
+async def _get_active_orders(demo: bool = False) -> dict:
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
@@ -220,12 +220,17 @@ async def _get_active_orders() -> dict:
     now = datetime.now(timezone.utc)
 
     async with get_session_factory()() as s:
-        result = await s.execute(
+        stmt = (
             select(Order)
             .options(selectinload(Order.user), selectinload(Order.items), selectinload(Order.delivery_info))
             .where(Order.status.notin_(["delivered", "cancelled"]))
             .order_by(Order.created_at.asc())
         )
+        if demo:
+            stmt = stmt.where(Order.number.like("DEMO-%"))
+        else:
+            stmt = stmt.where(~Order.number.like("DEMO-%"))
+        result = await s.execute(stmt)
         orders = result.scalars().all()
 
     def _items_short(items):
@@ -244,7 +249,7 @@ async def _get_active_orders() -> dict:
     ]}
 
 
-async def _get_history(period_days: int) -> dict:
+async def _get_history(period_days: int, demo: bool = False) -> dict:
     from sqlalchemy import func, select
     from sqlalchemy.orm import selectinload
 
@@ -255,12 +260,17 @@ async def _get_history(period_days: int) -> dict:
     since = now - timedelta(days=period_days)
 
     async with get_session_factory()() as s:
-        result = await s.execute(
+        stmt = (
             select(Order)
             .options(selectinload(Order.user), selectinload(Order.items))
             .where(Order.status.in_(["delivered", "cancelled"]), Order.created_at >= since)
             .order_by(Order.created_at.desc())
         )
+        if demo:
+            stmt = stmt.where(Order.number.like("DEMO-%"))
+        else:
+            stmt = stmt.where(~Order.number.like("DEMO-%"))
+        result = await s.execute(stmt)
         orders = result.scalars().all()
 
         delivered = [o for o in orders if o.status == "delivered"]
@@ -302,7 +312,8 @@ def setup_orders_routes(app: FastAPI) -> None:
     async def active_orders_data(request: Request):
         if request.session.get("admin_token") != "authenticated":
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-        return JSONResponse(await _get_active_orders())
+        demo = bool(request.session.get("admin_readonly"))
+        return JSONResponse(await _get_active_orders(demo=demo))
 
     @app.get("/crm/orders/history", response_class=HTMLResponse, include_in_schema=False)
     async def history_page(request: Request):
@@ -315,4 +326,5 @@ def setup_orders_routes(app: FastAPI) -> None:
         if request.session.get("admin_token") != "authenticated":
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
         period = period if period in (7, 30, 90, 365) else 30
-        return JSONResponse(await _get_history(period))
+        demo = bool(request.session.get("admin_readonly"))
+        return JSONResponse(await _get_history(period, demo=demo))

@@ -16,7 +16,7 @@ App.renderCart = async function(c) {
         html += `
           <div class="cart-item">
             <div class="cart-item-img">
-              ${item.main_image ? `<img src="${item.main_image}" alt="${esc(item.product_name)}" loading="lazy"/>` : '🍵'}
+              ${item.main_image ? productImgHtml(item.main_image, item.product_name) : '🍵'}
             </div>
             <div style="flex:1;min-width:0">
               <p style="font-size:14px;font-weight:600;color:var(--md-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(item.product_name)}</p>

@@ -42,19 +42,22 @@ App.renderProduct = async function(c, slug) {
 
   let html = '';
 
-  if (p.images.length) {
-    const n = p.images.length;
+  const realImages = p.images.filter(img => !img.path.startsWith('emoji:'));
+  const emojiImg = p.images.find(img => img.path.startsWith('emoji:'));
+  if (realImages.length) {
+    const n = realImages.length;
     const dotHtml = n > 1
-      ? `<div class="gallery-dots">${p.images.map((_, i) => `<div class="gallery-dot${i===0?' active':''}"></div>`).join('')}</div>`
+      ? `<div class="gallery-dots">${realImages.map((_, i) => `<div class="gallery-dot${i===0?' active':''}"></div>`).join('')}</div>`
       : '';
     html += `<div class="product-gallery-wrap">
       <div class="product-gallery" id="pimg-gallery">
-        ${p.images.map((img, i) => `<img src="${img.path}" alt="${esc(img.alt || p.name)}" loading="${i===0?'eager':'lazy'}" data-li="${i}"/>`).join('')}
+        ${realImages.map((img, i) => `<img src="${img.path}" alt="${esc(img.alt || p.name)}" loading="${i===0?'eager':'lazy'}" data-li="${i}"/>`).join('')}
       </div>
       ${dotHtml}
     </div>`;
   } else {
-    html += `<div style="height:220px;background:var(--md-surface-container);display:flex;align-items:center;justify-content:center;font-size:64px;margin:-16px -16px 0">🍵</div>`;
+    const ph = emojiImg ? emojiImg.path.slice(6) : '🍵';
+    html += `<div style="height:220px;background:var(--md-surface-container);display:flex;align-items:center;justify-content:center;font-size:96px;margin:-16px -16px 0">${ph}</div>`;
   }
 
   html += `<div class="product-info-sheet">
@@ -116,7 +119,7 @@ App.renderProduct = async function(c, slug) {
 
   c.innerHTML = html;
   this._currentProduct = p;
-  if (p.images.length) this._initGallery(p.images);
+  if (realImages.length) this._initGallery(realImages);
   this._initVariantSelect();
 };
 

@@ -186,9 +186,9 @@ class UserAdmin(ModelView, model=User):
         from app.models.user import User as _User
         stmt = select(_User)
         if request.session.get("admin_readonly"):
-            stmt = stmt.where(_User.telegram_id.in_(_DEMO_TG_IDS))
+            stmt = stmt.where(_User.telegram_id < 0)
         else:
-            stmt = stmt.where(_User.telegram_id.notin_(_DEMO_TG_IDS))
+            stmt = stmt.where(_User.telegram_id > 0)
         return stmt
 
     column_list = [

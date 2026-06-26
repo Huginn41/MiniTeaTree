@@ -120,7 +120,7 @@ const App = {
     return `
       <div class="product-card-small" onclick="App.navigate('product', '${p.slug}')">
         <div class="pcard-img">
-          ${p.main_image ? `<img src="${p.main_image}" alt="${esc(p.name)}" loading="lazy"/>` : '🍵'}
+          ${p.main_image ? productImgHtml(p.main_image, p.name) : '🍵'}
         </div>
         <div class="pcard-body">
           <div class="pcard-name">${esc(p.name)}</div>
@@ -138,7 +138,7 @@ const App = {
     return `
       <div class="product-card-grid" onclick="App.navigate('product', '${p.slug}')">
         <div class="pcard-img">
-          ${p.main_image ? `<img src="${p.main_image}" alt="${esc(p.name)}" loading="lazy"/>` : '🍵'}
+          ${p.main_image ? productImgHtml(p.main_image, p.name) : '🍵'}
         </div>
         <div class="pcard-body">
           <div class="pcard-name" style="font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3;max-height:2.6em">${esc(p.name)}</div>

@@ -1,0 +1,78 @@
+# ============================================================
+#  MiniTeaTree — Demo-окружение
+#
+#  Полностью изолировано от прода: своя PostgreSQL, свои данные.
+#  Доступ: http://SERVER_IP:8001/admin/
+#  Никаких DNS и сертификатов не нужно.
+#
+#  Запуск:
+#    cp .env.demo.example .env.demo   # один раз
+#    make demo-up
+#    make demo-seed
+# ============================================================
+services:
+  demo_db:
+    image: postgres:16-alpine
+    container_name: miniteatree_demo_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-demo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-demo_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-teatree_demo}
+    volumes:
+      - demo_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-demo_user} -d ${POSTGRES_DB:-teatree_demo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - demo_internal   # БД — только внутренняя сеть, снаружи недоступна
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: miniteatree_demo_app
+    restart: unless-stopped
+    depends_on:
+      demo_db:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - demo_media_data:/app/static/media
+    environment:
+      APP_ENV: development
+      DEBUG: "false"
+      LOG_LEVEL: INFO
+      DATABASE_URL: ${DATABASE_URL}
+      BOT_TOKEN: ${BOT_TOKEN:-demo_bot_token_not_real_xxxx}
+      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS:-0}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_TTL_MINUTES: 15
+      JWT_REFRESH_TTL_DAYS: 30
+      TELEGRAM_INITDATA_MAX_AGE_SECONDS: 0
+      YOOKASSA_PROVIDER_TOKEN: ""
+      YOOKASSA_SHOP_ID: ""
+      YOOKASSA_SECRET_KEY: ""
+      YOOKASSA_WEBHOOK_URL: ""
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-demo1234}
+    networks:
+      - demo_internal   # для связи с demo_db
+      - internal        # для связи с nginx (внешняя сеть из docker-compose.yml)
+
+volumes:
+  demo_postgres_data:
+  demo_media_data:
+
+networks:
+  demo_internal:
+    driver: bridge
+  internal:
+    external: true      # сеть уже создана docker-compose.yml
