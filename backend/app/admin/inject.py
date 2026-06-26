@@ -693,11 +693,9 @@ _ADMIN_JS = (r"""
   // ---- N. Добавить «Бонусная система» в сайдбар SQLAdmin ----
   function injectBonusLink(){
     if(document.querySelector('a[href="/admin/bonus-settings"]')) return;
-    // Находим любую ссылку категории «Настройки магазина» по href
     var anchor = document.querySelector('a[href="/admin/banner/list"]');
     if(!anchor) return;
     var isActive = window.location.pathname === '/admin/bonus-settings';
-    // Клонируем структуру соседнего элемента (li или просто a)
     var li = anchor.closest('li');
     var newLink = document.createElement('a');
     newLink.href = '/admin/bonus-settings';
@@ -707,10 +705,16 @@ _ADMIN_JS = (r"""
       var newLi = document.createElement('li');
       newLi.appendChild(newLink);
       li.parentElement.appendChild(newLi);
-      if(isActive){
-        // раскрыть collapse-секцию
-        var collapse = li.closest('.collapse');
-        if(collapse) collapse.classList.add('show');
+      // Раскрыть секцию если в ней есть активный элемент
+      // (collapseInactive мог схлопнуть секцию до нашей вставки)
+      var collapse = li.closest('.collapse');
+      if(collapse && collapse.querySelector('.active')){
+        collapse.classList.add('show');
+        var colId = collapse.id;
+        if(colId){
+          var toggle = document.querySelector('[data-bs-target="#'+colId+'"]') || document.querySelector('[href="#'+colId+'"]');
+          if(toggle){ toggle.classList.remove('collapsed'); toggle.setAttribute('aria-expanded','true'); }
+        }
       }
     } else {
       anchor.parentElement.appendChild(newLink);
