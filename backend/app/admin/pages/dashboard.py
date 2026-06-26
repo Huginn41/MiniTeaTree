@@ -241,5 +241,5 @@ def setup_dashboard_routes(app: FastAPI) -> None:
         if request.session.get("admin_token") != "authenticated":
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
         period = period if period in (7, 30, 90) else 30
-        demo = bool(request.session.get("admin_readonly"))
+        demo = request.session.get("admin_username") == "demo"
         return JSONResponse(await _get_dashboard_data(period, demo=demo))

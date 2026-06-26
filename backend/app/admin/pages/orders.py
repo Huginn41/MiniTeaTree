@@ -312,7 +312,7 @@ def setup_orders_routes(app: FastAPI) -> None:
     async def active_orders_data(request: Request):
         if request.session.get("admin_token") != "authenticated":
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-        demo = bool(request.session.get("admin_readonly"))
+        demo = request.session.get("admin_username") == "demo"
         return JSONResponse(await _get_active_orders(demo=demo))
 
     @app.get("/crm/orders/history", response_class=HTMLResponse, include_in_schema=False)
@@ -326,5 +326,5 @@ def setup_orders_routes(app: FastAPI) -> None:
         if request.session.get("admin_token") != "authenticated":
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
         period = period if period in (7, 30, 90, 365) else 30
-        demo = bool(request.session.get("admin_readonly"))
+        demo = request.session.get("admin_username") == "demo"
         return JSONResponse(await _get_history(period, demo=demo))

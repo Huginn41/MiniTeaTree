@@ -74,7 +74,7 @@ class OrderAdmin(ModelView, model=Order):
     def list_query(self, request):
         from sqlalchemy import select
         stmt = select(Order)
-        if request.session.get("admin_readonly"):
+        if request.session.get("admin_username") == "demo":
             stmt = stmt.where(Order.number.like("DEMO-%"))
         else:
             stmt = stmt.where(~Order.number.like("DEMO-%"))
@@ -185,7 +185,7 @@ class UserAdmin(ModelView, model=User):
         from sqlalchemy import select
         from app.models.user import User as _User
         stmt = select(_User)
-        if request.session.get("admin_readonly"):
+        if request.session.get("admin_username") == "demo":
             stmt = stmt.where(_User.telegram_id < 0)
         else:
             stmt = stmt.where(_User.telegram_id > 0)
