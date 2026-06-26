@@ -45,6 +45,9 @@ seed: ## Залить базовые данные (каталог, FAQ, банн
 seed-demo: ## Залить моковые данные (login: demo / demo1234 → DEMO-заказы)
 	cd $(BACKEND) && $(PYTHON) -m app.demo_seed
 
+clean-demo: ## Удалить все демо-данные из БД (DEMO-заказы + демо-клиенты)
+	docker compose exec app python -m app.demo_clean
+
 # ---------- Тесты и качество ----------
 test: ## Запустить тесты
 	cd $(BACKEND) && $(PYTHON) -m pytest -q
