@@ -287,6 +287,7 @@ async def notify_new_order(order: Order, session: AsyncSession) -> int:
     stmt = select(NotificationTarget).where(
         NotificationTarget.is_active.is_(True),
         NotificationTarget.role.in_(_NOTIFY_ROLES),
+        NotificationTarget.telegram_id > 0,  # отфильтровать демо-записи с fake IDs
     )
     result = await session.execute(stmt)
     targets = result.scalars().all()

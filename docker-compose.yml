@@ -62,12 +62,24 @@ services:
     networks:
       - internal
 
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: miniteatree_uptime
+    restart: unless-stopped
+    environment:
+      BASE_PATH: /monitor
+    volumes:
+      - uptime_data:/app/data
+    networks:
+      - internal
+
   nginx:
     image: nginx:1.27-alpine
     container_name: miniteatree_nginx
     restart: unless-stopped
     depends_on:
       - app
+      - uptime-kuma
     ports:
       - "80:80"
       - "443:443"
@@ -82,6 +94,7 @@ services:
 volumes:
   postgres_data:
   media_data:
+  uptime_data:
 
 networks:
   internal:
