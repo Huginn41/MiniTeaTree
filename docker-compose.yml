@@ -66,10 +66,10 @@ services:
     image: louislam/uptime-kuma:1
     container_name: miniteatree_uptime
     restart: unless-stopped
-    environment:
-      BASE_PATH: /monitor
     volumes:
       - uptime_data:/app/data
+    ports:
+      - "3001:3001"
     networks:
       - internal
 
